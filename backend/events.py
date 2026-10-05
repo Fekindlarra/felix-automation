@@ -301,10 +301,16 @@ class ConnectionInfo:
     connected_at: datetime
     last_heartbeat: datetime
     role: str  # "admin", "client"
+    is_mobile: bool = False  # Mobile device detection
+    user_agent: Optional[str] = None  # Client user agent for detection
 
     def is_active(self) -> bool:
         """Check if connection is active"""
         return self.state == ConnectionState.CONNECTED
+
+    def get_heartbeat_interval(self) -> int:
+        """Get heartbeat interval in seconds (60s mobile, 30s desktop)"""
+        return 60 if self.is_mobile else 30
 
 
 # Event routing configuration

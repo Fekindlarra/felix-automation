@@ -52,10 +52,14 @@ class WebSocketConnectionManager:
 
     async def connect(self, websocket: any, user_id: int,
                      client_id: Optional[int] = None,
-                     role: str = "client") -> str:
+                     role: str = "client",
+                     user_agent: Optional[str] = None) -> str:
         """Register a new WebSocket connection"""
         connection_id = str(uuid.uuid4())
         now = datetime.utcnow()
+
+        # Detect if client is mobile
+        is_mobile = self._detect_mobile_device(user_agent)
 
         # Store connection
         self.active_connections[connection_id] = websocket
@@ -68,7 +72,9 @@ class WebSocketConnectionManager:
             state=ConnectionState.CONNECTED,
             connected_at=now,
             last_heartbeat=now,
-            role=role
+            role=role,
+            is_mobile=is_mobile,
+            user_agent=user_agent
         )
         self.connection_info[connection_id] = conn_info
 
@@ -81,14 +87,19 @@ class WebSocketConnectionManager:
         if role == "admin":
             self.admin_connections.add(connection_id)
 
-        logger.info(f"✅ Connection established: {connection_id} (user:{user_id}, role:{role})")
+        device_type = "📱 Mobile" if is_mobile else "💻 Desktop"
+        logger.info(f"✅ Connection established: {connection_id} ({device_type}, user:{user_id}, role:{role})")
 
-        # Send connection established event
+        # Send connection established event with device info
         await self.broadcast_event(
             EventType.CONNECTION_ESTABLISHED,
             connection_id,
             user_id,
-            {"connection_id": connection_id}
+            {
+                "connection_id": connection_id,
+                "is_mobile": is_mobile,
+                "heartbeat_interval": conn_info.get_heartbeat_interval()
+            }
         )
 
         return connection_id
@@ -229,6 +240,71 @@ class WebSocketConnectionManager:
             "client_connections": len(self.client_connections),
             "active_clients": len([c for c in self.client_connections.values() if c])
         }
+
+    # Mobile Optimization Methods
+
+    def _detect_mobile_device(self, user_agent: Optional[str]) -> bool:
+        """Detect if client is a mobile device based on user agent"""
+        if not user_agent:
+            return False
+
+        mobile_patterns = [
+            'Android', 'webOS', 'iPhone', 'iPad', 'iPod',
+            'BlackBerry', 'IEMobile', 'Opera Mini',
+            'Mobile', 'CriOS'  # Chrome iOS
+        ]
+
+        return any(pattern in user_agent for pattern in mobile_patterns)
+
+    def get_connection_heartbeat(self, connection_id: str) -> Optional[int]:
+        """Get heartbeat interval for a specific connection (in seconds)"""
+        if connection_id not in self.connection_info:
+            return None
+
+        conn_info = self.connection_info[connection_id]
+        return conn_info.get_heartbeat_interval()
+
+    def get_active_mobile_connections(self) -> int:
+        """Count active mobile connections"""
+        return sum(
+            1 for conn_info in self.connection_info.values()
+            if conn_info.is_active() and conn_info.is_mobile
+        )
+
+    def get_active_desktop_connections(self) -> int:
+        """Count active desktop connections"""
+        return sum(
+            1 for conn_info in self.connection_info.values()
+            if conn_info.is_active() and not conn_info.is_mobile
+        )
+
+    def optimize_event_for_mobile(self, event_data: Dict, is_mobile: bool) -> Dict:
+        """
+        Optimize event payload for mobile clients to reduce bandwidth.
+        - Reduce precision of floating point numbers
+        - Remove unnecessary fields
+        - Compress data structures
+        """
+        if not is_mobile:
+            return event_data
+
+        optimized = {}
+
+        for key, value in event_data.items():
+            # Skip certain fields on mobile
+            if key in ['_internal', '_debug', '_metadata']:
+                continue
+
+            # Reduce precision of floats
+            if isinstance(value, float):
+                optimized[key] = round(value, 2)
+            # Skip None values on mobile
+            elif value is None:
+                continue
+            else:
+                optimized[key] = value
+
+        return optimized
 
 
 class EventBroadcaster:
