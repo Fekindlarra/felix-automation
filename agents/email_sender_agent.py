@@ -3,6 +3,7 @@
 """
 Email Sender Agent
 Envía auditorías y propuestas via SendGrid
+FASE 14: A/B Testing Integration for Email Variant Tracking
 """
 
 import sys
@@ -10,7 +11,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Tuple
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -27,6 +28,12 @@ try:
     from agents.email_queue_agent import EmailQueueAgent
 except ImportError:
     EmailQueueAgent = None
+
+# Import de A/B Testing (FASE 14)
+try:
+    from agents.email_variant_assigner import EmailVariantAssigner
+except ImportError:
+    EmailVariantAssigner = None
 
 # Logging
 logging.basicConfig(level=logging.INFO)
@@ -53,11 +60,69 @@ class EmailSenderAgent:
         # Inicializar queue para respaldo local
         self.queue_agent = EmailQueueAgent(orchestrator) if EmailQueueAgent else None
 
+        # Inicializar A/B testing variant assigner (FASE 14)
+        self.variant_assigner = None
+        if EmailVariantAssigner:
+            try:
+                self.variant_assigner = EmailVariantAssigner(database=orchestrator.database if hasattr(orchestrator, 'database') else None)
+                logger.info("✅ A/B Testing Variant Assigner initialized")
+            except Exception as e:
+                logger.warning(f"⚠️  A/B Testing not available: {e}")
+
         logger.info("✅ Email Sender Agent inicializado")
+
+    # ====== A/B TESTING INTEGRATION (FASE 14) ======
+
+    def _check_and_apply_ab_test(self, client_id: int, email_type: str) -> Optional[Tuple[Dict, int, str]]:
+        """
+        Check if there's an active A/B test for the email type and assign variant to client
+
+        Args:
+            client_id: Client ID
+            email_type: Type of email (e.g., 'audit_report', 'proposal', 'followup_1')
+
+        Returns:
+            Tuple of (variant_content, test_id, variant_letter) or None if no active test
+            variant_content dict has: {"subject": str, "body": str}
+        """
+        try:
+            if not self.variant_assigner:
+                return None
+
+            # Get active test for this email type
+            test = self.variant_assigner.get_active_test_for_email_type(email_type)
+            if not test:
+                logger.debug(f"📧 No active A/B test for email type: {email_type}")
+                return None
+
+            test_id = test['id']
+            logger.info(f"🧪 Found active A/B test: {test['name']} (ID: {test_id})")
+
+            # Assign client to variant
+            variant = self.variant_assigner.get_assignment(test_id, client_id)
+            if not variant:
+                logger.warning(f"⚠️  Could not assign variant for test {test_id}, client {client_id}")
+                return None
+
+            # Get variant content
+            variant_content = test[f'variant_{variant}']
+            logger.info(f"📧 Client {client_id} assigned to variant {variant} for test {test_id}")
+
+            # Record the assignment/send
+            self.variant_assigner.record_send(test_id, client_id, variant)
+
+            return (variant_content, test_id, variant)
+
+        except Exception as e:
+            logger.error(f"❌ Error checking A/B test: {e}")
+            return None
+
+    # ====== EMAIL SENDING METHODS ======
 
     def send_audit_report(self, client_id: int, audit_data: Dict) -> Dict:
         """
         Enviar reporte de auditoría por email
+        FASE 14: With A/B testing support
 
         Args:
             client_id: ID del cliente
@@ -73,8 +138,19 @@ class EmailSenderAgent:
 
         logger.info(f"📧 Enviando audit report a: {client.email}")
 
-        # Generar email personalizado
-        email_content = self._generate_audit_email(client, audit_data)
+        # FASE 14: Check for active A/B test
+        test_info = self._check_and_apply_ab_test(client_id, "audit_report")
+        test_id = None
+        variant = None
+
+        if test_info:
+            variant_content, test_id, variant = test_info
+            logger.info(f"🧪 A/B Test active: test_id={test_id}, variant={variant}")
+            # Use variant content to generate email (override default template)
+            email_content = self._generate_audit_email(client, audit_data, override_subject=variant_content.get('subject'))
+        else:
+            # Generar email personalizado (default template)
+            email_content = self._generate_audit_email(client, audit_data)
 
         # Simular envío (en producción: integración real con SendGrid)
         if self.sendgrid_api_key == 'DEMO_MODE':
@@ -96,7 +172,7 @@ class EmailSenderAgent:
         # 🔌 FASE 13 Day 3: Emitir evento WebSocket
         self.orchestrator._emit_email_event(client_id, "audit_report", "sent")
 
-        return {
+        result = {
             "status": status,
             "client_id": client_id,
             "recipient": client.email,
@@ -104,9 +180,17 @@ class EmailSenderAgent:
             "sent_at": datetime.now().isoformat()
         }
 
+        # FASE 14: Add A/B testing info if applicable
+        if test_id:
+            result["ab_test_id"] = test_id
+            result["ab_test_variant"] = variant
+
+        return result
+
     def send_proposal(self, client_id: int, proposal_id: int, proposal_data: Dict) -> Dict:
         """
         Enviar propuesta personalizada por email
+        FASE 14: With A/B testing support
 
         Args:
             client_id: ID del cliente
@@ -123,8 +207,18 @@ class EmailSenderAgent:
 
         logger.info(f"📧 Enviando propuesta a: {client.email}")
 
-        # Generar email de propuesta
-        email_content = self._generate_proposal_email(client, proposal_data)
+        # FASE 14: Check for active A/B test
+        test_info = self._check_and_apply_ab_test(client_id, "proposal")
+        test_id = None
+        variant = None
+
+        if test_info:
+            variant_content, test_id, variant = test_info
+            logger.info(f"🧪 A/B Test active: test_id={test_id}, variant={variant}")
+            email_content = self._generate_proposal_email(client, proposal_data, override_subject=variant_content.get('subject'))
+        else:
+            # Generar email de propuesta (default template)
+            email_content = self._generate_proposal_email(client, proposal_data)
 
         # Simular envío
         if self.sendgrid_api_key == 'DEMO_MODE':
@@ -147,7 +241,7 @@ class EmailSenderAgent:
         # 🔌 FASE 13 Day 3: Emitir evento WebSocket
         self.orchestrator._emit_email_event(client_id, "proposal", "sent")
 
-        return {
+        result = {
             "status": status,
             "client_id": client_id,
             "proposal_id": proposal_id,
@@ -156,9 +250,17 @@ class EmailSenderAgent:
             "sent_at": datetime.now().isoformat()
         }
 
+        # FASE 14: Add A/B testing info if applicable
+        if test_id:
+            result["ab_test_id"] = test_id
+            result["ab_test_variant"] = variant
+
+        return result
+
     def send_followup(self, client_id: int, followup_round: int) -> Dict:
         """
         Enviar email de seguimiento
+        FASE 14: With A/B testing support
 
         Args:
             client_id: ID del cliente
@@ -170,7 +272,19 @@ class EmailSenderAgent:
 
         logger.info(f"📧 Enviando followup #{followup_round} a: {client.email}")
 
-        email_content = self._generate_followup_email(client, followup_round)
+        # FASE 14: Check for active A/B test
+        email_type = f"followup_{followup_round}"
+        test_info = self._check_and_apply_ab_test(client_id, email_type)
+        test_id = None
+        variant = None
+
+        if test_info:
+            variant_content, test_id, variant = test_info
+            logger.info(f"🧪 A/B Test active: test_id={test_id}, variant={variant}")
+            email_content = self._generate_followup_email(client, followup_round, override_subject=variant_content.get('subject'))
+        else:
+            # Generar email de seguimiento (default template)
+            email_content = self._generate_followup_email(client, followup_round)
 
         if self.sendgrid_api_key == 'DEMO_MODE':
             logger.info(f"  🎯 [DEMO MODE] Followup #{followup_round} enviado")
@@ -185,7 +299,10 @@ class EmailSenderAgent:
             email_content['subject']
         )
 
-        return {
+        # 🔌 FASE 13 Day 3: Emitir evento WebSocket
+        self.orchestrator._emit_email_event(client_id, f"followup_{followup_round}", "sent")
+
+        result = {
             "status": status,
             "client_id": client_id,
             "followup_round": followup_round,
@@ -193,9 +310,17 @@ class EmailSenderAgent:
             "sent_at": datetime.now().isoformat()
         }
 
+        # FASE 14: Add A/B testing info if applicable
+        if test_id:
+            result["ab_test_id"] = test_id
+            result["ab_test_variant"] = variant
+
+        return result
+
     def send_booking_confirmation(self, client_id: int, booking_data: Dict) -> Dict:
         """
         Enviar confirmación de booking de call
+        FASE 14: With A/B testing support
 
         Args:
             client_id: ID del cliente
@@ -207,7 +332,18 @@ class EmailSenderAgent:
 
         logger.info(f"📧 Enviando confirmación de call a: {client.email}")
 
-        email_content = self._generate_booking_confirmation(client, booking_data)
+        # FASE 14: Check for active A/B test
+        test_info = self._check_and_apply_ab_test(client_id, "booking_confirmation")
+        test_id = None
+        variant = None
+
+        if test_info:
+            variant_content, test_id, variant = test_info
+            logger.info(f"🧪 A/B Test active: test_id={test_id}, variant={variant}")
+            email_content = self._generate_booking_confirmation(client, booking_data, override_subject=variant_content.get('subject'))
+        else:
+            # Generar email de confirmación (default template)
+            email_content = self._generate_booking_confirmation(client, booking_data)
 
         if self.sendgrid_api_key == 'DEMO_MODE':
             logger.info(f"  🎯 [DEMO MODE] Confirmación enviada")
@@ -222,7 +358,10 @@ class EmailSenderAgent:
             email_content['subject']
         )
 
-        return {
+        # 🔌 FASE 13 Day 3: Emitir evento WebSocket
+        self.orchestrator._emit_email_event(client_id, "booking_confirmation", "sent")
+
+        result = {
             "status": status,
             "client_id": client_id,
             "recipient": client.email,
@@ -231,10 +370,20 @@ class EmailSenderAgent:
             "sent_at": datetime.now().isoformat()
         }
 
+        # FASE 14: Add A/B testing info if applicable
+        if test_id:
+            result["ab_test_id"] = test_id
+            result["ab_test_variant"] = variant
+
+        return result
+
     # ====== GENERADORES DE EMAIL ======
 
-    def _generate_audit_email(self, client, audit_data: Dict) -> Dict:
-        """Generar contenido de email de auditoría (HTML + plain text)"""
+    def _generate_audit_email(self, client, audit_data: Dict, override_subject: Optional[str] = None) -> Dict:
+        """
+        Generar contenido de email de auditoría (HTML + plain text)
+        FASE 14: Supports override_subject for A/B testing variants
+        """
         avg_score = audit_data.get('average_score', 0)
         platforms = audit_data.get('platforms', [])
         platforms_html = "".join([f"<li>{p.upper()}</li>" for p in platforms])
@@ -344,16 +493,22 @@ Saludos,
 Felix Automation
 """
 
+        # Use override subject if provided (A/B testing variant)
+        subject = override_subject if override_subject else f"Tu auditoría de presencia digital - {avg_score}/100"
+
         return {
-            "subject": f"Tu auditoría de presencia digital - {avg_score}/100",
+            "subject": subject,
             "html_body": html_body,
             "plain_text": plain_text,
             "from": self.from_email,
             "categories": ["audit_report"]
         }
 
-    def _generate_proposal_email(self, client, proposal_data: Dict) -> Dict:
-        """Generar contenido de email de propuesta (HTML + plain text)"""
+    def _generate_proposal_email(self, client, proposal_data: Dict, override_subject: Optional[str] = None) -> Dict:
+        """
+        Generar contenido de email de propuesta (HTML + plain text)
+        FASE 14: Supports override_subject for A/B testing variants
+        """
         cost = proposal_data.get('estimated_cost', 0)
         duration = proposal_data.get('estimated_duration', 'Por confirmar')
         roi_projection = proposal_data.get('roi_projection', '3-6 meses')
@@ -494,16 +649,22 @@ Saludos,
 Felix Automation
 """
 
+        # Use override subject if provided (A/B testing variant)
+        subject = override_subject if override_subject else f"Tu propuesta de mejora - {client.name}"
+
         return {
-            "subject": f"Tu propuesta de mejora - {client.name}",
+            "subject": subject,
             "html_body": html_body,
             "plain_text": plain_text,
             "from": self.from_email,
             "categories": ["proposal"]
         }
 
-    def _generate_followup_email(self, client, followup_round: int) -> Dict:
-        """Generar contenido de email de seguimiento (HTML + plain text)"""
+    def _generate_followup_email(self, client, followup_round: int, override_subject: Optional[str] = None) -> Dict:
+        """
+        Generar contenido de email de seguimiento (HTML + plain text)
+        FASE 14: Supports override_subject for A/B testing variants
+        """
 
         templates = {
             1: {
@@ -635,16 +796,23 @@ Felix Automation
         }
 
         template = templates.get(followup_round, templates[1])
+
+        # Use override subject if provided (A/B testing variant)
+        subject = override_subject if override_subject else template['subject']
+
         return {
-            "subject": template['subject'],
+            "subject": subject,
             "html_body": template['html'],
             "plain_text": template['plain'],
             "from": self.from_email,
             "categories": [f"followup_{followup_round}"]
         }
 
-    def _generate_booking_confirmation(self, client, booking_data: Dict) -> Dict:
-        """Generar confirmación de booking (HTML + plain text)"""
+    def _generate_booking_confirmation(self, client, booking_data: Dict, override_subject: Optional[str] = None) -> Dict:
+        """
+        Generar confirmación de booking (HTML + plain text)
+        FASE 14: Supports override_subject for A/B testing variants
+        """
         date = booking_data.get('date', 'Por confirmar')
         time = booking_data.get('time', 'Por confirmar')
         zoom_link = booking_data.get('zoom_link', 'https://zoom.us/j/meeting')
@@ -744,8 +912,11 @@ Saludos,
 Felix Automation
 """
 
+        # Use override subject if provided (A/B testing variant)
+        subject = override_subject if override_subject else f"✓ Call confirmada - {date} {time}"
+
         return {
-            "subject": f"✓ Call confirmada - {date} {time}",
+            "subject": subject,
             "html_body": html_body,
             "plain_text": plain_text,
             "from": self.from_email,
