@@ -185,12 +185,158 @@ class DatabaseManager:
         )
         """)
 
+        # ========== FASE 14: NEW TABLES ==========
+
+        # ====== TABLA: SHOPIFY STORES (Real API Integration) ======
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS shopify_stores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER NOT NULL UNIQUE,
+            shop_domain TEXT NOT NULL UNIQUE,
+            access_token_encrypted TEXT NOT NULL,
+            access_token_iv TEXT,
+            shop_name TEXT,
+            currency TEXT DEFAULT 'USD',
+            timezone TEXT,
+            plan TEXT,
+            email TEXT,
+            phone TEXT,
+            last_sync TIMESTAMP,
+            sync_status TEXT DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (client_id) REFERENCES clients(id)
+        )
+        """)
+
+        # ====== TABLA: SHOPIFY ORDERS ======
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS shopify_orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            store_id INTEGER NOT NULL,
+            shopify_order_id TEXT NOT NULL,
+            order_number INTEGER,
+            customer_email TEXT,
+            total_price REAL,
+            subtotal_price REAL,
+            total_tax REAL,
+            total_shipping REAL,
+            currency TEXT DEFAULT 'USD',
+            status TEXT,
+            fulfillment_status TEXT,
+            payment_status TEXT,
+            created_at_shopify TIMESTAMP,
+            updated_at_shopify TIMESTAMP,
+            synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (store_id) REFERENCES shopify_stores(id),
+            UNIQUE(store_id, shopify_order_id)
+        )
+        """)
+
+        # ====== TABLA: SHOPIFY WEBHOOKS ======
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS shopify_webhooks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            store_id INTEGER NOT NULL,
+            webhook_id TEXT NOT NULL,
+            topic TEXT NOT NULL,
+            url TEXT,
+            active BOOLEAN DEFAULT 1,
+            last_triggered TIMESTAMP,
+            trigger_count INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (store_id) REFERENCES shopify_stores(id),
+            UNIQUE(store_id, webhook_id)
+        )
+        """)
+
+        # ====== TABLA: PREDICTION HISTORY (ML Accuracy Tracking) ======
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS prediction_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER NOT NULL,
+            probability REAL NOT NULL,
+            confidence REAL NOT NULL,
+            risk_factors_json TEXT,
+            positive_factors_json TEXT,
+            predicted_timeline_days INTEGER,
+            actual_outcome TEXT,
+            prediction_correct BOOLEAN,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            outcome_recorded_at TIMESTAMP,
+            FOREIGN KEY (client_id) REFERENCES clients(id)
+        )
+        """)
+
+        # ====== TABLA: A/B TESTS ======
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ab_tests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            test_name TEXT NOT NULL,
+            email_type TEXT NOT NULL,
+            variant_a_subject TEXT,
+            variant_a_body TEXT,
+            variant_b_subject TEXT,
+            variant_b_body TEXT,
+            active BOOLEAN DEFAULT 1,
+            start_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            end_date TIMESTAMP,
+            planned_duration_days INTEGER DEFAULT 14,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        # ====== TABLA: A/B TEST RESULTS ======
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ab_test_results (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            test_id INTEGER NOT NULL,
+            client_id INTEGER NOT NULL,
+            variant TEXT NOT NULL,
+            sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            opened BOOLEAN DEFAULT 0,
+            opened_at TIMESTAMP,
+            clicked BOOLEAN DEFAULT 0,
+            clicked_at TIMESTAMP,
+            converted BOOLEAN DEFAULT 0,
+            converted_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (test_id) REFERENCES ab_tests(id),
+            FOREIGN KEY (client_id) REFERENCES clients(id)
+        )
+        """)
+
+        # ====== TABLA: ANOMALIES (Detection & Tracking) ======
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS anomalies (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER NOT NULL,
+            anomaly_type TEXT NOT NULL,
+            severity TEXT DEFAULT 'medium',
+            description TEXT,
+            metrics_json TEXT,
+            detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            resolved BOOLEAN DEFAULT 0,
+            resolved_at TIMESTAMP,
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (client_id) REFERENCES clients(id)
+        )
+        """)
+
         # ====== ÍNDICES ======
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_clients_email ON clients(email)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_audits_client ON audits(client_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_pipeline_stage ON sales_pipeline(stage)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_email_logs_client ON email_logs(client_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_funnel_state_client ON funnel_state(client_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_shopify_stores_client ON shopify_stores(client_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_shopify_orders_store ON shopify_orders(store_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_prediction_history_client ON prediction_history(client_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_ab_test_results_test ON ab_test_results(test_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_ab_test_results_client ON ab_test_results(client_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_anomalies_client ON anomalies(client_id)")
 
         self.connection.commit()
         print("✅ Schema de base de datos inicializado")

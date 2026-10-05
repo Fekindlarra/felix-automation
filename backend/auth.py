@@ -152,3 +152,37 @@ def verify_client_token(token: str) -> Dict:
         )
 
     return payload
+
+
+def verify_jwt_token(token: str) -> Optional[Dict]:
+    """
+    Verificar y decodificar JWT token sin lanzar excepciones.
+    Utilizado por WebSocket que maneja errores internamente.
+
+    Args:
+        token: JWT token string
+
+    Returns:
+        Payload decodificado si el token es válido, None si no lo es
+    """
+    try:
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM]
+        )
+
+        sub: str = payload.get("sub")
+        if sub is None:
+            logger.warning("⚠️ JWT token sin 'sub' claim")
+            return None
+
+        logger.debug(f"✅ JWT token verificado para: {sub}")
+        return payload
+
+    except JWTError as e:
+        logger.warning(f"⚠️ JWT verification failed: {str(e)}")
+        return None
+    except Exception as e:
+        logger.error(f"❌ Unexpected error in JWT verification: {str(e)}")
+        return None
