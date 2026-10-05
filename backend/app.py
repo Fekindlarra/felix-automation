@@ -39,6 +39,10 @@ from backend.routes.scheduler_routes import router as scheduler_router
 from backend.routes.api_enhancement_routes import router as api_enhancement_router
 from backend.routes.prediction_validator_routes import router as prediction_validator_router
 from backend.routes.whitebox_routes import router as whitebox_router
+from backend.routes.ab_testing_routes import router as ab_testing_router, init_ab_testing
+from backend.routes.shopify_webhooks import router as shopify_webhooks_router, init_webhooks
+from agents.statistical_tester import StatisticalTester
+from agents.email_variant_assigner import EmailVariantAssigner
 
 # Logging
 logging.basicConfig(
@@ -81,8 +85,18 @@ app.include_router(prediction_validator_router)
 # Include White-Box Audit routes (FASE 11: Deep platform integrations with credentials)
 app.include_router(whitebox_router)
 
+# Include A/B Testing routes (FASE 14: Email A/B Testing Framework)
+app.include_router(ab_testing_router)
+
+# Include Shopify Webhooks routes (FASE 14: Real-time Shopify events)
+app.include_router(shopify_webhooks_router)
+
 # Global orchestrator instance
 orchestrator = None
+
+# FASE 14: A/B Testing and Statistical Analysis instances
+statistical_tester = None
+variant_assigner = None
 
 
 def get_orchestrator() -> FelixAutomationOrchestrator:
@@ -92,6 +106,22 @@ def get_orchestrator() -> FelixAutomationOrchestrator:
         orchestrator = FelixAutomationOrchestrator(db_path=DATABASE_PATH)
         orchestrator.connect_database()
     return orchestrator
+
+
+def get_statistical_tester() -> StatisticalTester:
+    """Get or create statistical tester instance"""
+    global statistical_tester
+    if statistical_tester is None:
+        statistical_tester = StatisticalTester(significance_threshold=0.05)
+    return statistical_tester
+
+
+def get_variant_assigner() -> EmailVariantAssigner:
+    """Get or create variant assigner instance"""
+    global variant_assigner
+    if variant_assigner is None:
+        variant_assigner = EmailVariantAssigner()
+    return variant_assigner
 
 
 # ============================================================================
@@ -499,6 +529,17 @@ async def startup_event():
     try:
         orch = get_orchestrator()
         logger.info(f"✅ Base de datos conectada - {len(orch.get_all_clients())} clientes encontrados")
+
+        # FASE 14: Initialize A/B Testing routes
+        tester = get_statistical_tester()
+        assigner = get_variant_assigner()
+        init_ab_testing(orch.conn, tester, assigner)
+        logger.info("✅ A/B Testing framework initialized")
+
+        # FASE 14: Initialize Shopify Webhooks routes
+        init_webhooks(orch.conn)
+        logger.info("✅ Shopify webhook handler initialized")
+
     except Exception as e:
         logger.error(f"❌ Error conectando a BD: {str(e)}")
 
