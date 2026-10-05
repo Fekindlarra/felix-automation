@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "client_id": 1,
+    "email_type": "audit_report",
+    "recipient": "info@raices.cl",
+    "subject": "Tu auditoria digital completada - Raices de Cauquenes",
+    "body": "Hola Raices de Cauquenes,\n\nTu auditoria digital esta lista.\n\nRESULTADO GENERAL: 81/100\n\nPlataformas auditadas:\n  * Web (Performance, Seguridad, Tracking)\n  * Facebook Ads (Estructura, Contenido, Targeting)\n  * Google Ads (Keywords, Quality Score, Tracking)\n\nProximos pasos: Una call corta de 15 minutos para explicar hallazgos.\n\nAgendamos? -> https://calendly.com/enbuenamesa/propuesta\n\nSaludos,\nFelix Automation\n",
+    "created_at": "2026-10-05T12:00:06.150823",
+    "status": "pending"
+  },
+  {
+    "id": 2,
+    "client_id": 1,
+    "email_type": "proposal",
+    "recipient": "info@raices.cl",
+    "subject": "Tu propuesta de mejora - Raices de Cauquenes",
+    "body": "Hola Raices de Cauquenes,\n\nTe envio la propuesta personalizada basada en tu auditoria.\n\nPRESUPUESTO ESTIMADO\n  * Costo: $3,000 USD\n  * Duracion: 2-3 semanas\n  * ROI estimado: 2 meses\n\nINCLUYE\n  * Auditoria tecnica completa\n  * Optimizacion de campanas de ads\n  * Implementacion de tracking\n  * Reportes mensuales\n\nAgendar call: https://calendly.com/enbuenamesa/propuesta\n\nSaludos,\nFelix Automation\n",
+    "created_at": "2026-10-05T12:00:06.151096",
+    "status": "pending"
+  },
+  {
+    "id": 3,
+    "client_id": 1,
+    "email_type": "followup_1",
+    "recipient": "info@raices.cl",
+    "subject": "Seguimiento: Tu auditoria digital",
+    "body": "Hola Raices de Cauquenes,\n\nSolo checando si viste tu reporte de auditoria.\n\nPreguntas? Duda en algun punto?\n\nRespondé con un mensajito o agendemos 15 minutos de call directa.\n\nLink de call: https://calendly.com/enbuenamesa/propuesta\n\nSaludos,\nFelix\n",
+    "created_at": "2026-10-05T12:00:06.151572",
+    "status": "pending"
+  }
+]

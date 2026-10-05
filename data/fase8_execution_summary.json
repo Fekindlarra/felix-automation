@@ -1,0 +1,117 @@
+{
+  "total_clientes": 3,
+  "auditados": 3,
+  "scored": 3,
+  "propuestas_generadas": 3,
+  "emails_enviados": 0,
+  "followups_iniciados": 3,
+  "pipeline_actualizado": 3,
+  "dashboards_generados": 4,
+  "errores": [],
+  "execution_log": [
+    {
+      "timestamp": "2026-10-05T12:42:38.428601",
+      "step": "Audit",
+      "status": "✅",
+      "details": "Cliente Tienda Online ABC"
+    },
+    {
+      "timestamp": "2026-10-05T12:42:38.435065",
+      "step": "Audit",
+      "status": "✅",
+      "details": "Cliente Agencia Digital XYZ"
+    },
+    {
+      "timestamp": "2026-10-05T12:42:38.439450",
+      "step": "Audit",
+      "status": "✅",
+      "details": "Cliente Boutique Fashion LMN"
+    },
+    {
+      "timestamp": "2026-10-05T12:42:38.439818",
+      "step": "Lead Score",
+      "status": "✅",
+      "details": "Tienda Online ABC: 82 🟢 ALTO"
+    },
+    {
+      "timestamp": "2026-10-05T12:42:38.440060",
+      "step": "Lead Score",
+      "status": "✅",
+      "details": "Agencia Digital XYZ: 82 🟢 ALTO"
+    },
+    {
+      "timestamp": "2026-10-05T12:42:38.440305",
+      "step": "Lead Score",
+      "status": "✅",
+      "details": "Boutique Fashion LMN: 82 🟢 ALTO"
+    },
+    {
+      "timestamp": "2026-10-05T12:42:39.588077",
+      "step": "Proposal Gen",
+      "status": "✅",
+      "details": "Tienda Online ABC (ID: 7)"
+    },
+    {
+      "timestamp": "2026-10-05T12:42:40.141112",
+      "step": "Proposal Gen",
+      "status": "✅",
+      "details": "Agencia Digital XYZ (ID: 8)"
+    },
+    {
+      "timestamp": "2026-10-05T12:42:40.512594",
+      "step": "Proposal Gen",
+      "status": "✅",
+      "details": "Boutique Fashion LMN (ID: 9)"
+    },
+    {
+      "timestamp": "2026-10-05T12:42:41.526224",
+      "step": "Follow-up Init",
+      "status": "✅",
+      "details": "Tienda Online ABC (Seq: N/A)"
+    },
+    {
+      "timestamp": "2026-10-05T12:42:41.526403",
+      "step": "Follow-up Init",
+      "status": "✅",
+      "details": "Agencia Digital XYZ (Seq: N/A)"
+    },
+    {
+      "timestamp": "2026-10-05T12:42:41.526577",
+      "step": "Follow-up Init",
+      "status": "✅",
+      "details": "Boutique Fashion LMN (Seq: N/A)"
+    },
+    {
+      "timestamp": "2026-10-05T12:42:41.527143",
+      "step": "Pipeline Update",
+      "status": "✅",
+      "details": "Tienda Online ABC → PROPUESTA"
+    },
+    {
+      "timestamp": "2026-10-05T12:42:41.527504",
+      "step": "Pipeline Update",
+      "status": "✅",
+      "details": "Agencia Digital XYZ → PROPUESTA"
+    },
+    {
+      "timestamp": "2026-10-05T12:42:41.527793",
+      "step": "Pipeline Update",
+      "status": "✅",
+      "details": "Boutique Fashion LMN → PROPUESTA"
+    },
+    {
+      "timestamp": "2026-10-05T12:42:41.529642",
+      "step": "Dashboard Gen",
+      "status": "✅",
+      "details": "Dashboards generados (4)"
+    },
+    {
+      "timestamp": "2026-10-05T12:42:41.530928",
+      "step": "Reports",
+      "status": "✅",
+      "details": "Todos los reportes generados"
+    }
+  ],
+  "execution_time_seconds": 3.108627,
+  "timestamp": "2026-10-05T12:42:38.422359"
+}

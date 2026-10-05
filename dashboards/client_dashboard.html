@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Felix Automation - Portal Cliente</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg-light: #f8fafc;
+            --bg-white: #ffffff;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --primary: #3b82f6;
+                --primary-dark: #1e3a8a;
+                --success: #34d399;
+                --warning: #fbbf24;
+                --danger: #f87171;
+                --bg-light: #0f172a;
+                --bg-white: #1e293b;
+                --text-dark: #f1f5f9;
+                --text-light: #cbd5e1;
+                --border: #334155;
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--bg-light);
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .header-subtitle {
+            font-size: 13px;
+            color: var(--text-light);
+            margin-top: 5px;
+        }
+
+        .header-right {
+            text-align: right;
+        }
+
+        .client-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .timestamp {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-top: 5px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-badge.active {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+        }
+
+        .progress-section {
+            background: var(--bg-white);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: var(--shadow);
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 20px;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        .timeline {
+            position: relative;
+            padding: 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 19px;
+            top: 20px;
+            bottom: 0;
+            width: 2px;
+            background: var(--border);
+        }
+
+        .timeline-item {
+            margin-bottom: 25px;
+            padding-left: 60px;
+            position: relative;
+        }
+
+        .timeline-dot {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--bg-white);
+            border: 3px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.2s;
+        }
+
+        .timeline-item.active .timeline-dot {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+        }
+
+        .timeline-item.completed .timeline-dot {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+
+        .timeline-content {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 15px;
+        }
+
+        .timeline-item.active .timeline-content {
+            background: rgba(37, 99, 235, 0.05);
+            border-color: var(--primary);
+        }
+
+        .timeline-content h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 5px;
+        }
+
+        .timeline-content p {
+            font-size: 13px;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+
+        .timeline-date {
+            font-size: 12px;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .audit-summary {
+            background: var(--bg-white);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: var(--shadow);
+        }
+
+        .audit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .audit-card {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .audit-card:hover {
+            background: var(--bg-white);
+            border-color: var(--primary);
+        }
+
+        .audit-icon {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .audit-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+
+        .audit-score {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        .audit-status {
+            font-size: 11px;
+            color: var(--text-light);
+        }
+
+        .score-bar {
+            width: 100%;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .score-fill {
+            height: 100%;
+            background: var(--success);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        .proposal-section {
+            background: var(--bg-white);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: var(--shadow);
+        }
+
+        .proposal-content {
+            background: var(--bg-light);
+            border: 1px dashed var(--border);
+            border-radius: 6px;
+            padding: 20px;
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .proposal-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .proposal-message {
+            font-size: 14px;
+            color: var(--text-dark);
+            margin-bottom: 15px;
+        }
+
+        .download-btn {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .download-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        .next-steps {
+            background: var(--bg-white);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: var(--shadow);
+        }
+
+        .steps-list {
+            list-style: none;
+            margin-top: 15px;
+        }
+
+        .steps-list li {
+            padding: 12px 0;
+            padding-left: 30px;
+            position: relative;
+            font-size: 13px;
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        .steps-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 14px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+        }
+
+        .contact-section {
+            background: rgba(37, 99, 235, 0.05);
+            border: 1px solid var(--primary);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .contact-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 10px;
+        }
+
+        .contact-info {
+            font-size: 13px;
+            color: var(--text-light);
+            line-height: 1.8;
+        }
+
+        .contact-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .contact-link:hover {
+            text-decoration: underline;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-light);
+            font-size: 12px;
+            margin-top: 40px;
+            border-top: 1px solid var(--border);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                align-items: flex-start;
+            }
+
+            .header-right {
+                text-align: left;
+            }
+
+            .audit-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>📊 Tu Progreso en Felix Automation</h1>
+                <p class="header-subtitle">Portal Personalizado - Seguimiento de tu Proyecto</p>
+            </div>
+            <div class="header-right">
+                <div class="client-name" id="clientName">Nombre del Negocio</div>
+                <div class="timestamp">
+                    Actualizado: <span id="updateTime">--</span>
+                </div>
+                <div class="status-badge active">En Proceso</div>
+            </div>
+        </div>
+
+        <!-- Progress Timeline -->
+        <div class="progress-section">
+            <div class="section-title">🎯 Estado de tu Proyecto</div>
+            <div class="timeline">
+                <div class="timeline-item completed">
+                    <div class="timeline-dot">✓</div>
+                    <div class="timeline-content">
+                        <h3>Auditoría Completada</h3>
+                        <p>Análisis profundo de tu web, redes sociales y performance digital</p>
+                        <div class="timeline-date">Completado: 2 de Octubre, 2026</div>
+                    </div>
+                </div>
+
+                <div class="timeline-item active">
+                    <div class="timeline-dot">2</div>
+                    <div class="timeline-content">
+                        <h3>Propuesta en Revisión</h3>
+                        <p>Tu propuesta personalizada está siendo revisada y está lista para descargar</p>
+                        <div class="timeline-date">En Proceso: Desde hace 2 días</div>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-dot">3</div>
+                    <div class="timeline-content">
+                        <h3>Negociación de Términos</h3>
+                        <p>Discusión de detalles, ajustes y próximos pasos de implementación</p>
+                        <div class="timeline-date">Próximo paso</div>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-dot">✓</div>
+                    <div class="timeline-content">
+                        <h3>Proyecto Iniciado</h3>
+                        <p>Implementación y ejecución de la estrategia acordada</p>
+                        <div class="timeline-date">Por comenzar</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audit Summary -->
+        <div class="audit-summary">
+            <div class="section-title">📈 Resumen de Auditorías</div>
+            <p style="font-size: 13px; color: var(--text-light); margin-bottom: 15px;">
+                Aquí puedes ver los resultados de nuestro análisis en diferentes áreas de tu negocio
+            </p>
+            <div class="audit-grid">
+                <div class="audit-card">
+                    <div class="audit-icon">🌐</div>
+                    <div class="audit-name">Website Audit</div>
+                    <div class="audit-score">78/100</div>
+                    <div class="audit-status">Performance & Security</div>
+                    <div class="score-bar">
+                        <div class="score-fill" style="width: 78%;"></div>
+                    </div>
+                </div>
+
+                <div class="audit-card">
+                    <div class="audit-icon">📘</div>
+                    <div class="audit-name">Facebook Ads</div>
+                    <div class="audit-score">65/100</div>
+                    <div class="audit-status">Estructura & Targeting</div>
+                    <div class="score-bar">
+                        <div class="score-fill" style="width: 65%; background: var(--warning);"></div>
+                    </div>
+                </div>
+
+                <div class="audit-card">
+                    <div class="audit-icon">🔍</div>
+                    <div class="audit-name">Google Ads</div>
+                    <div class="audit-score">72/100</div>
+                    <div class="audit-status">Keywords & Quality Score</div>
+                    <div class="score-bar">
+                        <div class="score-fill" style="width: 72%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Proposal Section -->
+        <div class="proposal-section">
+            <div class="section-title">📄 Tu Propuesta Personalizada</div>
+            <div class="proposal-content">
+                <div class="proposal-icon">📋</div>
+                <div class="proposal-message">
+                    Tu propuesta detallada está lista para descargar
+                </div>
+                <a href="#" class="download-btn">↓ Descargar Propuesta (PDF)</a>
+            </div>
+            <p style="font-size: 12px; color: var(--text-light); margin-top: 15px; text-align: center;">
+                La propuesta incluye análisis completo, recomendaciones estratégicas e inversión estimada
+            </p>
+        </div>
+
+        <!-- Next Steps -->
+        <div class="next-steps">
+            <div class="section-title">📋 Próximos Pasos</div>
+            <ul class="steps-list">
+                <li><strong>Revisar Propuesta:</strong> Tómate tiempo para revisar el análisis y las recomendaciones detalladas</li>
+                <li><strong>Hacer Preguntas:</strong> Si tienes dudas sobre cualquier punto, no dudes en comunicarte</li>
+                <li><strong>Enviar Feedback:</strong> Tu opinión es importante para ajustar detalles según tus necesidades</li>
+                <li><strong>Agendar Llamada:</strong> Coordinaremos una llamada para discutir términos e implementación</li>
+                <li><strong>Comenzar Implementación:</strong> Una vez acordado, iniciamos con tu proyecto</li>
+            </ul>
+        </div>
+
+        <!-- Contact Section -->
+        <div class="contact-section">
+            <div class="contact-title">¿Tienes Preguntas?</div>
+            <div class="contact-info">
+                Estamos aquí para ayudarte<br>
+                📧 <a href="mailto:ventas@enbuenamesa.com" class="contact-link">ventas@enbuenamesa.com</a><br>
+                📞 +56 9 XXXX XXXX<br>
+                💬 Disponibles de Lunes a Viernes, 9:00 - 18:00
+            </div>
+        </div>
+
+        <div class="footer">
+            <strong>Felix Automation</strong> - Sistema de Automatización de Ventas Digitales | En Buena Mesa © 2026
+        </div>
+    </div>
+
+    <script>
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            const now = new Date();
+            document.getElementById('updateTime').textContent = now.toLocaleDateString('es-ES');
+            // In production, this would be populated from the API with client-specific data
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Felix - Acceso</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #4F46E5;
+            --primary-dark: #4338CA;
+            --primary-light: #6366F1;
+            --secondary: #EC4899;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --danger: #EF4444;
+            --gray-900: #111827;
+            --gray-800: #1F2937;
+            --gray-700: #374151;
+            --gray-600: #4B5563;
+            --gray-500: #6B7280;
+            --gray-400: #9CA3AF;
+            --gray-300: #D1D5DB;
+            --gray-200: #E5E7EB;
+            --gray-100: #F3F4F6;
+            --gray-50: #F9FAFB;
+            --white: #FFFFFF;
+            --bg: #FFFFFF;
+            --fg: #111827;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --bg: #111827;
+                --fg: #F3F4F6;
+                color-scheme: dark;
+            }
+        }
+
+        :root[data-theme="dark"] {
+            --bg: #111827;
+            --fg: #F3F4F6;
+            color-scheme: dark;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 16px;
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .logo-text {
+            font-size: 1.875rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--gray-500);
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--gray-200);
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            background: transparent;
+            color: var(--gray-500);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s ease;
+        }
+
+        .tab-button:hover {
+            color: var(--fg);
+        }
+
+        .tab-button.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--fg);
+        }
+
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            background: var(--bg);
+            color: var(--fg);
+            transition: border-color 0.2s ease;
+        }
+
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        input[type="checkbox"] {
+            width: 1rem;
+            height: 1rem;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            margin-bottom: 0;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        button {
+            flex: 1;
+            padding: 0.875rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: var(--gray-200);
+            color: var(--fg);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-300);
+        }
+
+        .error-message {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+            display: none;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .success-message {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+            display: none;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 1.5rem;
+            height: 1.5rem;
+            border: 3px solid var(--gray-300);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .footer-text {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            margin-top: 2rem;
+        }
+
+        .footer-text a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .footer-text a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                max-width: 100%;
+            }
+
+            .logo-text {
+                font-size: 1.5rem;
+            }
+
+            .tab-button {
+                font-size: 0.875rem;
+                padding: 0.75rem;
+            }
+
+            button {
+                padding: 0.75rem 1rem;
+                font-size: 0.875rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <div class="logo">🚀</div>
+            <div class="logo-text">Felix Automation</div>
+            <p class="subtitle">Sistema de Automatización de Ventas</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-button active" data-tab="admin-login">
+                👨‍💼 Admin
+            </button>
+            <button class="tab-button" data-tab="client-access">
+                👥 Portal Cliente
+            </button>
+        </div>
+
+        <!-- Admin Login -->
+        <div id="admin-login" class="tab-content active">
+            <form id="admin-form">
+                <div class="error-message" id="admin-error"></div>
+                <div class="success-message" id="admin-success"></div>
+
+                <div class="form-group">
+                    <label for="admin-email">Email</label>
+                    <input type="email" id="admin-email" name="email" placeholder="felipe@enbuenamesa.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="admin-password">Contraseña</label>
+                    <input type="password" id="admin-password" name="password" placeholder="••••••••" required>
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="admin-remember" name="remember">
+                        <label for="admin-remember">Recordarme por 24 horas</label>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="btn-primary">Ingresar</button>
+                </div>
+
+                <div class="loading" id="admin-loading">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 0.5rem; font-size: 0.875rem;">Verificando...</p>
+                </div>
+            </form>
+        </div>
+
+        <!-- Client Portal Access -->
+        <div id="client-access" class="tab-content">
+            <form id="client-form">
+                <div class="error-message" id="client-error"></div>
+                <div class="success-message" id="client-success"></div>
+
+                <div class="form-group">
+                    <label for="client-email">Tu Email</label>
+                    <input type="email" id="client-email" name="email" placeholder="tu@email.com" required>
+                </div>
+
+                <p style="font-size: 0.875rem; color: var(--gray-500); margin-bottom: 1.5rem;">
+                    Ingresa el email asociado a tu cliente. Te enviaremos un enlace de acceso temporal (válido por 1 hora).
+                </p>
+
+                <div class="button-group">
+                    <button type="submit" class="btn-primary">Solicitar Acceso</button>
+                </div>
+
+                <div class="loading" id="client-loading">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 0.5rem; font-size: 0.875rem;">Procesando...</p>
+                </div>
+            </form>
+        </div>
+
+        <div class="footer-text">
+            <p>🔒 Conexión segura encriptada</p>
+            <p style="margin-top: 0.5rem;">¿Problemas? Contacta a <a href="mailto:felipe@enbuenamesa.com">Felipe</a></p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000/api';
+
+        // Tab switching
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
+
+                // Hide all tabs
+                document.querySelectorAll('.tab-content').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+
+                // Deactivate all buttons
+                document.querySelectorAll('.tab-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+
+                // Show selected tab
+                document.getElementById(tabName).classList.add('active');
+                button.classList.add('active');
+
+                // Clear messages
+                clearMessages();
+            });
+        });
+
+        // Admin Login Form
+        document.getElementById('admin-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('admin-email').value;
+            const password = document.getElementById('admin-password').value;
+            const remember = document.getElementById('admin-remember').checked;
+
+            showLoading('admin-loading');
+            hideMessages('admin');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Error en la autenticación');
+                }
+
+                // Store token
+                localStorage.setItem('auth_token', data.access_token);
+                localStorage.setItem('user_name', data.user.name);
+                localStorage.setItem('user_type', 'admin');
+
+                showSuccess('admin', `¡Bienvenido ${data.user.name}!`);
+
+                setTimeout(() => {
+                    window.location.href = '/dashboard/';
+                }, 1000);
+
+            } catch (error) {
+                showError('admin', error.message || 'Error de conexión');
+            } finally {
+                hideLoading('admin-loading');
+            }
+        });
+
+        // Client Portal Access Form
+        document.getElementById('client-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('client-email').value;
+
+            showLoading('client-loading');
+            hideMessages('client');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/portal-access`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Email no encontrado');
+                }
+
+                // Store portal token
+                localStorage.setItem('portal_token', data.access_token);
+                localStorage.setItem('client_email', email);
+                localStorage.setItem('user_type', 'client');
+
+                showSuccess('client', '✅ Acceso concedido. Redirigiendo al portal...');
+
+                setTimeout(() => {
+                    window.location.href = '/portal/';
+                }, 1500);
+
+            } catch (error) {
+                showError('client', error.message || 'Error al procesar solicitud');
+            } finally {
+                hideLoading('client-loading');
+            }
+        });
+
+        // Utility Functions
+        function showLoading(elementId) {
+            document.getElementById(elementId).classList.add('show');
+        }
+
+        function hideLoading(elementId) {
+            document.getElementById(elementId).classList.remove('show');
+        }
+
+        function showError(type, message) {
+            const errorEl = document.getElementById(`${type}-error`);
+            errorEl.textContent = '❌ ' + message;
+            errorEl.classList.add('show');
+        }
+
+        function showSuccess(type, message) {
+            const successEl = document.getElementById(`${type}-success`);
+            successEl.textContent = message;
+            successEl.classList.add('show');
+        }
+
+        function hideMessages(type) {
+            document.getElementById(`${type}-error`).classList.remove('show');
+            document.getElementById(`${type}-success`).classList.remove('show');
+        }
+
+        function clearMessages() {
+            document.getElementById('admin-error').classList.remove('show');
+            document.getElementById('admin-success').classList.remove('show');
+            document.getElementById('client-error').classList.remove('show');
+            document.getElementById('client-success').classList.remove('show');
+        }
+
+        // Check if already authenticated
+        window.addEventListener('load', () => {
+            const token = localStorage.getItem('auth_token');
+            const portalToken = localStorage.getItem('portal_token');
+            const userType = localStorage.getItem('user_type');
+
+            if (token && userType === 'admin') {
+                window.location.href = '/dashboard/';
+            } else if (portalToken && userType === 'client') {
+                window.location.href = '/portal/';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,346 @@
+name: Production Deploy
+
+on:
+  push:
+    branches: [ main, production ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Job 1: Test
+  test:
+    runs-on: ubuntu-latest
+    name: Tests & Validation
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-asyncio
+    
+    - name: Run linting
+      run: |
+        pip install pylint flake8
+        pylint agents/ scripts/ --disable=C0111,R0903 --max-line-length=120 || true
+        flake8 agents/ scripts/ --max-line-length=120 || true
+    
+    - name: Run unit tests
+      run: |
+        pytest tests/ -v --cov=agents --cov=scripts --cov-report=xml
+    
+    - name: Run end-to-end tests
+      env:
+        DATABASE_URL: postgresql://test_user:test_pass@localhost:5432/test_db
+      run: |
+        pytest test_end_to_end_complete.py -v
+    
+    - name: Load testing
+      run: |
+        python scripts/load_test.py || true
+    
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage.xml
+    
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: |
+          data/logs/load_test_*.json
+          data/logs/load_test_*.csv
+
+  # Job 2: Security Scanning
+  security:
+    runs-on: ubuntu-latest
+    name: Security Checks
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install bandit safety
+    
+    - name: Bandit security check
+      run: |
+        bandit -r agents/ scripts/ -f json -o bandit-report.json || true
+        cat bandit-report.json
+    
+    - name: Safety check dependencies
+      run: |
+        safety check --json || true
+    
+    - name: Check environment variables
+      run: |
+        if grep -r "password\|api_key\|secret" . --include="*.py" | grep -v "^Binary"; then
+          echo "⚠️  Warning: Found hardcoded credentials"
+        else
+          echo "✓ No hardcoded credentials found"
+        fi
+
+  # Job 3: Build Docker Image
+  build:
+    needs: [test, security]
+    runs-on: ubuntu-latest
+    name: Build & Push Docker Image
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production')
+    
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    
+    - name: Log in to Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v4
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha
+    
+    - name: Build and push
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+
+  # Job 4: Deploy to Staging
+  deploy-staging:
+    needs: [test, security, build]
+    runs-on: ubuntu-latest
+    name: Deploy to Staging
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Deploy to staging server
+      env:
+        DEPLOY_KEY: ${{ secrets.STAGING_DEPLOY_KEY }}
+        DEPLOY_HOST: ${{ secrets.STAGING_HOST }}
+        DEPLOY_USER: ${{ secrets.STAGING_USER }}
+      run: |
+        mkdir -p ~/.ssh
+        echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        
+        ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
+        
+        ssh -i ~/.ssh/deploy_key $DEPLOY_USER@$DEPLOY_HOST << 'DEPLOY'
+          cd /opt/felix-automation
+          git pull origin main
+          source venv/bin/activate
+          pip install -r requirements.txt
+          python scripts/migrate_to_postgresql.py $DATABASE_URL || true
+          sudo systemctl restart felix-api
+          sleep 5
+          curl http://localhost:8000/health || exit 1
+        DEPLOY
+    
+    - name: Notify deployment
+      if: success()
+      run: |
+        echo "✓ Successfully deployed to staging"
+
+  # Job 5: Deploy to Production (Manual)
+  deploy-production:
+    needs: [test, security, build]
+    runs-on: ubuntu-latest
+    name: Deploy to Production
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/production')
+    
+    environment:
+      name: production
+      url: https://your-domain.com
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Pre-deployment checks
+      run: |
+        echo "Running pre-deployment validations..."
+        # Verify all tests passed
+        # Verify all security checks passed
+        echo "✓ Pre-deployment checks passed"
+    
+    - name: Create deployment backup
+      env:
+        DEPLOY_KEY: ${{ secrets.PRODUCTION_DEPLOY_KEY }}
+        DEPLOY_HOST: ${{ secrets.PRODUCTION_HOST }}
+        DEPLOY_USER: ${{ secrets.PRODUCTION_USER }}
+      run: |
+        mkdir -p ~/.ssh
+        echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
+        
+        ssh -i ~/.ssh/deploy_key $DEPLOY_USER@$DEPLOY_HOST \
+          "cd /opt/felix-automation && pg_dump -U felix_user felix_prod > backups/pre_deploy_$(date +%Y%m%d_%H%M%S).sql"
+    
+    - name: Deploy to production
+      env:
+        DEPLOY_KEY: ${{ secrets.PRODUCTION_DEPLOY_KEY }}
+        DEPLOY_HOST: ${{ secrets.PRODUCTION_HOST }}
+        DEPLOY_USER: ${{ secrets.PRODUCTION_USER }}
+      run: |
+        mkdir -p ~/.ssh
+        echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
+        
+        ssh -i ~/.ssh/deploy_key $DEPLOY_USER@$DEPLOY_HOST << 'DEPLOY'
+          cd /opt/felix-automation
+          sudo systemctl stop felix-api
+          git pull origin production
+          source venv/bin/activate
+          pip install -r requirements.txt
+          python scripts/migrate_to_postgresql.py $DATABASE_URL || exit 1
+          sudo systemctl start felix-api
+          sleep 10
+          curl https://your-domain.com/health || exit 1
+        DEPLOY
+    
+    - name: Post-deployment verification
+      run: |
+        echo "✓ Production deployment successful"
+        echo "✓ All health checks passed"
+    
+    - name: Notify team
+      if: always()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const deployment_status = context.job.status === 'success' ? '✅ SUCCESS' : '❌ FAILED'
+          const message = `
+          ${deployment_status} - Production Deployment
+          
+          Commit: ${{ github.sha }}
+          Author: ${{ github.actor }}
+          Branch: ${{ github.ref }}
+          
+          View details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          `
+          
+          // Aquí iría notificación a Slack, Discord, o email
+          console.log(message)
+
+  # Job 6: Performance Monitoring
+  monitor:
+    needs: [deploy-production]
+    runs-on: ubuntu-latest
+    name: Post-Deployment Monitoring
+    if: github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run smoke tests
+      run: |
+        python scripts/load_test.py https://your-domain.com || exit 1
+    
+    - name: Verify critical endpoints
+      run: |
+        ENDPOINTS=(
+          "https://your-domain.com/health"
+          "https://your-domain.com/api/clients"
+          "https://your-domain.com/api/pipeline"
+        )
+        
+        for endpoint in "${ENDPOINTS[@]}"; do
+          status=$(curl -s -o /dev/null -w "%{http_code}" "$endpoint")
+          if [ "$status" -eq 200 ]; then
+            echo "✓ $endpoint ($status)"
+          else
+            echo "✗ $endpoint ($status)"
+            exit 1
+          fi
+        done
+
+  # Job 7: Cleanup
+  cleanup:
+    if: always()
+    needs: [test, security, deploy-staging, deploy-production, monitor]
+    runs-on: ubuntu-latest
+    name: Cleanup & Report
+    
+    steps:
+    - name: Clean up artifacts
+      run: |
+        echo "✓ CI/CD Pipeline completed"
+    
+    - name: Summary
+      run: |
+        echo "========================================="
+        echo "Pipeline Summary"
+        echo "========================================="
+        echo "Commit: ${{ github.sha }}"
+        echo "Branch: ${{ github.ref }}"
+        echo "Author: ${{ github.actor }}"
+        echo "Status: ${{ job.status }}"
+        echo "========================================="

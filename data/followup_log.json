@@ -1,0 +1,68 @@
+[
+  {
+    "timestamp": "2026-10-05T12:13:05.532612",
+    "sequence_id": 1,
+    "client_id": 1,
+    "client_name": "Raíces de Cauquenes",
+    "followup_number": 1,
+    "followup_type": "check_in",
+    "recipient": "info@raices.cl",
+    "subject": "¿Viste tu propuesta? - Raíces de Cauquenes",
+    "status": "sent"
+  },
+  {
+    "timestamp": "2026-10-05T12:13:05.533024",
+    "sequence_id": 2,
+    "client_id": 2,
+    "client_name": "TechShop Premium",
+    "followup_number": 1,
+    "followup_type": "check_in",
+    "recipient": "admin@techshop.cl",
+    "subject": "¿Viste tu propuesta? - TechShop Premium",
+    "status": "sent"
+  },
+  {
+    "timestamp": "2026-10-05T12:13:05.533526",
+    "sequence_id": 2,
+    "client_id": 2,
+    "client_name": "TechShop Premium",
+    "followup_number": 2,
+    "followup_type": "data_share",
+    "recipient": "admin@techshop.cl",
+    "subject": "Datos que te pueden interesar - TechShop Premium",
+    "status": "sent"
+  },
+  {
+    "timestamp": "2026-10-05T12:13:05.533991",
+    "sequence_id": 3,
+    "client_id": 3,
+    "client_name": "ConsultorLabs",
+    "followup_number": 1,
+    "followup_type": "check_in",
+    "recipient": "hello@consultorlabs.cl",
+    "subject": "¿Viste tu propuesta? - ConsultorLabs",
+    "status": "sent"
+  },
+  {
+    "timestamp": "2026-10-05T12:13:05.534518",
+    "sequence_id": 3,
+    "client_id": 3,
+    "client_name": "ConsultorLabs",
+    "followup_number": 2,
+    "followup_type": "data_share",
+    "recipient": "hello@consultorlabs.cl",
+    "subject": "Datos que te pueden interesar - ConsultorLabs",
+    "status": "sent"
+  },
+  {
+    "timestamp": "2026-10-05T12:13:23.660084",
+    "sequence_id": 3,
+    "client_id": 3,
+    "client_name": "ConsultorLabs",
+    "followup_number": 3,
+    "followup_type": "last_touch",
+    "recipient": "hello@consultorlabs.cl",
+    "subject": "Último dato: ROI potencial - ConsultorLabs",
+    "status": "sent"
+  }
+]

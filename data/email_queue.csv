@@ -1,0 +1,4 @@
+id,client_id,email_type,recipient,subject,created_at,status
+1,1,audit_report,info@raices.cl,Tu auditoria digital completada - Raices de Cauquenes,2026-10-05T12:00:06.150823,pending
+2,1,proposal,info@raices.cl,Tu propuesta de mejora - Raices de Cauquenes,2026-10-05T12:00:06.151096,pending
+3,1,followup_1,info@raices.cl,Seguimiento: Tu auditoria digital,2026-10-05T12:00:06.151572,pending

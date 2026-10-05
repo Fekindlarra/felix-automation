@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Interno - Felix Automation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: #667eea;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .metric-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .metric-subtitle {
+            font-size: 13px;
+            color: #999;
+        }
+
+        .funnel-section {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+        }
+
+        .funnel-stage {
+            margin-bottom: 20px;
+        }
+
+        .stage-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .stage-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .stage-count {
+            color: #667eea;
+            font-weight: 700;
+        }
+
+        .stage-bar {
+            width: 100%;
+            height: 30px;
+            background: #f0f0f0;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .stage-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: white;
+            transition: width 0.5s ease;
+        }
+
+        .stage-percentage {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+            text-align: right;
+        }
+
+        .clients-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 13px;
+        }
+
+        .clients-table thead {
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .clients-table th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 700;
+            color: #667eea;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+
+        .clients-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .clients-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .client-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .stage-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .badge-prospecto {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .badge-propuesta {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .badge-negociacion {
+            background: #fce4ec;
+            color: #c2185b;
+        }
+
+        .badge-cerrado {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            font-size: 12px;
+            margin-top: 30px;
+            opacity: 0.8;
+        }
+
+        @media (max-width: 768px) {
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Dashboard Interno</h1>
+            <p>Felix Automation - Control del Embudo de Ventas (Datos en Vivo)</p>
+        </header>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">👥 Total Clientes</div>
+                <div class="metric-value">3</div>
+                <div class="metric-subtitle">En el pipeline activo</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">📧 Emails Enviados</div>
+                <div class="metric-value">0</div>
+                <div class="metric-subtitle">Esta semana</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">💰 Ingresos Esperados</div>
+                <div class="metric-value">$0 USD</div>
+                <div class="metric-subtitle">De leads ALTO potencial</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">🎯 Leads Alto Potencial</div>
+                <div class="metric-value">0</div>
+                <div class="metric-subtitle">Score >= 75</div>
+            </div>
+        </div>
+
+        <div class="funnel-section">
+            <div class="section-title">Distribución del Embudo</div>
+
+            <div class="funnel-stage">
+                <div class="stage-header">
+                    <span class="stage-name">1️⃣ PROSPECTO - Clientes identificados</span>
+                    <span class="stage-count">1 clientes</span>
+                </div>
+                <div class="stage-bar">
+                    <div class="stage-fill" style="width: 33.33333333333333%">33.3%</div>
+                </div>
+                <div class="stage-percentage">1 / 3 clientes</div>
+            </div>
+
+            <div class="funnel-stage">
+                <div class="stage-header">
+                    <span class="stage-name">2️⃣ PROPUESTA - Propuesta enviada</span>
+                    <span class="stage-count">1 clientes</span>
+                </div>
+                <div class="stage-bar">
+                    <div class="stage-fill" style="width: 33.33333333333333%">33.3%</div>
+                </div>
+                <div class="stage-percentage">1 / 3 clientes</div>
+            </div>
+
+            <div class="funnel-stage">
+                <div class="stage-header">
+                    <span class="stage-name">3️⃣ NEGOCIACIÓN - En conversación</span>
+                    <span class="stage-count">1 clientes</span>
+                </div>
+                <div class="stage-bar">
+                    <div class="stage-fill" style="width: 33.33333333333333%">33.3%</div>
+                </div>
+                <div class="stage-percentage">1 / 3 clientes</div>
+            </div>
+
+            <div class="funnel-stage">
+                <div class="stage-header">
+                    <span class="stage-name">4️⃣ CERRADO - Contratado o rechazado</span>
+                    <span class="stage-count">0 clientes</span>
+                </div>
+                <div class="stage-bar">
+                    <div class="stage-fill" style="width: 0.0%">0.0%</div>
+                </div>
+                <div class="stage-percentage">0 / 3 clientes</div>
+            </div>
+        </div>
+
+        <div class="funnel-section">
+            <div class="section-title">Clientes Activos</div>
+
+            <table class="clients-table">
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Email</th>
+                        <th>Etapa</th>
+                        <th>Creado</th>
+                        <th>Última Actualización</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+                    <tr>
+                        <td class="client-name">TechShop Premium</td>
+                        <td>admin@techshop.cl</td>
+                        <td><span class="stage-badge badge-prospecto">PROSPECTO</span></td>
+                        <td>2026-10-05</td>
+                        <td>2026-10-05</td>
+                    </tr>
+            
+                    <tr>
+                        <td class="client-name">Raíces de Cauquenes</td>
+                        <td>info@raices.cl</td>
+                        <td><span class="stage-badge badge-propuesta">PROPUESTA</span></td>
+                        <td>2026-10-05</td>
+                        <td>2026-10-05</td>
+                    </tr>
+            
+                    <tr>
+                        <td class="client-name">ConsultorLabs</td>
+                        <td>hello@consultorlabs.cl</td>
+                        <td><span class="stage-badge badge-negociacion">NEGOCIACION</span></td>
+                        <td>2026-10-05</td>
+                        <td>2026-10-05</td>
+                    </tr>
+            
+                </tbody>
+            </table>
+        </div>
+
+        <div class="footer">
+            <p>Felix Automation Dashboard | Última actualización: 2026-10-05 12:07:08</p>
+        </div>
+    </div>
+</body>
+</html>

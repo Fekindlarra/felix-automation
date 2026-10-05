@@ -1,0 +1,462 @@
+# ===============================================
+# FELIX AUTOMATION - OPCIÓN C CONFIG
+# ===============================================
+# Sistema de Automatización de Ventas - FASE 9+
+# Configuración centralizada para todos los agentes
+
+system:
+  name: "Felix Automation - Opción C"
+  version: "8.0"
+  mode: "production"  # development, staging, production
+  debug: false
+
+# ===============================================
+# BASE DE DATOS
+# ===============================================
+database:
+  type: "sqlite"
+  path: "data/pipeline.db"
+  journal_mode: "WAL"  # Write-Ahead Logging para mejor concurrencia
+  timeout: 30
+
+# ===============================================
+# EMAIL (SendGrid)
+# ===============================================
+email:
+  provider: "sendgrid"
+  sendgrid_api_key: "${SENDGRID_API_KEY}"  # Definir en variables de entorno
+  from_email: "ventas@enbuenamesa.com"
+  from_name: "Felix Automation"
+  demo_mode: true  # Si true, no envía emails reales
+  demo_log_path: "data/logs/email_demo.json"
+  
+  # Plantillas de emails
+  templates:
+    proposal_subject: "Propuesta Personalizada: Auditoría y Estrategia Digital"
+    followup_subject_1: "Follow-up: Tu Auditoría Digital"
+    followup_subject_2: "Oportunidades Identificadas"
+    followup_subject_3: "Próximas Acciones Recomendadas"
+
+# ===============================================
+# AGENTES DE VENTA
+# ===============================================
+agents:
+  multi_platform_auditor:
+    enabled: true
+    timeout: 300  # 5 minutos por auditoría
+    platforms:
+      - "web"
+      - "facebook_ads"
+      - "google_ads"
+    parallel: true
+    max_workers: 4
+    
+  lead_scorer:
+    enabled: true
+    timeout: 60
+    scoring_method: "hybrid"  # hybrid, weighted, ml
+    # Pesos para cálculo de score
+    weights:
+      web_audit: 0.40
+      facebook_ads: 0.30
+      google_ads: 0.30
+    # Criterios de potencial
+    thresholds:
+      high: 75    # Alto potencial
+      medium: 50  # Medio potencial
+      low: 0      # Bajo potencial
+  
+  proposal_generator:
+    enabled: true
+    timeout: 120
+    output_formats:
+      - "html"
+      - "pdf"
+    pdf_engine: "weasyprint"  # or reportlab
+    
+  email_sender:
+    enabled: true
+    timeout: 60
+    batch_size: 10
+    delay_between_sends: 0.5  # segundos
+    retry_attempts: 3
+    retry_delay: 300  # segundos
+    
+  followup_agent:
+    enabled: true
+    timeout: 60
+    sequences:
+      - days: 2
+        template: "followup_subject_1"
+      - days: 4
+        template: "followup_subject_2"
+      - days: 7
+        template: "followup_subject_3"
+    
+  sales_pipeline:
+    enabled: true
+    timeout: 60
+    stages:
+      - "prospecto"
+      - "propuesta"
+      - "negociacion"
+      - "cerrado"
+    reporting_schedule: "weekly"  # weekly, daily, on-demand
+    
+  funnel_management:
+    enabled: true
+    timeout: 60
+    dashboards:
+      internal: true
+      client: true
+    auto_generate: true
+    update_frequency: 3600  # segundos (1 hora)
+
+# ===============================================
+# AUDITORÍAS
+# ===============================================
+auditors:
+  web:
+    # Performance
+    performance:
+      timeout_threshold: 3000  # ms
+      size_threshold: 5  # MB
+    
+    # Security
+    security:
+      check_https: true
+      check_headers: true
+      check_certs: true
+    
+    # Tracking
+    tracking:
+      check_analytics: true
+      check_gtag: true
+      check_pixel: true
+    
+    # Technology
+    technology:
+      detect_cms: true
+      detect_framework: true
+      detect_hosting: true
+  
+  facebook_ads:
+    # Estructura
+    check_campaigns: true
+    check_adsets: true
+    check_ads: true
+    
+    # Contenido
+    check_copy: true
+    check_visuals: true
+    check_cta: true
+    
+    # Targeting
+    check_audience: true
+    check_placement: true
+    check_schedule: true
+    
+    # Tracking
+    check_pixel: true
+    check_conversion_tracking: true
+  
+  google_ads:
+    # Estructura
+    check_campaigns: true
+    check_adgroups: true
+    check_keywords: true
+    
+    # Keywords
+    match_types: ["exact", "phrase", "broad"]
+    quality_score_min: 5
+    
+    # Quality Score
+    expected_ctr_min: 2.0  # %
+    expected_quality_score: 7
+    
+    # Tracking
+    check_tracking_template: true
+    check_conversion_tracking: true
+
+# ===============================================
+# PIPELINE Y EMBUDO
+# ===============================================
+pipeline:
+  stages:
+    prospecto:
+      description: "Cliente potencial identificado"
+      sla_days: 1
+    propuesta:
+      description: "Propuesta enviada y revisada"
+      sla_days: 7
+    negociacion:
+      description: "Discusión de términos y ajustes"
+      sla_days: 14
+    cerrado:
+      description: "Contrato firmado o rechazado"
+      sla_days: 0
+
+# ===============================================
+# DASHBOARDS
+# ===============================================
+dashboards:
+  internal:
+    refresh_interval: 3600  # segundos
+    metrics:
+      - "total_clients"
+      - "clients_by_stage"
+      - "conversion_rate"
+      - "revenue_forecast"
+      - "agent_performance"
+      - "scoring_distribution"
+  
+  client:
+    refresh_interval: 3600
+    visibility:
+      - "own_progress"
+      - "audit_summary"
+      - "proposal_status"
+      - "timeline"
+    hide:
+      - "revenue"
+      - "other_clients"
+
+# ===============================================
+# LOGGING
+# ===============================================
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "json"  # json or text
+  file: "data/logs/sistema.log"
+  max_size_mb: 10
+  backup_count: 5
+  
+  # Logs por componente
+  components:
+    agents: "data/logs/agents.log"
+    auditors: "data/logs/auditors.log"
+    database: "data/logs/database.log"
+    email: "data/logs/email.log"
+    pipeline: "data/logs/pipeline.log"
+
+# ===============================================
+# ALMACENAMIENTO
+# ===============================================
+storage:
+  audits_path: "data/audits"
+  proposals_path: "data/proposals"
+  dashboards_path: "data/dashboards"
+  logs_path: "data/logs"
+  pipeline_path: "data/pipeline"
+  
+  # Retención de datos
+  retention:
+    audits_days: 365
+    logs_days: 90
+    cache_days: 30
+
+# ===============================================
+# HORARIOS Y SCHEDULING
+# ===============================================
+scheduling:
+  # Cuando ejecutar el pipeline automáticamente
+  auto_execute: false  # true para cron jobs
+  
+  # Horarios cron (si auto_execute es true)
+  cron_times:
+    - "0 8 * * *"      # Todos los días a las 8 AM
+    - "0 14 * * *"     # Todos los días a las 2 PM
+  
+  # Timezone
+  timezone: "America/Santiago"
+
+# ===============================================
+# NOTIFICACIONES
+# ===============================================
+notifications:
+  enabled: true
+  channels:
+    - "log"
+    - "email"
+  
+  email_on:
+    - "pipeline_error"
+    - "high_value_lead"
+    - "pipeline_stage_change"
+  
+  email_recipients:
+    admin: "felipe@enbuenamesa.com"
+
+# ===============================================
+# SEGURIDAD
+# ===============================================
+security:
+  # Encriptación de credenciales
+  credentials_encryption: true
+  cipher: "AES-256-CBC"
+  
+  # Acceso temporal a credenciales
+  temp_credential_ttl: 3600  # segundos (1 hora)
+  
+  # Limpieza automática de credenciales
+  auto_cleanup: true
+  cleanup_delay: 300  # segundos (5 minutos)
+
+# ===============================================
+# FEATURES (FASE 9+)
+# ===============================================
+features:
+  # FASE 9: Webhook Integration
+  webhooks_enabled: false
+  webhook_port: 8000
+  webhook_secret: "${WEBHOOK_SECRET}"
+
+  # White-Box Audit - Auditoría Profunda con Credenciales
+  whitebox_enabled: true
+  whitebox:
+    shopify_enabled: true
+    jumpseller_enabled: true
+    code_analysis_enabled: true
+
+# ===============================================
+# WHITE-BOX AUDIT - CONFIGURACIÓN DETALLADA
+# ===============================================
+whitebox:
+  # Master key para encriptación Fernet
+  # IMPORTANTE: Definir en variables de entorno: WHITEBOX_MASTER_KEY
+  # Si no se define, se generará automáticamente (inseguro para producción)
+  master_key: "${WHITEBOX_MASTER_KEY}"
+
+  # TTL para credenciales almacenadas en memoria (segundos)
+  ttl_seconds: 3600  # 1 hora (recomendado: 3600-7200)
+
+  # Limpieza automática de credenciales expiradas
+  auto_cleanup_enabled: true
+  cleanup_interval: 300  # segundos (5 minutos)
+
+  # Plataformas soportadas
+  shopify:
+    enabled: true
+    api_version: "2024-01"
+    timeout: 60  # segundos
+    scopes:
+      - "read_products"
+      - "read_orders"
+      - "read_analytics"
+      - "read_customers"
+    # Datos a auditar
+    audit_config:
+      - "configuration"
+      - "performance"
+      - "security"
+      - "integrations"
+      - "seo"
+
+  jumpseller:
+    enabled: true
+    api_version: "2.0"
+    timeout: 60  # segundos
+    # Datos a auditar
+    audit_config:
+      - "configuration"
+      - "products"
+      - "transactions"
+      - "integrations"
+      - "security"
+
+  code:
+    enabled: true
+    timeout: 120  # segundos (más tiempo para análisis de código)
+    # Métodos de acceso
+    access_methods:
+      - "ssh"
+      - "ftp"
+    # Parámetros SSH
+    ssh:
+      timeout: 30  # segundos
+      port: 22
+      key_algorithms: ["rsa", "ed25519"]
+    # Patrones a ignorar en análisis
+    ignore_patterns:
+      - ".git"
+      - "node_modules"
+      - "__pycache__"
+      - ".env"
+      - ".venv"
+      - "build/"
+      - "dist/"
+    # Datos a auditar
+    audit_config:
+      - "architecture"
+      - "security"
+      - "performance"
+      - "best_practices"
+      - "dependencies"
+
+  # Logging de auditorías White-Box
+  logging:
+    enabled: true
+    log_path: "data/logs/whitebox.log"
+    # IMPORTANTE: Nunca loguear credenciales sin encriptar
+    log_credentials: false
+    log_findings: true
+
+  # Seguridad adicional
+  security:
+    # Requiere confirmación antes de usar credenciales
+    require_confirmation: false
+    # Notificar al cliente después de auditoría
+    notify_client: true
+    # Eliminar credenciales después de N días de inactividad
+    auto_delete_days: 30
+
+  # Resultados y reportes
+  reporting:
+    # Generar reporte técnico detallado
+    detailed_reports: true
+    # Incluir recomendaciones de seguridad
+    include_recommendations: true
+    # Formato de reporte
+    formats:
+      - "json"
+      - "pdf"
+      - "html"
+
+# ===============================================
+# INTEGRACIONES EXTERNAS
+# ===============================================
+integrations:
+  # APIs que se pueden conectar
+  shopify:
+    enabled: false
+    api_version: "2024-01"
+    redirect_uri: "http://localhost:8000/auth/shopify/callback"
+  
+  jumpseller:
+    enabled: false
+    auth_type: "api_key"
+  
+  slack:
+    enabled: false
+    webhook_url: "${SLACK_WEBHOOK_URL}"
+  
+  zapier:
+    enabled: false
+    webhook_url: "${ZAPIER_WEBHOOK_URL}"
+
+# ===============================================
+# LÍMITES Y CUOTAS
+# ===============================================
+limits:
+  max_clients_per_run: 1000
+  max_parallel_audits: 10
+  max_email_per_day: 5000
+  max_api_calls_per_minute: 100
+  timeout_global: 600  # segundos (10 minutos)
+
+# ===============================================
+# ENVIRONMENT OVERRIDES
+# ===============================================
+# Se pueden sobrescribir con variables de entorno
+# Formato: FELIX_<SECTION>_<KEY> = valor
+# Ejemplo: FELIX_EMAIL_DEMO_MODE=false

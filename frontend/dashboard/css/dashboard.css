@@ -1,0 +1,332 @@
+/* ============================================================================
+   DASHBOARD SPECIFIC STYLES
+   FASE 12 Frontend
+   ============================================================================ */
+
+/* Pipeline Visualization */
+
+.pipeline-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--spacing-lg);
+    margin-top: var(--spacing-xl);
+}
+
+.pipeline-stage {
+    background-color: var(--white);
+    border: 2px dashed var(--gray-300);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    min-height: 400px;
+    transition: all 0.3s ease;
+}
+
+.pipeline-stage:hover {
+    border-color: var(--primary);
+    box-shadow: var(--shadow-md);
+}
+
+.pipeline-stage h3 {
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-md);
+    border-bottom: 2px solid var(--gray-200);
+    color: var(--gray-900);
+}
+
+.stage-clients {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    min-height: 300px;
+}
+
+.client-card {
+    padding: var(--spacing-md);
+    background-color: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    cursor: move;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.client-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    background-color: var(--gray-100);
+}
+
+.client-card.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg);
+}
+
+.client-card-name {
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: var(--spacing-xs);
+}
+
+.client-card-company {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+    margin-bottom: var(--spacing-xs);
+}
+
+.client-card-score {
+    display: inline-block;
+    background-color: var(--primary);
+    color: var(--white);
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Audits List */
+
+.audits-list {
+    display: grid;
+    gap: var(--spacing-lg);
+}
+
+.audit-group {
+    background-color: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-sm);
+}
+
+.audit-group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-lg);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.audit-group-title {
+    font-weight: 600;
+    color: var(--gray-900);
+    font-size: 1.125rem;
+}
+
+.audit-group-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: var(--spacing-md);
+}
+
+.audit-item {
+    padding: var(--spacing-md);
+    background-color: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    text-align: center;
+}
+
+.audit-platform {
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: var(--spacing-sm);
+    font-size: 0.875rem;
+    text-transform: capitalize;
+}
+
+.audit-score {
+    display: inline-block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.audit-score.high { color: var(--success); }
+.audit-score.medium { color: var(--warning); }
+.audit-score.low { color: var(--danger); }
+
+.audit-type {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Reports Options */
+
+.reports-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-lg);
+    margin-top: var(--spacing-xl);
+}
+
+.reports-options .btn-primary {
+    padding: var(--spacing-lg);
+    font-size: 1.125rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.reports-options .btn-primary:hover {
+    transform: translateY(-4px);
+}
+
+/* Status Badges */
+
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.badge-prospecto {
+    background-color: rgba(59, 130, 246, 0.1);
+    color: #3B82F6;
+}
+
+.badge-propuesta {
+    background-color: rgba(245, 158, 11, 0.1);
+    color: #F59E0B;
+}
+
+.badge-negociacion {
+    background-color: rgba(139, 92, 246, 0.1);
+    color: #8B5CF6;
+}
+
+.badge-cerrado {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: #10B981;
+}
+
+/* Empty States */
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    color: var(--gray-500);
+    gap: var(--spacing-lg);
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    opacity: 0.5;
+}
+
+.empty-state-text {
+    text-align: center;
+    max-width: 300px;
+}
+
+.empty-state-text h3 {
+    color: var(--gray-700);
+    margin-bottom: var(--spacing-sm);
+}
+
+/* Status Indicators */
+
+.status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+.status-indicator.online {
+    background-color: var(--success);
+    animation: pulse 2s infinite;
+}
+
+.status-indicator.offline {
+    background-color: var(--gray-400);
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Revenue Display */
+
+.revenue-display {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--success);
+    font-family: var(--font-mono);
+}
+
+.revenue-symbol {
+    font-size: 1rem;
+    margin-right: 4px;
+}
+
+/* Metric Cards Grid */
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-lg);
+    margin: var(--spacing-xl) 0;
+}
+
+.metric-card {
+    padding: var(--spacing-lg);
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: var(--white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+}
+
+.metric-card-value {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-sm);
+}
+
+.metric-card-label {
+    font-size: 0.875rem;
+    opacity: 0.9;
+}
+
+.metric-card.secondary {
+    background: linear-gradient(135deg, var(--secondary), #DB2777);
+}
+
+.metric-card.success {
+    background: linear-gradient(135deg, var(--success), #059669);
+}
+
+.metric-card.warning {
+    background: linear-gradient(135deg, var(--warning), #D97706);
+}
+
+/* Trends */
+
+.trend-up {
+    color: var(--success);
+}
+
+.trend-down {
+    color: var(--danger);
+}
+
+.trend-icon {
+    display: inline-block;
+    margin-right: 4px;
+}

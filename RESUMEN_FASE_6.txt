@@ -1,0 +1,349 @@
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                                                                                ║
+║          🎉 FASE 6: SALES PIPELINE AGENT - COMPLETADA ✅                      ║
+║                                                                                ║
+║              Sistema de Análisis y Predicción del Pipeline de Ventas          ║
+║                                                                                ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+
+═══════════════════════════════════════════════════════════════════════════════════
+🏗️ COMPONENTES CONSTRUIDOS
+═══════════════════════════════════════════════════════════════════════════════════
+
+1️⃣ SALES PIPELINE AGENT (agents/sales_pipeline_agent.py)
+   ✅ get_pipeline_health() - Análisis completo del pipeline
+   ✅ predict_deal_closure(client_id) - Predice probabilidad de cierre
+   ✅ get_at_risk_clients() - Identifica clientes en riesgo
+   ✅ generate_weekly_report() - Reporte semanal automático
+   ✅ export_pipeline_analytics() - Exporta análisis en JSON
+   ✅ get_next_actions() - Acciones recomendadas por cliente
+   ✅ _calculate_weighted_score(static method) - Cálculo de predicción
+
+2️⃣ TEST AUTOMATIZADO (test_fase6.py)
+   ✅ Análisis de salud del pipeline
+   ✅ Predicción de cierre para cada cliente
+   ✅ Identificación de clientes en riesgo
+   ✅ Generación de reportes semanales
+   ✅ Exportación de datos a JSON
+   ✅ Generación de estadísticas finales
+
+3️⃣ PERSISTENCIA DE DATOS
+   ✅ data/pipeline_analytics.json - Análisis exportable
+   ✅ data/pipeline.json - Estado del pipeline (desde FASE 7)
+
+
+═══════════════════════════════════════════════════════════════════════════════════
+📊 EL MODELO PREDICTIVO (5 FACTORES)
+═══════════════════════════════════════════════════════════════════════════════════
+
+    FACTOR                  PESO    DESCRIPCIÓN
+    ══════════════════      ════    ════════════════════════════════════════
+
+    Stage Progression       30%     ¿En qué etapa está? (Prospecto → Cerrado)
+    Engagement              25%     ¿Ha abierto emails? ¿Ha respondido?
+    Lead Score              20%     ¿Es un cliente de alto potencial?
+    Days in Stage           15%     ¿Cuánto tiempo lleva en esta etapa?
+    Communication Freq      10%     ¿Hay contacto reciente?
+
+    FÓRMULA:
+    ────────
+    Probability = (stage × 0.30) + (engagement × 0.25) + (lead_score × 0.20)
+                + (days_in_stage × 0.15) + (comm_freq × 0.10)
+
+    CATEGORIZACIÓN:
+    ───────────────
+    🟢 MUY PROBABLE (75%+)     → Probable cierre pronto
+    🟡 PROBABLE (50-74%)       → Monitor activo recomendado
+    🔴 BAJO POTENCIAL (<50%)   → Requiere intervención o rechazo
+
+
+═══════════════════════════════════════════════════════════════════════════════════
+📈 FLUJO DE DATOS
+═══════════════════════════════════════════════════════════════════════════════════
+
+    FASE 3 (Lead Scorer)            FASE 5 (Follow-up Agent)
+    ════════════════════            ═════════════════════════
+    Lead Scores                     Email Opens/Clicks
+         ↓                                ↓
+         └────────────────┬───────────────┘
+                          ↓
+                [SALES PIPELINE AGENT]
+                          ↓
+         ┌────────────────┼────────────────┐
+         ↓                ↓                ↓
+    Pipeline Health   Predictions      At-Risk
+    (Total clientes)  (% de cierre)     Clients
+         ↓                ↓                ↓
+    [pipeline_analytics.json]
+         ↓
+    📊 Reports & Dashboards
+
+
+═══════════════════════════════════════════════════════════════════════════════════
+📈 MÉTRICAS CALCULADAS
+═══════════════════════════════════════════════════════════════════════════════════
+
+ANÁLISIS DE SALUD:
+  • Total de clientes en pipeline
+  • Distribución por etapa (Prospecto, Propuesta, Negociación, Cerrado)
+  • Porcentaje en cada etapa
+  • Número de deals cerrados
+  • Velocidad de conversión (% de cierre)
+  • Días promedio por etapa
+
+PREDICCIONES POR CLIENTE:
+  • Probabilidad de cierre (0-100%)
+  • Categoría (Muy Probable / Probable / Bajo Potencial)
+  • Factores clave de predicción
+  • Recomendación de acción
+
+CLIENTES EN RIESGO:
+  • Días sin actualización
+  • Último contacto
+  • Acción recomendada
+
+ACCIONES SUGERIDAS:
+  • Próximos pasos específicos por cliente
+  • Prioridad (Alta/Media/Baja)
+  • Timeline recomendado
+
+
+═══════════════════════════════════════════════════════════════════════════════════
+🚀 CÓMO USAR
+═══════════════════════════════════════════════════════════════════════════════════
+
+OPCIÓN 1: PROBAR EL SISTEMA (Lo más simple)
+──────────────────────────────────────────
+1. Ejecuta el test:
+   $ python3 test_fase6.py
+
+2. Verás:
+   - Análisis de salud del pipeline
+   - Predicciones para cada cliente
+   - Clientes en riesgo
+   - Reporte semanal
+   - Estadísticas finales
+
+3. Datos generados:
+   - data/pipeline_analytics.json (exportación completa)
+
+
+OPCIÓN 2: INTEGRAR EN TU CÓDIGO
+───────────────────────────────
+from agents.sales_pipeline_agent import SalesPipelineAgent
+
+agent = SalesPipelineAgent(orchestrator)
+
+# Análisis de salud
+health = agent.get_pipeline_health()
+print(f"Total clientes: {health['total_clientes']}")
+print(f"Cerrados: {health['cerrados']} ({health['conversion_pct']:.1f}%)")
+
+# Predicción de cierre para un cliente
+prediction = agent.predict_deal_closure(client_id=1)
+print(f"{prediction['client_name']}: {prediction['probability']:.1f}% " +
+      f"({prediction['category']})")
+
+# Clientes en riesgo
+at_risk = agent.get_at_risk_clients()
+for client in at_risk:
+    print(f"⚠️  {client['client_name']}: {client['days_without_update']} días sin update")
+
+# Acciones sugeridas
+next_actions = agent.get_next_actions()
+
+# Reporte semanal
+report = agent.generate_weekly_report()
+print(report)
+
+# Exportar análisis
+agent.export_pipeline_analytics()
+
+
+═══════════════════════════════════════════════════════════════════════════════════
+📁 ARCHIVOS CREADOS
+═══════════════════════════════════════════════════════════════════════════════════
+
+CÓDIGO FUENTE:
+├── agents/sales_pipeline_agent.py ........... (~350 líneas)
+├── test_fase6.py ............................ (~200 líneas)
+└── FASE_6_GUIA.md ........................... (Documentación)
+
+DATOS (Generados por test_fase6.py):
+└── data/pipeline_analytics.json ............ (Análisis exportable)
+
+
+═══════════════════════════════════════════════════════════════════════════════════
+✅ CHECKLIST - ¿QUÉ SE LOGRÓ?
+═══════════════════════════════════════════════════════════════════════════════════
+
+BACKEND:
+ ✅ Agente de análisis y predicción de pipeline
+ ✅ Modelo predictivo de 5 factores
+ ✅ Identificación de clientes en riesgo
+ ✅ Cálculo de próximas acciones
+ ✅ Generación de reportes semanales
+ ✅ Persistencia en JSON files
+ ✅ Persistencia en BD SQLite (via orchestrator)
+ ✅ Reporte en formato ASCII para consola
+
+TESTING:
+ ✅ Script de test completo (test_fase6.py)
+ ✅ Genera datos de prueba realistas
+ ✅ Exporta JSONs para integración
+
+DOCUMENTACIÓN:
+ ✅ Guía completa (FASE_6_GUIA.md)
+ ✅ Ejemplos de código Python
+ ✅ Explicación de modelo predictivo
+ ✅ FAQ y troubleshooting
+
+
+═══════════════════════════════════════════════════════════════════════════════════
+🔗 INTEGRACIÓN CON OTRAS FASES
+═══════════════════════════════════════════════════════════════════════════════════
+
+ENTRADA (Recibe datos de):
+  ← FASE 3: Lead Scorer Agent (scores de clientes)
+  ← FASE 5: Follow-up Agent (engagement data)
+  ← FASE 7: Funnel Management Agent (estado del embudo)
+
+SALIDA (Proporciona a):
+  → Predicciones de cierre (para dashboards)
+  → Alertas de clientes en riesgo
+  → Acciones sugeridas (para agentes futuros)
+  → Reportes semanales (email automático)
+
+
+═══════════════════════════════════════════════════════════════════════════════════
+🎨 PERSONALIZACIÓN
+═══════════════════════════════════════════════════════════════════════════════════
+
+CAMBIAR PESOS DE PREDICCIÓN:
+  En agents/sales_pipeline_agent.py:
+  CIERRE_PESOS = {
+      "stage_progression": 0.30,    # Cambiar a 0.25, 0.35, etc
+      "engagement": 0.25,
+      "lead_score": 0.20,
+      "days_in_stage": 0.15,
+      "communication_frequency": 0.10
+  }
+
+CAMBIAR UMBRALES DE RIESGO:
+  En get_at_risk_clients():
+  AT_RISK_THRESHOLD = 14  # Cambiar a 7, 21, etc (días)
+
+CAMBIAR CATEGORÍAS:
+  En predict_deal_closure():
+  - Editar los umbrales de MUY_PROBABLE (75%) y PROBABLE (50%)
+
+
+═══════════════════════════════════════════════════════════════════════════════════
+📊 EJEMPLO: EJECUCIÓN
+═══════════════════════════════════════════════════════════════════════════════════
+
+$ python3 test_fase6.py
+
+╔════════════════════════════════════════════════════════════════╗
+║           TEST FASE 6: SALES PIPELINE AGENT                  ║
+║      Análisis y Predicción del Pipeline de Ventas            ║
+╚════════════════════════════════════════════════════════════════╝
+
+1️⃣ ANALIZANDO SALUD DEL PIPELINE
+----------------------------------------------------------------------
+📊 SALUD DEL PIPELINE:
+   • Total clientes: 3
+   • Cerrados: 0 (0.0% velocity)
+   • Prospecto: 1 (33.3%)
+   • Propuesta: 1 (33.3%)
+   • Negociación: 1 (33.3%)
+   • Avg días en stage: 3.0
+
+2️⃣ PREDICCIONES DE CIERRE
+----------------------------------------------------------------------
+🟡 Raíces de Cauquenes (Propuesta): 53.3% - PROBABLE
+🔴 TechShop Premium (Prospecto): 49.2% - BAJO POTENCIAL
+🔴 ConsultorLabs (Negociación): 42.5% - BAJO POTENCIAL
+
+Probability Promedio: 48.3%
+
+3️⃣ CLIENTES EN RIESGO
+----------------------------------------------------------------------
+✅ No hay clientes en riesgo (ninguno > 14 días sin update)
+
+4️⃣ ACCIONES SUGERIDAS
+----------------------------------------------------------------------
+📋 PRÓXIMOS PASOS POR CLIENTE:
+   1. Raíces de Cauquenes: Enviar segunda propuesta | MEDIA | 3 días
+   2. TechShop Premium: Agendar call | ALTA | 1 día
+   3. ConsultorLabs: Confirmar términos | MEDIA | 2 días
+
+5️⃣ REPORTE SEMANAL
+----------------------------------------------------------------------
+[Reporte completo con análisis temporal...]
+
+6️⃣ EXPORTAR ANALYTICS
+----------------------------------------------------------------------
+✅ Datos exportados a: data/pipeline_analytics.json
+
+7️⃣ ESTADÍSTICAS FINALES
+----------------------------------------------------------------------
+📈 RESUMEN DE FASE 6:
+   • Total clientes: 3
+   • Clientes ALTO potencial (75%+): 0
+   • Clientes MEDIO potencial (50-74%): 1
+   • Clientes BAJO potencial (<50%): 2
+   • Probability promedio: 48.3%
+   • Clientes en riesgo: 0
+   • Deals cerrados esta semana: 0
+
+
+═══════════════════════════════════════════════════════════════════════════════════
+🚀 PRÓXIMAS FASES
+═══════════════════════════════════════════════════════════════════════════════════
+
+FASE 7: Funnel Management Agent (Ya completada)
+  → Gestiona embudo con dashboards internos + cliente
+  → Sincroniza con Sales Pipeline Agent
+  → Proporciona transparencia al cliente
+
+FASE 8: Integración Completa (Próxima)
+  → Conectar todos los 7 agentes
+  → Sistema end-to-end funcionando
+  → API para integración externa
+  → Automación de reportes semanales
+
+FASE 9: Webhooks y Eventos (Futuro)
+  → Webhooks de SendGrid para opens/clicks
+  → Webhooks de Shopify para nuevos pedidos
+  → Eventos en tiempo real
+
+
+═══════════════════════════════════════════════════════════════════════════════════
+📞 COMANDOS RÁPIDOS
+═══════════════════════════════════════════════════════════════════════════════════
+
+REGENERAR TEST DATA:
+  python3 test_fase6.py
+
+VER DATOS EXPORTADOS:
+  cat data/pipeline_analytics.json
+
+VER GUÍA COMPLETA:
+  cat FASE_6_GUIA.md
+
+VER CÓDIGO DEL AGENTE:
+  cat agents/sales_pipeline_agent.py
+
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+                    ✅ FASE 6: COMPLETADA CON ÉXITO
+
+              Predicción inteligente del pipeline
+           Identificación automática de oportunidades
+                 Acciones sugeridas por cliente
+
+═══════════════════════════════════════════════════════════════════════════════════
+

@@ -1,0 +1,61 @@
+{
+  "timestamp": "2026-10-05T12:07:08.550147",
+  "titulo": "Dashboard Interno - Felix Automation",
+  "metricas": {
+    "total_clientes": 3,
+    "emails_enviados": 0,
+    "ingresos_esperados": "$0 USD",
+    "leads_alto_potencial": 0
+  },
+  "por_etapa": {
+    "prospecto": 1,
+    "propuesta": 1,
+    "negociacion": 1,
+    "cerrado": 0
+  },
+  "porcentajes": {
+    "prospecto": 33.3,
+    "propuesta": 33.3,
+    "negociacion": 33.3,
+    "cerrado": 0.0
+  },
+  "clients_by_stage": {
+    "prospecto": [
+      {
+        "client_id": 2,
+        "client_name": "TechShop Premium",
+        "email": "admin@techshop.cl",
+        "stage": 1,
+        "stage_name": "prospecto",
+        "created_at": "2026-10-05T12:04:52.348874",
+        "updated_at": "2026-10-05T12:07:08.545731",
+        "notes": ""
+      }
+    ],
+    "propuesta": [
+      {
+        "client_id": 1,
+        "client_name": "Raíces de Cauquenes",
+        "email": "info@raices.cl",
+        "stage": 2,
+        "stage_name": "propuesta",
+        "created_at": "2026-10-05T12:04:52.348589",
+        "updated_at": "2026-10-05T12:07:08.544965",
+        "notes": ""
+      }
+    ],
+    "negociacion": [
+      {
+        "client_id": 3,
+        "client_name": "ConsultorLabs",
+        "email": "hello@consultorlabs.cl",
+        "stage": 3,
+        "stage_name": "negociacion",
+        "created_at": "2026-10-05T12:04:52.349944",
+        "updated_at": "2026-10-05T12:07:08.546237",
+        "notes": ""
+      }
+    ],
+    "cerrado": []
+  }
+}

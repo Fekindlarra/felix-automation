@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Portal - Felix Automation</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <div class="logo">
+                <span class="logo-icon">🚀</span>
+                <span class="logo-text">Felix</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <span class="user-info" id="userInfo">Cliente</span>
+            <button class="btn-logout" onclick="logout()">Salir</button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <nav class="nav">
+                <button class="nav-item active" onclick="showSection('resumen')">
+                    📊 Resumen
+                </button>
+                <button class="nav-item" onclick="showSection('auditorias')">
+                    🔍 Mis Auditorías
+                </button>
+                <button class="nav-item" onclick="showSection('propuesta')">
+                    📄 Mi Propuesta
+                </button>
+                <button class="nav-item" onclick="showSection('pipeline')">
+                    🎯 Mi Progreso
+                </button>
+                <button class="nav-item" onclick="showSection('contacto')">
+                    ✉️ Contacto
+                </button>
+            </nav>
+        </aside>
+
+        <!-- Content Area -->
+        <div class="content">
+            <!-- Loading Indicator -->
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Cargando información...</p>
+            </div>
+
+            <!-- Error Modal -->
+            <div id="errorModal" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <span class="close" onclick="closeErrorModal()">&times;</span>
+                    <h2>Aviso</h2>
+                    <p id="errorMessage"></p>
+                    <button class="btn-primary" onclick="closeErrorModal()">Entendido</button>
+                </div>
+            </div>
+
+            <!-- 1. Resumen Section -->
+            <section id="resumen" class="section active">
+                <div class="section-header">
+                    <h1>Mi Portal</h1>
+                    <p class="subtitle">Bienvenido a tu dashboard personalizado</p>
+                </div>
+
+                <div class="summary-grid">
+                    <!-- Client Info Card -->
+                    <div class="info-card">
+                        <h3>Información del Cliente</h3>
+                        <div class="info-item">
+                            <span class="info-label">Nombre:</span>
+                            <span class="info-value" id="clientName">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Empresa:</span>
+                            <span class="info-value" id="clientCompany">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Email:</span>
+                            <span class="info-value" id="clientEmail">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Industria:</span>
+                            <span class="info-value" id="clientIndustry">-</span>
+                        </div>
+                    </div>
+
+                    <!-- Status Card -->
+                    <div class="status-card">
+                        <h3>Tu Estado</h3>
+                        <div class="status-badge" id="stageStatus">
+                            <span class="stage-name">-</span>
+                        </div>
+                        <div class="status-timeline">
+                            <div class="timeline-step completed">
+                                <span class="step-number">1</span>
+                                <span class="step-name">Prospecto</span>
+                            </div>
+                            <div class="timeline-step" id="step2">
+                                <span class="step-number">2</span>
+                                <span class="step-name">Propuesta</span>
+                            </div>
+                            <div class="timeline-step" id="step3">
+                                <span class="step-number">3</span>
+                                <span class="step-name">Negociación</span>
+                            </div>
+                            <div class="timeline-step" id="step4">
+                                <span class="step-number">4</span>
+                                <span class="step-name">Cerrado</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Score Card -->
+                    <div class="score-card">
+                        <h3>Tu Puntuación</h3>
+                        <div class="big-score" id="clientScore">0</div>
+                        <p class="score-label">de 100</p>
+                        <p class="score-description">Tu potencial de negocio según nuestro análisis</p>
+                    </div>
+                </div>
+
+                <!-- Latest Audit Summary -->
+                <div class="latest-audit">
+                    <h2>Última Auditoría</h2>
+                    <div id="latestAuditContent">
+                        <p class="text-center">Cargando auditoría...</p>
+                    </div>
+                </div>
+
+                <!-- Next Steps -->
+                <div class="next-steps">
+                    <h2>Próximos Pasos</h2>
+                    <div class="steps-list">
+                        <div class="step-item">
+                            <div class="step-icon">📋</div>
+                            <div class="step-content">
+                                <h3>Revisa tu Propuesta</h3>
+                                <p>Conoce nuestras recomendaciones y servicios personalizados para tu negocio</p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-icon">❓</div>
+                            <div class="step-content">
+                                <h3>Aclara tus Dudas</h3>
+                                <p>¿Preguntas sobre los resultados? Contáctanos directamente</p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-icon">🤝</div>
+                            <div class="step-content">
+                                <h3>Comencemos Juntos</h3>
+                                <p>Si todo te parece correcto, iniciemos la implementación</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. Auditorías Section -->
+            <section id="auditorias" class="section">
+                <div class="section-header">
+                    <h1>Mis Auditorías</h1>
+                    <p class="subtitle">Análisis completo de tu presencia digital</p>
+                </div>
+
+                <div id="auditsContent" class="audits-list">
+                    <p class="text-center">Cargando auditorías...</p>
+                </div>
+            </section>
+
+            <!-- 3. Propuesta Section -->
+            <section id="propuesta" class="section">
+                <div class="section-header">
+                    <h1>Mi Propuesta</h1>
+                    <p class="subtitle">Plan personalizado para tu negocio</p>
+                </div>
+
+                <div id="propuestaContent" class="propuesta-container">
+                    <p class="text-center">Cargando propuesta...</p>
+                </div>
+            </section>
+
+            <!-- 4. Pipeline Section -->
+            <section id="pipeline" class="section">
+                <div class="section-header">
+                    <h1>Mi Progreso</h1>
+                    <p class="subtitle">Dónde estamos en el proceso</p>
+                </div>
+
+                <div class="pipeline-info">
+                    <div class="pipeline-stage-full" id="pipelineStatus">
+                        <p class="text-center">Cargando progreso...</p>
+                    </div>
+                </div>
+
+                <div class="timeline-events">
+                    <h3>Historial de Eventos</h3>
+                    <div id="timelineEvents">
+                        <p class="text-center text-muted">Sin eventos registrados aún</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. Contacto Section -->
+            <section id="contacto" class="section">
+                <div class="section-header">
+                    <h1>Contacto</h1>
+                    <p class="subtitle">¿Preguntas o dudas? Estamos aquí para ayudarte</p>
+                </div>
+
+                <div class="contact-info">
+                    <div class="contact-card">
+                        <h3>📧 Email</h3>
+                        <p>
+                            <a href="mailto:felipe@enbuenamesa.com">felipe@enbuenamesa.com</a>
+                        </p>
+                        <p class="text-muted">Respuesta dentro de 24 horas</p>
+                    </div>
+
+                    <div class="contact-card">
+                        <h3>📱 WhatsApp</h3>
+                        <p>
+                            <a href="https://wa.me/56912345678" target="_blank">+56 9 1234 5678</a>
+                        </p>
+                        <p class="text-muted">Disponible de lunes a viernes 9am-6pm</p>
+                    </div>
+
+                    <div class="contact-card">
+                        <h3>🌐 Sitio Web</h3>
+                        <p>
+                            <a href="https://enbuenamesa.com" target="_blank">www.enbuenamesa.com</a>
+                        </p>
+                        <p class="text-muted">Más información sobre nuestros servicios</p>
+                    </div>
+                </div>
+
+                <div class="contact-form">
+                    <h3>Envíanos un Mensaje</h3>
+                    <form id="contactForm">
+                        <div class="form-group">
+                            <label for="messageSubject">Asunto</label>
+                            <input type="text" id="messageSubject" placeholder="¿En qué podemos ayudarte?" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="messageBody">Mensaje</label>
+                            <textarea id="messageBody" placeholder="Escribe tu mensaje aquí..." rows="5" required></textarea>
+                        </div>
+                        <button type="submit" class="btn-primary">Enviar Mensaje</button>
+                    </form>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav">
+        <button class="mobile-nav-item active" onclick="showSection('resumen')">
+            <div class="mobile-nav-icon">📊</div>
+            <span>Resumen</span>
+        </button>
+        <button class="mobile-nav-item" onclick="showSection('auditorias')">
+            <div class="mobile-nav-icon">🔍</div>
+            <span>Auditorías</span>
+        </button>
+        <button class="mobile-nav-item" onclick="showSection('propuesta')">
+            <div class="mobile-nav-icon">📄</div>
+            <span>Propuesta</span>
+        </button>
+        <button class="mobile-nav-item" onclick="showSection('pipeline')">
+            <div class="mobile-nav-icon">🎯</div>
+            <span>Progreso</span>
+        </button>
+        <button class="mobile-nav-item" onclick="showSection('contacto')">
+            <div class="mobile-nav-icon">✉️</div>
+            <span>Contacto</span>
+        </button>
+    </nav>
+
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

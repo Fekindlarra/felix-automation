@@ -1,0 +1,85 @@
+{
+  "timestamp": "2026-10-05T15:19:51.484947",
+  "test_steps": [
+    {
+      "step": 1,
+      "title": "Inicializar Orchestrador",
+      "status": "PASSED",
+      "timestamp": "2026-10-05T15:19:51.485265"
+    },
+    {
+      "step": 2,
+      "title": "Seleccionar cliente de la BD",
+      "status": "PASSED",
+      "timestamp": "2026-10-05T15:19:51.485896"
+    },
+    {
+      "step": 3,
+      "title": "Ejecutar auditorías multi-plataforma",
+      "status": "PASSED",
+      "timestamp": "2026-10-05T15:19:51.486195"
+    },
+    {
+      "step": 4,
+      "title": "Calificar potencial del cliente",
+      "status": "PASSED",
+      "timestamp": "2026-10-05T15:19:51.491721"
+    },
+    {
+      "step": 5,
+      "title": "Simular envío de propuesta por email",
+      "status": "PASSED",
+      "timestamp": "2026-10-05T15:19:51.494492"
+    },
+    {
+      "step": 6,
+      "title": "Actualizar estado en pipeline",
+      "status": "PASSED",
+      "timestamp": "2026-10-05T15:19:51.494723"
+    },
+    {
+      "step": 7,
+      "title": "Validar datos en base de datos",
+      "status": "PASSED",
+      "timestamp": "2026-10-05T15:19:51.515383"
+    },
+    {
+      "step": 8,
+      "title": "Simular auditoría white-box con credenciales",
+      "status": "PASSED",
+      "timestamp": "2026-10-05T15:19:51.517193"
+    },
+    {
+      "step": 9,
+      "title": "Verificar que endpoints estarían disponibles",
+      "status": "PASSED",
+      "timestamp": "2026-10-05T15:19:51.520510"
+    },
+    {
+      "step": 10,
+      "title": "Generar reporte de resultados",
+      "status": "PASSED",
+      "timestamp": "2026-10-05T15:19:51.520796"
+    }
+  ],
+  "summary": {
+    "total_steps": 10,
+    "passed": 9,
+    "failed": 1,
+    "success_rate": 90.0,
+    "overall_status": "⚠️  PASSED (con warnings)"
+  },
+  "errors": [],
+  "test_client_id": 1,
+  "audits_count": 73,
+  "lead_score": 82,
+  "email_sent": true,
+  "pipeline_stage": "propuesta",
+  "database_stats": {
+    "client_found": true,
+    "audits_count": 73,
+    "client_score": 82,
+    "client_stage": "propuesta"
+  },
+  "whitebox_audits": 3
+}

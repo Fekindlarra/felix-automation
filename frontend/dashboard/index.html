@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Felix Dashboard - Admin</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="logo">
+                    <span class="logo-icon">🚀</span>
+                    <span class="logo-text">Felix Dashboard</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <span class="user-info" id="userInfo">Felipe</span>
+                <button class="btn-logout" onclick="logout()">Logout</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <nav class="nav">
+                    <a href="#" class="nav-item active" onclick="showSection('dashboard')">
+                        <span class="nav-icon">📊</span>
+                        Dashboard
+                    </a>
+                    <a href="#" class="nav-item" onclick="showSection('clients')">
+                        <span class="nav-icon">👥</span>
+                        Clientes
+                    </a>
+                    <a href="#" class="nav-item" onclick="showSection('pipeline')">
+                        <span class="nav-icon">📈</span>
+                        Pipeline
+                    </a>
+                    <a href="#" class="nav-item" onclick="showSection('audits')">
+                        <span class="nav-icon">🔍</span>
+                        Auditorías
+                    </a>
+                    <a href="#" class="nav-item" onclick="showSection('reports')">
+                        <span class="nav-icon">📋</span>
+                        Reportes
+                    </a>
+                </nav>
+            </aside>
+
+            <!-- Content Area -->
+            <div class="content">
+                <!-- Loading State -->
+                <div class="loading" id="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Cargando datos...</p>
+                </div>
+
+                <!-- Dashboard Section -->
+                <section id="dashboard" class="section active">
+                    <div class="section-header">
+                        <h1>Dashboard</h1>
+                        <p class="subtitle">Resumen de métricas y KPIs</p>
+                    </div>
+
+                    <!-- KPI Cards -->
+                    <div class="kpi-grid">
+                        <div class="kpi-card">
+                            <div class="kpi-icon">👥</div>
+                            <div class="kpi-content">
+                                <div class="kpi-value" id="totalClientes">0</div>
+                                <div class="kpi-label">Total Clientes</div>
+                            </div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-icon">✅</div>
+                            <div class="kpi-content">
+                                <div class="kpi-value" id="activosClientes">0</div>
+                                <div class="kpi-label">Clientes Activos</div>
+                            </div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-icon">🎯</div>
+                            <div class="kpi-content">
+                                <div class="kpi-value" id="conversionRate">0%</div>
+                                <div class="kpi-label">Tasa Conversión</div>
+                            </div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-icon">💰</div>
+                            <div class="kpi-content">
+                                <div class="kpi-value" id="revenue">$0</div>
+                                <div class="kpi-label">Revenue Forecast</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="charts-grid">
+                        <div class="chart-container">
+                            <h3>Pipeline por Etapa</h3>
+                            <canvas id="pipelineChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3>Score Promedio</h3>
+                            <div id="avgScore" class="big-number">0</div>
+                            <p class="small-text">/100</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Clients Section -->
+                <section id="clients" class="section" style="display: none;">
+                    <div class="section-header">
+                        <h1>Clientes</h1>
+                        <input type="text" class="search-input" id="searchClients" placeholder="Buscar cliente...">
+                    </div>
+                    <div class="table-container">
+                        <table class="clients-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nombre</th>
+                                    <th>Empresa</th>
+                                    <th>Email</th>
+                                    <th>Etapa</th>
+                                    <th>Score</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clientsTableBody">
+                                <tr>
+                                    <td colspan="7" class="text-center">Cargando clientes...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Pipeline Section -->
+                <section id="pipeline" class="section" style="display: none;">
+                    <div class="section-header">
+                        <h1>Pipeline Visual</h1>
+                        <p class="subtitle">Arrastra clientes entre etapas</p>
+                    </div>
+                    <div class="pipeline-container">
+                        <div class="pipeline-stage" data-stage="prospecto">
+                            <h3>📋 Prospecto</h3>
+                            <div class="stage-clients" id="stage-prospecto"></div>
+                        </div>
+                        <div class="pipeline-stage" data-stage="propuesta">
+                            <h3>📄 Propuesta</h3>
+                            <div class="stage-clients" id="stage-propuesta"></div>
+                        </div>
+                        <div class="pipeline-stage" data-stage="negociacion">
+                            <h3>💬 Negociación</h3>
+                            <div class="stage-clients" id="stage-negociacion"></div>
+                        </div>
+                        <div class="pipeline-stage" data-stage="cerrado">
+                            <h3>✅ Cerrado</h3>
+                            <div class="stage-clients" id="stage-cerrado"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Audits Section -->
+                <section id="audits" class="section" style="display: none;">
+                    <div class="section-header">
+                        <h1>Auditorías</h1>
+                        <p class="subtitle">Historial de auditorías por cliente</p>
+                    </div>
+                    <div id="auditsContent">Cargando auditorías...</div>
+                </section>
+
+                <!-- Reports Section -->
+                <section id="reports" class="section" style="display: none;">
+                    <div class="section-header">
+                        <h1>Reportes</h1>
+                        <p class="subtitle">Generar reportes personalizados</p>
+                    </div>
+                    <div class="reports-options">
+                        <button class="btn-primary" onclick="generateReport('weekly')">
+                            Reporte Semanal
+                        </button>
+                        <button class="btn-primary" onclick="generateReport('monthly')">
+                            Reporte Mensual
+                        </button>
+                        <button class="btn-primary" onclick="generateReport('custom')">
+                            Reporte Personalizado
+                        </button>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="errorModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeErrorModal()">&times;</span>
+            <h2>Error</h2>
+            <p id="errorMessage"></p>
+            <button class="btn-primary" onclick="closeErrorModal()">OK</button>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/pipeline.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-10-05T12:07:08.550500",
+  "client_id": 1,
+  "client_name": "Raíces de Cauquenes",
+  "client_email": "info@raices.cl",
+  "stage": 2,
+  "stage_name": "propuesta",
+  "scores": {
+    "web": 72,
+    "facebook_ads": 97,
+    "google_ads": 88,
+    "total": 80
+  },
+  "oportunidad": {
+    "mejora_estimada": "+11%",
+    "ingresos_mes": "+$48 USD/mes"
+  },
+  "timeline": {
+    "duracion_proyecto": "2-3 semanas",
+    "roi_estimado": "~2 meses",
+    "proximo_paso": "Seguimiento y negociación"
+  }
+}

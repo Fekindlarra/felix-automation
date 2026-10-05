@@ -1,0 +1,465 @@
+/* ============================================================================
+   RESPONSIVE DESIGN
+   Mobile-first approach
+   ============================================================================ */
+
+/* Tablet (768px and up) */
+@media (max-width: 1024px) {
+    .sidebar {
+        width: 14rem;
+    }
+
+    .content {
+        padding: var(--spacing-xl);
+    }
+
+    .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .pipeline-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .clients-table {
+        font-size: 0.875rem;
+    }
+
+    .clients-table th,
+    .clients-table td {
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+}
+
+/* Small Tablet (768px) */
+@media (max-width: 768px) {
+    .sidebar {
+        display: none;
+    }
+
+    .main-content {
+        flex-direction: column;
+    }
+
+    .content {
+        padding: var(--spacing-lg);
+    }
+
+    .section-header {
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .section-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .kpi-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .kpi-card {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .kpi-content {
+        flex: 1;
+    }
+
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .pipeline-container {
+        grid-template-columns: 1fr;
+    }
+
+    .pipeline-stage {
+        min-height: 200px;
+    }
+
+    .stage-clients {
+        min-height: auto;
+    }
+
+    .search-input {
+        max-width: 100%;
+    }
+
+    .table-container {
+        border-radius: var(--radius-md);
+    }
+
+    .clients-table {
+        font-size: 0.75rem;
+    }
+
+    .clients-table th,
+    .clients-table td {
+        padding: var(--spacing-sm);
+    }
+
+    /* Hide less important columns on mobile */
+    .clients-table th:nth-child(3),
+    .clients-table td:nth-child(3),
+    .clients-table th:nth-child(4),
+    .clients-table td:nth-child(4) {
+        display: none;
+    }
+
+    .header {
+        padding: var(--spacing-md) var(--spacing-lg);
+    }
+
+    .header-left {
+        gap: var(--spacing-md);
+    }
+
+    .logo-icon {
+        font-size: 1.5rem;
+    }
+
+    .logo-text {
+        display: none !important;
+    }
+
+    .header-right {
+        gap: var(--spacing-md);
+    }
+
+    .user-info {
+        display: none;
+    }
+
+    .btn-logout {
+        padding: var(--spacing-xs) var(--spacing-md);
+        font-size: 0.875rem;
+    }
+
+    /* Mobile Nav */
+    .mobile-nav {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        position: sticky;
+        bottom: 0;
+        background-color: var(--white);
+        border-top: 1px solid var(--gray-200);
+        padding: var(--spacing-md);
+        gap: var(--spacing-sm);
+    }
+
+    .mobile-nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: var(--spacing-sm);
+        border-radius: var(--radius-md);
+        color: var(--gray-500);
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        flex: 1;
+        text-align: center;
+    }
+
+    .mobile-nav-item:hover,
+    .mobile-nav-item.active {
+        background-color: rgba(79, 70, 229, 0.1);
+        color: var(--primary);
+    }
+
+    .mobile-nav-icon {
+        font-size: 1.5rem;
+    }
+
+    .kpi-value {
+        font-size: 1.5rem;
+    }
+
+    .audit-group-items {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+
+    .modal-content {
+        width: 95%;
+    }
+
+    .reports-options {
+        grid-template-columns: 1fr;
+    }
+
+    .reports-options .btn-primary {
+        padding: var(--spacing-md);
+        font-size: 1rem;
+    }
+}
+
+/* Small Mobile (480px) */
+@media (max-width: 480px) {
+    .header {
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+
+    .section-header h1 {
+        font-size: 1.25rem;
+    }
+
+    .subtitle {
+        font-size: 0.75rem;
+    }
+
+    .kpi-card {
+        padding: var(--spacing-md);
+        gap: var(--spacing-md);
+    }
+
+    .kpi-icon {
+        font-size: 2rem;
+    }
+
+    .kpi-value {
+        font-size: 1.25rem;
+    }
+
+    .kpi-label {
+        font-size: 0.75rem;
+    }
+
+    .chart-container {
+        padding: var(--spacing-md);
+    }
+
+    .chart-container h3 {
+        font-size: 1rem;
+        margin-bottom: var(--spacing-md);
+    }
+
+    .big-number {
+        font-size: 2.5rem;
+        margin: var(--spacing-lg) 0;
+    }
+
+    .client-card {
+        padding: var(--spacing-sm);
+    }
+
+    .client-card-name {
+        font-size: 0.875rem;
+    }
+
+    .client-card-company {
+        font-size: 0.75rem;
+    }
+
+    .audit-item {
+        padding: var(--spacing-sm);
+    }
+
+    .audit-score {
+        font-size: 1.25rem;
+    }
+
+    .audit-platform {
+        font-size: 0.7rem;
+    }
+
+    .audit-type {
+        font-size: 0.65rem;
+    }
+
+    .pipeline-stage {
+        padding: var(--spacing-md);
+        min-height: auto;
+    }
+
+    .pipeline-stage h3 {
+        font-size: 1rem;
+        margin-bottom: var(--spacing-md);
+    }
+
+    .client-card-score {
+        font-size: 0.65rem;
+        padding: 1px 6px;
+    }
+
+    .clients-table {
+        font-size: 0.7rem;
+    }
+
+    .clients-table th,
+    .clients-table td {
+        padding: 4px;
+    }
+
+    /* Hide more columns on very small screens */
+    .clients-table th:nth-child(6),
+    .clients-table td:nth-child(6),
+    .clients-table th:nth-child(7),
+    .clients-table td:nth-child(7) {
+        display: none;
+    }
+
+    .btn-primary,
+    .btn-secondary,
+    .btn-logout {
+        padding: var(--spacing-sm) var(--spacing-md);
+        font-size: 0.875rem;
+    }
+
+    .search-input {
+        font-size: 1rem; /* Prevent zoom on mobile */
+        padding: var(--spacing-sm);
+    }
+
+    .metric-card {
+        padding: var(--spacing-md);
+    }
+
+    .metric-card-value {
+        font-size: 1.5rem;
+    }
+
+    .metric-card-label {
+        font-size: 0.75rem;
+    }
+
+    .mobile-nav {
+        padding: var(--spacing-sm);
+        gap: 2px;
+    }
+
+    .mobile-nav-item {
+        padding: 4px;
+        font-size: 0.65rem;
+    }
+
+    .mobile-nav-icon {
+        font-size: 1.25rem;
+    }
+}
+
+/* Landscape Orientation */
+@media (max-height: 600px) {
+    .header {
+        padding: var(--spacing-sm) var(--spacing-lg);
+    }
+
+    .content {
+        padding: var(--spacing-lg);
+    }
+
+    .kpi-card {
+        padding: var(--spacing-md);
+    }
+
+    .kpi-value {
+        font-size: 1.5rem;
+    }
+
+    .section-header h1 {
+        font-size: 1.25rem;
+    }
+
+    .pipeline-stage {
+        min-height: auto;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .header,
+    .sidebar,
+    .mobile-nav,
+    .btn-logout {
+        display: none;
+    }
+
+    .main-content {
+        flex-direction: column;
+    }
+
+    .content {
+        padding: 0;
+    }
+
+    .section {
+        page-break-inside: avoid;
+    }
+
+    .kpi-card,
+    .chart-container,
+    .audit-group {
+        page-break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #ccc;
+    }
+
+    body {
+        background-color: var(--white);
+        color: #000;
+    }
+}
+
+/* Accessibility - Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Dark Mode Preferences */
+@media (prefers-color-scheme: dark) {
+    .logo {
+        color: var(--primary-light);
+    }
+
+    .header {
+        background-color: var(--gray-100);
+    }
+
+    .sidebar {
+        background-color: var(--gray-200);
+    }
+
+    .nav-item:hover,
+    .nav-item.active {
+        background-color: var(--primary);
+    }
+
+    .content {
+        background-color: var(--bg);
+    }
+
+    .kpi-card,
+    .chart-container,
+    .table-container,
+    .audit-group,
+    .pipeline-stage,
+    .client-card,
+    .modal-content {
+        background-color: var(--gray-100);
+        border-color: var(--gray-200);
+    }
+
+    .btn-primary {
+        background-color: var(--primary);
+    }
+
+    .section-header h1 {
+        color: var(--gray-900);
+    }
+
+    .metric-card {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    }
+}

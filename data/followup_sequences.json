@@ -1,0 +1,163 @@
+{
+  "sequences": [
+    {
+      "sequence_id": 1,
+      "client_id": 1,
+      "client_name": "Raíces de Cauquenes",
+      "client_email": "info@raices.cl",
+      "proposal_id": 1,
+      "status": "completed",
+      "started_at": "2026-10-02T12:13:25.431337",
+      "last_followup_at": "2026-10-05T12:13:05.532422",
+      "followups": {
+        "1": {
+          "sent": true,
+          "sent_at": "2026-10-05T12:13:05.532419",
+          "opened": true,
+          "clicked": false
+        },
+        "2": {
+          "sent": false,
+          "sent_at": null,
+          "opened": false,
+          "clicked": false
+        },
+        "3": {
+          "sent": false,
+          "sent_at": null,
+          "opened": false,
+          "clicked": false
+        }
+      },
+      "notes": "",
+      "completed_reason": "cliente_respondió",
+      "completed_at": "2026-10-05T12:13:25.437310"
+    },
+    {
+      "sequence_id": 2,
+      "client_id": 2,
+      "client_name": "TechShop Premium",
+      "client_email": "admin@techshop.cl",
+      "proposal_id": 2,
+      "status": "completed",
+      "started_at": "2026-09-30T12:13:25.431337",
+      "last_followup_at": "2026-10-05T12:13:05.533379",
+      "followups": {
+        "1": {
+          "sent": true,
+          "sent_at": "2026-10-05T12:13:05.532864",
+          "opened": true,
+          "clicked": false
+        },
+        "2": {
+          "sent": true,
+          "sent_at": "2026-10-05T12:13:05.533378",
+          "opened": true,
+          "clicked": false
+        },
+        "3": {
+          "sent": false,
+          "sent_at": null,
+          "opened": false,
+          "clicked": false
+        }
+      },
+      "notes": "",
+      "completed_reason": "rechazó",
+      "completed_at": "2026-10-05T12:13:25.437988"
+    },
+    {
+      "sequence_id": 3,
+      "client_id": 3,
+      "client_name": "ConsultorLabs",
+      "client_email": "hello@consultorlabs.cl",
+      "proposal_id": 3,
+      "status": "active",
+      "started_at": "2026-09-27T12:13:25.431337",
+      "last_followup_at": "2026-10-05T12:13:23.659660",
+      "followups": {
+        "1": {
+          "sent": true,
+          "sent_at": "2026-10-05T12:13:05.533839",
+          "opened": false,
+          "clicked": false
+        },
+        "2": {
+          "sent": true,
+          "sent_at": "2026-10-05T12:13:05.534331",
+          "opened": false,
+          "clicked": false
+        },
+        "3": {
+          "sent": true,
+          "sent_at": "2026-10-05T12:13:23.659653",
+          "opened": false,
+          "clicked": false
+        }
+      },
+      "notes": ""
+    },
+    {
+      "sequence_id": 4,
+      "client_id": 1,
+      "client_name": "Raíces de Cauquenes",
+      "client_email": "info@raices.cl",
+      "proposal_id": 1,
+      "status": "active",
+      "started_at": "2026-10-05T12:13:11.932670",
+      "last_followup_at": null,
+      "followups": {
+        "1": {
+          "sent": false,
+          "sent_at": null,
+          "opened": false,
+          "clicked": false
+        },
+        "2": {
+          "sent": false,
+          "sent_at": null,
+          "opened": false,
+          "clicked": false
+        },
+        "3": {
+          "sent": false,
+          "sent_at": null,
+          "opened": false,
+          "clicked": false
+        }
+      },
+      "notes": ""
+    },
+    {
+      "sequence_id": 5,
+      "client_id": 2,
+      "client_name": "TechShop Premium",
+      "client_email": "admin@techshop.cl",
+      "proposal_id": 2,
+      "status": "active",
+      "started_at": "2026-10-05T12:13:11.933474",
+      "last_followup_at": null,
+      "followups": {
+        "1": {
+          "sent": false,
+          "sent_at": null,
+          "opened": false,
+          "clicked": false
+        },
+        "2": {
+          "sent": false,
+          "sent_at": null,
+          "opened": false,
+          "clicked": false
+        },
+        "3": {
+          "sent": false,
+          "sent_at": null,
+          "opened": false,
+          "clicked": false
+        }
+      },
+      "notes": ""
+    }
+  ]
+}

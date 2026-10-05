@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cola de Emails - Felix Automation</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        h1 { color: #333; }
+        .stats { background: #e8f5e9; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #667eea; color: white; }
+        tr:hover { background: #f9f9f9; }
+        .email-content { max-height: 100px; overflow-y: auto; background: #f9f9f9; padding: 10px; border-radius: 3px; font-size: 12px; }
+        .pending { color: #ff9800; font-weight: bold; }
+        .sent { color: #4caf50; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📧 Cola de Emails - Felix Automation</h1>
+
+        <div class="stats">
+            <p><strong>Total de emails pendientes:</strong> 3</p>
+            <p><strong>Generado:</strong> 2026-10-05 12:00:06</p>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Cliente</th>
+                    <th>Tipo</th>
+                    <th>Destinatario</th>
+                    <th>Asunto</th>
+                    <th>Creado</th>
+                    <th>Estado</th>
+                    <th>Vista Previa</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                <tr>
+                    <td>1</td>
+                    <td>Raíces de Cauquenes</td>
+                    <td>audit_report</td>
+                    <td>info@raices.cl</td>
+                    <td>Tu auditoria digital completada - Raices...</td>
+                    <td>2026-10-05</td>
+                    <td><span class="pending">pending</span></td>
+                    <td><details><summary>Ver</summary><div class="email-content">Hola Raices de Cauquenes,
+
+Tu auditoria digital esta lista.
+
+RESULTADO GENERAL: 81/100
+
+Plataformas auditadas:
+  * Web (Performance, Seguridad, Tracking)
+  * Facebook Ads (Estructura, Contenido, Targe...</div></details></td>
+                </tr>
+
+                <tr>
+                    <td>2</td>
+                    <td>Raíces de Cauquenes</td>
+                    <td>proposal</td>
+                    <td>info@raices.cl</td>
+                    <td>Tu propuesta de mejora - Raices de Cauqu...</td>
+                    <td>2026-10-05</td>
+                    <td><span class="pending">pending</span></td>
+                    <td><details><summary>Ver</summary><div class="email-content">Hola Raices de Cauquenes,
+
+Te envio la propuesta personalizada basada en tu auditoria.
+
+PRESUPUESTO ESTIMADO
+  * Costo: $3,000 USD
+  * Duracion: 2-3 semanas
+  * ROI estimado: 2 meses
+
+INCLUYE
+  * Audi...</div></details></td>
+                </tr>
+
+                <tr>
+                    <td>3</td>
+                    <td>Raíces de Cauquenes</td>
+                    <td>followup_1</td>
+                    <td>info@raices.cl</td>
+                    <td>Seguimiento: Tu auditoria digital...</td>
+                    <td>2026-10-05</td>
+                    <td><span class="pending">pending</span></td>
+                    <td><details><summary>Ver</summary><div class="email-content">Hola Raices de Cauquenes,
+
+Solo checando si viste tu reporte de auditoria.
+
+Preguntas? Duda en algun punto?
+
+Respondé con un mensajito o agendemos 15 minutos de call directa.
+
+Link de call: https://ca...</div></details></td>
+                </tr>
+
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

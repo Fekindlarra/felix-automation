@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-10-05T12:07:08.550944",
+  "client_id": 3,
+  "client_name": "ConsultorLabs",
+  "client_email": "hello@consultorlabs.cl",
+  "stage": 3,
+  "stage_name": "negociacion",
+  "scores": {
+    "web": 72,
+    "facebook_ads": 97,
+    "google_ads": 88,
+    "total": 78
+  },
+  "oportunidad": {
+    "mejora_estimada": "+12%",
+    "ingresos_mes": "+$53 USD/mes"
+  },
+  "timeline": {
+    "duracion_proyecto": "2-3 semanas",
+    "roi_estimado": "~2 meses",
+    "proximo_paso": "Finalizar contrato"
+  }
+}

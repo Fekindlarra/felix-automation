@@ -1,0 +1,74 @@
+{
+  "timestamp": "2026-10-05T12:42:41.530313",
+  "pipeline_health": {
+    "total_clients": 3,
+    "closed_deals": 0,
+    "pipeline_velocity": "0.0%",
+    "stage_health": {
+      "propuesta": {
+        "count": 3,
+        "avg_days": 0.0,
+        "min_days": 0,
+        "max_days": 0
+      }
+    },
+    "calculated_at": "2026-10-05T12:42:41.529834"
+  },
+  "at_risk_clients": [],
+  "closure_predictions": [
+    {
+      "client_id": 1,
+      "client_name": "Tienda Online ABC",
+      "stage": "propuesta",
+      "closure_probability": "44.8%",
+      "category": "BAJO POTENCIAL",
+      "emoji": "🔴",
+      "factors": {
+        "stage_progression": 50.0,
+        "engagement": 100.0,
+        "lead_score": null,
+        "days_in_stage": 10.0,
+        "communication_frequency": 33.33333333333333
+      },
+      "predicted_at": "2026-10-05T12:42:41.530036"
+    },
+    {
+      "client_id": 2,
+      "client_name": "Agencia Digital XYZ",
+      "stage": "propuesta",
+      "closure_probability": "48.2%",
+      "category": "BAJO POTENCIAL",
+      "emoji": "🔴",
+      "factors": {
+        "stage_progression": 50.0,
+        "engagement": 100.0,
+        "lead_score": null,
+        "days_in_stage": 10.0,
+        "communication_frequency": 66.66666666666666
+      },
+      "predicted_at": "2026-10-05T12:42:41.530200"
+    },
+    {
+      "client_id": 3,
+      "client_name": "Boutique Fashion LMN",
+      "stage": "propuesta",
+      "closure_probability": "26.5%",
+      "category": "BAJO POTENCIAL",
+      "emoji": "🔴",
+      "factors": {
+        "stage_progression": 50.0,
+        "engagement": 0.0,
+        "lead_score": null,
+        "days_in_stage": 10.0,
+        "communication_frequency": 100
+      },
+      "predicted_at": "2026-10-05T12:42:41.530303"
+    }
+  ],
+  "summary": {
+    "total_clients": 3,
+    "total_at_risk": 0,
+    "high_probability_deals": 0,
+    "average_closure_probability": 39.833333333333336
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-10-05T12:07:08.550671",
+  "client_id": 2,
+  "client_name": "TechShop Premium",
+  "client_email": "admin@techshop.cl",
+  "stage": 1,
+  "stage_name": "prospecto",
+  "scores": {
+    "web": 72,
+    "facebook_ads": 97,
+    "google_ads": 88,
+    "total": 84
+  },
+  "oportunidad": {
+    "mejora_estimada": "+9%",
+    "ingresos_mes": "+$38 USD/mes"
+  },
+  "timeline": {
+    "duracion_proyecto": "2-3 semanas",
+    "roi_estimado": "~2 meses",
+    "proximo_paso": "Enviar propuesta personalizada"
+  }
+}

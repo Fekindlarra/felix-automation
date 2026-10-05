@@ -1,0 +1,140 @@
+RUNBOOK POST-DEPLOYMENT
+Felix Automation - Operacion y Mantenimiento en Produccion
+
+Version: 11.0
+Fecha: 2026-10-05
+Audiencia: Felipe y equipo de operaciones
+
+==================================================
+CHECKLIST DIARIO (5 min)
+==================================================
+
+Ejecutar cada manana:
+
+  sudo systemctl status felix-api | grep Active
+  curl -s https://tu-dominio.com/health | jq '.status'
+  sudo -u felix psql -h localhost -U felix_user -d felix_prod -c "SELECT NOW();"
+  df -h / | tail -1
+  free -h | grep Mem
+
+Acciones si algo falla:
+  - Servicio no running: sudo systemctl restart felix-api
+  - Health check falla: sudo tail -50 /var/log/felix/error.log
+  - BD no conecta: sudo systemctl restart postgresql
+
+==================================================
+VERIFICACION SEMANAL (30 min)
+==================================================
+
+Cada lunes a las 8 AM:
+
+1. Revisar Logs
+   sudo grep -i error /var/log/felix/error.log | tail -20
+
+2. Revisar Performance de BD
+   sudo -u felix psql -h localhost -U felix_user -d felix_prod -c "SELECT datname, count(*) FROM pg_stat_activity GROUP BY datname;"
+
+3. Revisar Backup
+   ls -lh ~/backup/*.sql | tail -5
+
+4. Revisar Uptime Kuma
+   https://tu-dominio.com:3001
+
+==================================================
+PROCEDIMIENTOS DE MANTENIMIENTO
+==================================================
+
+Actualizar Codigo Segura:
+
+  # 1. Backup
+  sudo -u postgres pg_dump felix_prod > ~/backup/felix_pre_update.sql
+
+  # 2. Update
+  cd /opt/felix-automation
+  git pull origin main
+
+  # 3. Dependencias
+  source venv/bin/activate
+  pip install -r requirements.txt
+
+  # 4. Reiniciar
+  sudo systemctl restart felix-api
+
+  # 5. Verificar
+  curl -s https://tu-dominio.com/health | jq
+
+Limpiar Logs Antiguos (Cada 30 dias):
+  sudo find /var/log/felix -name "*.log.*" -mtime +30 -delete
+
+Optimizar BD (Cada mes):
+  sudo -u felix psql -h localhost -U felix_user -d felix_prod -c "VACUUM ANALYZE;"
+
+==================================================
+PROCEDIMIENTOS DE EMERGENCIA
+==================================================
+
+Sistema Completamente Down:
+
+  # Verificar estado
+  sudo systemctl status felix-api postgresql nginx
+
+  # Reiniciar servicios
+  sudo systemctl restart postgresql
+  sleep 5
+  sudo systemctl restart felix-api nginx
+
+  # Verificar
+  curl -s https://tu-dominio.com/health
+
+BD Corrupta:
+
+  sudo systemctl stop felix-api
+  sudo -u postgres dropdb felix_prod
+  sudo -u postgres createdb -O felix_user felix_prod
+  sudo -u postgres pg_restore -d felix_prod ~/backup/felix_YYYYMMDD.sql
+  sudo systemctl start felix-api
+
+Disco Lleno:
+
+  sudo du -sh /opt/felix-automation/* | sort -rh
+  sudo find /var/log/felix -type f -mtime +30 -delete
+  sudo find /opt/felix-automation -type d -name __pycache__ -exec rm -rf {} +
+
+Alto Uso de CPU/Memoria:
+
+  top -b -n 1 | head -20
+  sudo systemctl restart felix-api
+  sudo tail -100 /var/log/felix/error.log
+
+==================================================
+SEGURIDAD POST-DEPLOYMENT
+==================================================
+
+Firewall:
+  sudo ufw enable
+  sudo ufw allow 22/tcp 80/tcp 443/tcp 3001/tcp
+
+Rotacion de Contrasenias (Cada 90 dias):
+  sudo -u postgres psql
+  ALTER USER felix_user WITH PASSWORD 'new_password';
+  \q
+  
+  # Actualizar en .env y reiniciar
+  sudo nano /opt/felix-optimization/.env
+  sudo systemctl restart felix-api
+
+==================================================
+RECURSOS IMPORTANTES
+==================================================
+
+Logs:              /var/log/felix/error.log
+Config:            /opt/felix-automation/.env
+Backups:           ~/backup/
+Uptime Dashboard:  https://tu-dominio.com:3001
+Health Check:      https://tu-dominio.com/health
+Support:           felipe@enbuenamesa.com
+
+==================================================
+ULTIMA ACTUALIZACION: 2026-10-05
+VERSION: 11.0 Production Ready
+==================================================
