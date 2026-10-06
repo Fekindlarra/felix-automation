@@ -44,6 +44,10 @@ class EventType(Enum):
     KPI_UPDATED = "kpi:updated"
     METRIC_SNAPSHOT = "metric:snapshot"
 
+    # Prediction Events (FASE 14)
+    PREDICTION_GENERATED = "prediction:generated"
+    ANOMALY_DETECTED = "anomaly:detected"
+
     # Notification Events
     NOTIFICATION_CREATED = "notification:created"
     NOTIFICATION_DISMISSED = "notification:dismissed"
@@ -151,6 +155,46 @@ class KPIEvent(EventPayload):
                 "metric_name": self.metric_name,
                 "metric_value": self.metric_value,
                 "metric_unit": self.metric_unit
+            }
+
+
+@dataclass
+class PredictionEvent(EventPayload):
+    """ML Prediction event (FASE 14)"""
+    probability: Optional[float] = None
+    confidence: Optional[float] = None
+    risk_factors: Optional[list] = None
+    positive_factors: Optional[list] = None
+    recommendation: Optional[str] = None
+    predicted_timeline_days: Optional[int] = None
+
+    def __post_init__(self):
+        if self.data is None:
+            self.data = {
+                "probability": self.probability,
+                "confidence": self.confidence,
+                "risk_factors": self.risk_factors or [],
+                "positive_factors": self.positive_factors or [],
+                "recommendation": self.recommendation,
+                "predicted_timeline_days": self.predicted_timeline_days
+            }
+
+
+@dataclass
+class AnomalyEvent(EventPayload):
+    """Anomaly detection event (FASE 14)"""
+    anomaly_type: Optional[str] = None
+    severity: Optional[str] = None  # "low", "medium", "high"
+    description: Optional[str] = None
+    affected_metric: Optional[str] = None
+
+    def __post_init__(self):
+        if self.data is None:
+            self.data = {
+                "anomaly_type": self.anomaly_type,
+                "severity": self.severity,
+                "description": self.description,
+                "affected_metric": self.affected_metric
             }
 
 
@@ -268,6 +312,41 @@ class EventFactory:
         )
 
     @staticmethod
+    def prediction_generated(client_id: int, probability: float, confidence: float,
+                            risk_factors: list, positive_factors: list,
+                            recommendation: str, predicted_timeline_days: int,
+                            user_id: Optional[int] = None) -> PredictionEvent:
+        """Create prediction generated event (FASE 14)"""
+        return PredictionEvent(
+            event_type=EventType.PREDICTION_GENERATED,
+            timestamp=datetime.utcnow(),
+            client_id=client_id,
+            user_id=user_id,
+            probability=probability,
+            confidence=confidence,
+            risk_factors=risk_factors,
+            positive_factors=positive_factors,
+            recommendation=recommendation,
+            predicted_timeline_days=predicted_timeline_days
+        )
+
+    @staticmethod
+    def anomaly_detected(client_id: int, anomaly_type: str, severity: str,
+                        description: str, affected_metric: str,
+                        user_id: Optional[int] = None) -> AnomalyEvent:
+        """Create anomaly detected event (FASE 14)"""
+        return AnomalyEvent(
+            event_type=EventType.ANOMALY_DETECTED,
+            timestamp=datetime.utcnow(),
+            client_id=client_id,
+            user_id=user_id,
+            anomaly_type=anomaly_type,
+            severity=severity,
+            description=description,
+            affected_metric=affected_metric
+        )
+
+    @staticmethod
     def notification_created(client_id: int, title: str, message: str,
                             notification_type: str = "info",
                             user_id: Optional[int] = None) -> NotificationEvent:
@@ -323,6 +402,8 @@ EVENT_ROUTING = {
     EventType.EMAIL_CLICKED: ["admin"],
     EventType.KPI_UPDATED: ["admin"],
     EventType.METRIC_SNAPSHOT: ["admin"],
+    EventType.PREDICTION_GENERATED: ["admin", "client"],  # FASE 14
+    EventType.ANOMALY_DETECTED: ["admin"],  # FASE 14
     EventType.NOTIFICATION_CREATED: ["admin", "client"],
 }
 

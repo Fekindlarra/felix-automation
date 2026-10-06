@@ -282,7 +282,7 @@ class WebSocketConnectionManager:
         """
         Optimize event payload for mobile clients to reduce bandwidth.
         - Reduce precision of floating point numbers
-        - Remove unnecessary fields
+        - Remove unnecessary fields (any field starting with _)
         - Compress data structures
         """
         if not is_mobile:
@@ -291,8 +291,8 @@ class WebSocketConnectionManager:
         optimized = {}
 
         for key, value in event_data.items():
-            # Skip certain fields on mobile
-            if key in ['_internal', '_debug', '_metadata']:
+            # Skip internal fields (any field starting with underscore)
+            if isinstance(key, str) and key.startswith('_'):
                 continue
 
             # Reduce precision of floats
@@ -441,6 +441,58 @@ class EventBroadcaster:
         )
 
         self.logger.info(f"🔔 Notification: {title}")
+
+    async def emit_prediction(self, client_id: int, probability: float,
+                             confidence: float, risk_factors: list,
+                             positive_factors: list, recommendation: str,
+                             predicted_timeline_days: int):
+        """Emit ML prediction event (FASE 14)"""
+        message_payload = {
+            "event_type": EventType.PREDICTION_GENERATED.value,
+            "timestamp": datetime.utcnow().isoformat(),
+            "data": {
+                "client_id": client_id,
+                "probability": probability,
+                "confidence": confidence,
+                "risk_factors": risk_factors,
+                "positive_factors": positive_factors,
+                "recommendation": recommendation,
+                "predicted_timeline_days": predicted_timeline_days
+            }
+        }
+
+        await self.manager.broadcast_event(
+            EventType.PREDICTION_GENERATED,
+            "system",
+            0,
+            message_payload["data"]
+        )
+
+        self.logger.info(f"🎯 Prediction: Client {client_id} → {probability:.1f}% probability")
+
+    async def emit_anomaly(self, client_id: int, anomaly_type: str,
+                          severity: str, description: str, affected_metric: str):
+        """Emit anomaly detection event (FASE 14)"""
+        message_payload = {
+            "event_type": EventType.ANOMALY_DETECTED.value,
+            "timestamp": datetime.utcnow().isoformat(),
+            "data": {
+                "client_id": client_id,
+                "anomaly_type": anomaly_type,
+                "severity": severity,
+                "description": description,
+                "affected_metric": affected_metric
+            }
+        }
+
+        await self.manager.broadcast_event(
+            EventType.ANOMALY_DETECTED,
+            "system",
+            0,
+            message_payload["data"]
+        )
+
+        self.logger.info(f"⚠️ Anomaly ({severity}): {anomaly_type} - {description}")
 
 
 # Global connection manager instance

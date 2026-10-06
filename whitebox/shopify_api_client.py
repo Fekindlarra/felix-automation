@@ -41,9 +41,10 @@ class RateLimiter:
 class ShopifyAPIClient:
     """Shopify REST API client with connection pooling and rate limiting"""
 
-    def __init__(self, shop_domain: str, access_token: str):
+    def __init__(self, shop_domain: str, access_token: str, timeout: int = 30):
         self.shop_domain = shop_domain
         self.access_token = access_token
+        self.timeout = timeout
         self.base_url = f"https://{shop_domain}/admin/api/2024-01"
 
         # Connection pooling
@@ -58,7 +59,7 @@ class ShopifyAPIClient:
             "Content-Type": "application/json"
         }
 
-        logger.info(f"Shopify API client initialized for {shop_domain}")
+        logger.info(f"✅ Shopify API client initialized for {shop_domain}")
 
     def _make_request(self, method: str, endpoint: str, 
                      data: Optional[Dict] = None) -> Optional[Dict]:
@@ -159,6 +160,23 @@ class ShopifyAPIClient:
         """Health check: verify API connection is working"""
         result = self._make_request("GET", "shop.json")
         return result is not None and "shop" in result
+
+    def validate_credentials(self) -> bool:
+        """Validate that the provided credentials work with Shopify API"""
+        try:
+            result = self._make_request("GET", "shop.json")
+            is_valid = result is not None and "shop" in result
+
+            if is_valid:
+                shop_name = result.get("shop", {}).get("name", "Unknown")
+                logger.info(f"✅ Shopify credentials validated for: {shop_name}")
+            else:
+                logger.warning(f"❌ Shopify credentials validation failed for {self.shop_domain}")
+
+            return is_valid
+        except Exception as e:
+            logger.error(f"❌ Credential validation error: {e}")
+            return False
 
     def close(self):
         """Close session and cleanup"""

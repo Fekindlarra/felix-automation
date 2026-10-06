@@ -1,63 +1,101 @@
 {
-  "name": "Felix Automation Dashboard",
-  "short_name": "Felix Dashboard",
-  "description": "Real-time Sales Automation & Analytics Dashboard",
+  "name": "Felix Automation - Dashboard de Ventas",
+  "short_name": "Felix Automation",
+  "description": "Sistema de automatización de ventas con predicciones ML en tiempo real",
   "start_url": "/frontend/admin_dashboard.html",
-  "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#667eea",
   "orientation": "portrait-primary",
+  "theme_color": "#667eea",
+  "background_color": "#ffffff",
+  "scope": "/",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23667eea' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='middle'>FA</text></svg>",
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23667eea' width='192' height='192'/><text x='96' y='120' font-size='120' font-weight='bold' fill='white' text-anchor='middle' font-family='Arial'>⚡</text></svg>",
       "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect fill='%23667eea' width='512' height='512'/><text x='50%' y='50%' font-size='350' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='middle'>FA</text></svg>",
-      "sizes": "512x512",
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23667eea' width='192' height='192'/><text x='96' y='120' font-size='120' font-weight='bold' fill='white' text-anchor='middle' font-family='Arial'>⚡</text></svg>",
+      "sizes": "192x192",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "maskable"
     }
   ],
-  "categories": ["business", "productivity"],
   "screenshots": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect fill='%23f8f9fa' width='540' height='720'/><rect fill='%23667eea' width='540' height='120'/><text x='270' y='60' font-size='40' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='middle'>Dashboard</text></svg>",
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect fill='%23667eea' width='540' height='720'/><text x='270' y='360' font-size='80' font-weight='bold' fill='white' text-anchor='middle' font-family='Arial'>Dashboard</text></svg>",
       "sizes": "540x720",
       "type": "image/svg+xml",
       "form_factor": "narrow"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1280 720'><rect fill='%23667eea' width='1280' height='720'/><text x='640' y='360' font-size='80' font-weight='bold' fill='white' text-anchor='middle' font-family='Arial'>Dashboard</text></svg>",
+      "sizes": "1280x720",
+      "type": "image/svg+xml",
+      "form_factor": "wide"
     }
   ],
+  "categories": ["business", "productivity"],
   "shortcuts": [
     {
-      "name": "Ver Dashboard",
+      "name": "Panel de Control",
       "short_name": "Dashboard",
-      "description": "Abre el dashboard interno",
+      "description": "Acceder al dashboard interno",
       "url": "/frontend/admin_dashboard.html",
       "icons": [
         {
-          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%23667eea' width='96' height='96'/><text x='50%' y='50%' font-size='60' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='middle'>📊</text></svg>",
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%23667eea' width='96' height='96'/><text x='48' y='60' font-size='60' font-weight='bold' fill='white' text-anchor='middle' font-family='Arial'>📊</text></svg>",
           "sizes": "96x96",
           "type": "image/svg+xml"
         }
       ]
     },
     {
-      "name": "Ver Pipeline",
-      "short_name": "Pipeline",
-      "description": "Abre el pipeline de ventas",
-      "url": "/frontend/admin_dashboard.html#pipeline",
+      "name": "Pruebas A/B",
+      "short_name": "A/B Tests",
+      "description": "Ver resultados de pruebas A/B",
+      "url": "/frontend/ab_testing_dashboard.html",
       "icons": [
         {
-          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%23f5576c' width='96' height='96'/><text x='50%' y='50%' font-size='60' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='middle'>📈</text></svg>",
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%23f093fb' width='96' height='96'/><text x='48' y='60' font-size='60' font-weight='bold' fill='white' text-anchor='middle' font-family='Arial'>📈</text></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Predicciones ML",
+      "short_name": "ML",
+      "description": "Ver predicciones de ML en tiempo real",
+      "url": "/frontend/ml_prediction_widgets.html",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%234caf50' width='96' height='96'/><text x='48' y='60' font-size='60' font-weight='bold' fill='white' text-anchor='middle' font-family='Arial'>🧠</text></svg>",
           "sizes": "96x96",
           "type": "image/svg+xml"
         }
       ]
     }
   ],
-  "prefer_related_applications": false
+  "share_target": {
+    "action": "/api/share/receive",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "file_handlers": [
+    {
+      "action": "/api/files/upload",
+      "accept": {
+        "application/json": [".json"],
+        "text/csv": [".csv"],
+        "application/pdf": [".pdf"]
+      }
+    }
+  ]
 }

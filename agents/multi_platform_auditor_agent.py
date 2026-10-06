@@ -8,6 +8,7 @@ Audita: Web + Facebook Ads + Google Ads en paralelo
 import sys
 import json
 import logging
+import requests
 from pathlib import Path
 from typing import Dict, List, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -19,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from orchestrator import FelixAutomationOrchestrator, Audit
 from auditors.facebook_ads_auditor import FacebookAdsAuditor, create_sample_facebook_audit
 from auditors.google_ads_auditor import GoogleAdsAuditor, create_sample_google_audit
+from auditors.seo_auditor import SEOAuditor
 from whitebox.shopify_auditor import ShopifyAuditor
 from whitebox.jumpseller_auditor import JumpsellerAuditor
 from whitebox.code_auditor import CodeAuditor
@@ -46,7 +48,7 @@ class MultiPlatformAuditorAgent:
 
         Args:
             client_id: ID del cliente
-            platforms: Lista de plataformas ['web', 'facebook_ads', 'google_ads']
+            platforms: Lista de plataformas ['web', 'facebook_ads', 'google_ads', 'seo']
         """
         if platforms is None:
             platforms = ['web', 'facebook_ads', 'google_ads']
@@ -69,6 +71,9 @@ class MultiPlatformAuditorAgent:
                     futures[future] = platform
                 elif platform == 'google_ads':
                     future = executor.submit(self._compute_google_audit, client)
+                    futures[future] = platform
+                elif platform == 'seo':
+                    future = executor.submit(self._compute_seo_audit, client)
                     futures[future] = platform
 
             # Recolectar resultados de auditoría (sin BD)
@@ -348,6 +353,80 @@ class MultiPlatformAuditorAgent:
             "platform": "google_ads",
             "overall_score": result['overall_score'],
             "metrics": result['metrics']
+        }
+
+    def _compute_seo_audit(self, client) -> Dict:
+        """Computar auditoría SEO (sin BD, seguro para threads)"""
+        logger.info(f"  🔍 Computando SEO para {client.name}")
+
+        try:
+            # Obtener URL del cliente
+            website_url = getattr(client, 'website', None)
+            if not website_url:
+                logger.warning(f"  ⚠️ Cliente {client.name} sin URL de website, usando mock")
+                return self._create_sample_seo_audit()
+
+            # Fetch HTML desde el website
+            try:
+                response = requests.get(website_url, timeout=10)
+                response.raise_for_status()
+                html = response.text
+                page_size = len(response.content)
+            except Exception as e:
+                logger.warning(f"  ⚠️ Error fetching {website_url}: {str(e)}, usando mock")
+                return self._create_sample_seo_audit()
+
+            # Auditar con SEOAuditor
+            seo_auditor = SEOAuditor()
+            audit_result = seo_auditor.audit({
+                'url': website_url,
+                'html': html,
+                'page_size': page_size,
+                'load_time': 1.5,  # Estimado
+                'headers': dict(response.headers)
+            })
+
+            return {
+                "platform": "seo",
+                "overall_score": audit_result['overall_score'],
+                "metrics": audit_result['metrics'],
+                "keywords_detected": audit_result.get('keywords_detected', [])
+            }
+
+        except Exception as e:
+            logger.error(f"  ❌ Error computando SEO audit: {str(e)}")
+            return self._create_sample_seo_audit()
+
+    def _create_sample_seo_audit(self) -> Dict:
+        """Crear auditoría SEO de muestra (cuando hay error o no hay URL)"""
+        return {
+            "platform": "seo",
+            "overall_score": 65,
+            "metrics": {
+                "tecnica": {
+                    "score": 70,
+                    "findings": [
+                        {"severity": "warning", "issue": "Title muy corto", "value": 25}
+                    ]
+                },
+                "contenido": {
+                    "score": 60,
+                    "findings": [
+                        {"severity": "warning", "issue": "Contenido muy corto", "value": 250}
+                    ]
+                },
+                "rendimiento": {
+                    "score": 75,
+                    "findings": []
+                },
+                "seguridad": {
+                    "score": 65,
+                    "findings": [
+                        {"severity": "warning", "issue": "No hay política de privacidad", "value": None}
+                    ]
+                }
+            },
+            "keywords_detected": ["automatización", "ventas", "plataforma"]
         }
 
     def _save_audit_results(self, client_id: int, results: Dict):

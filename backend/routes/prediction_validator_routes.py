@@ -32,7 +32,7 @@ def get_validator(orchestrator: FelixAutomationOrchestrator) -> PredictionValida
 # PREDICTION RECORDING ENDPOINTS
 # ============================================================================
 
-@router.post("/api/predictions/record")
+@router.post("/api/predictions/record", response_model=None)
 async def record_prediction(
     token: str,
     client_id: int,
@@ -40,8 +40,7 @@ async def record_prediction(
     confidence: float,
     pipeline_stage: str = "prospecto",
     factors: list = None,
-    model_version: str = "v1.0",
-    orchestrator: FelixAutomationOrchestrator = None
+    model_version: str = "v1.0"
 ):
     """
     Record a prediction made by ConversionPredictor.
@@ -95,15 +94,14 @@ async def record_prediction(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/predictions/{prediction_id}/outcome")
+@router.post("/api/predictions/{prediction_id}/outcome", response_model=None)
 async def record_outcome(
     prediction_id: str,
     token: str,
     converted: bool,
     actual_stage: str = "unknown",
     closed_value: float = 0,
-    days_to_conversion: int = None,
-    orchestrator: FelixAutomationOrchestrator = None
+    days_to_conversion: int = None
 ):
     """
     Record actual outcome for a prediction.
@@ -164,12 +162,11 @@ async def record_outcome(
 # ACCURACY METRICS ENDPOINTS
 # ============================================================================
 
-@router.get("/api/predictions/metrics/accuracy")
+@router.get("/api/predictions/metrics/accuracy", response_model=None)
 async def get_accuracy_metrics(
     token: str,
     days: int = 30,
-    model_version: str = None,
-    orchestrator: FelixAutomationOrchestrator = None
+    model_version: str = None
 ):
     """
     Get accuracy metrics for predictions.
@@ -209,11 +206,10 @@ async def get_accuracy_metrics(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/api/predictions/metrics/by-model")
+@router.get("/api/predictions/metrics/by-model", response_model=None)
 async def get_model_comparison(
     token: str,
-    days: int = 30,
-    orchestrator: FelixAutomationOrchestrator = None
+    days: int = 30
 ):
     """
     Compare prediction accuracy across different model versions.
@@ -255,11 +251,10 @@ async def get_model_comparison(
 # CONFIDENCE ADJUSTMENT ENDPOINTS
 # ============================================================================
 
-@router.post("/api/predictions/confidence/adjust")
+@router.post("/api/predictions/confidence/adjust", response_model=None)
 async def adjust_confidence_scores(
     token: str,
-    client_id: int = None,
-    orchestrator: FelixAutomationOrchestrator = None
+    client_id: int = None
 ):
     """
     Adjust confidence scores based on historical accuracy.
@@ -300,10 +295,9 @@ async def adjust_confidence_scores(
 # RETRAINING ENDPOINTS
 # ============================================================================
 
-@router.get("/api/predictions/retraining/recommendations")
+@router.get("/api/predictions/retraining/recommendations", response_model=None)
 async def get_retraining_recommendations(
-    token: str,
-    orchestrator: FelixAutomationOrchestrator = None
+    token: str
 ):
     """
     Get recommendations for model retraining.
@@ -349,12 +343,11 @@ async def get_retraining_recommendations(
 # HISTORY ENDPOINTS
 # ============================================================================
 
-@router.get("/api/predictions/history")
+@router.get("/api/predictions/history", response_model=None)
 async def get_prediction_history(
     token: str,
     client_id: int = None,
-    limit: int = 50,
-    orchestrator: FelixAutomationOrchestrator = None
+    limit: int = 50
 ):
     """
     Get prediction history for analysis.
@@ -396,11 +389,10 @@ async def get_prediction_history(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/api/predictions/{prediction_id}")
+@router.get("/api/predictions/{prediction_id}", response_model=None)
 async def get_prediction_details(
     prediction_id: str,
-    token: str,
-    orchestrator: FelixAutomationOrchestrator = None
+    token: str
 ):
     """
     Get details for a specific prediction.
@@ -459,11 +451,10 @@ async def get_prediction_details(
 # STATISTICS ENDPOINTS
 # ============================================================================
 
-@router.get("/api/predictions/stats/overview")
+@router.get("/api/predictions/stats/overview", response_model=None)
 async def get_predictions_overview(
     token: str,
-    days: int = 30,
-    orchestrator: FelixAutomationOrchestrator = None
+    days: int = 30
 ):
     """
     Get high-level overview of prediction statistics.

@@ -209,19 +209,24 @@ class TestABTestingIntegration:
         """Test variant assignment is deterministic"""
         from agents.email_variant_assigner import EmailVariantAssigner
 
-        assigner = EmailVariantAssigner()
+        # Create mock database connection
+        db_mock = MagicMock()
+        assigner = EmailVariantAssigner(db_mock)
 
         # Same client should always get same variant
         variant1 = assigner.assign_variant(test_id=1, client_id=100)
         variant2 = assigner.assign_variant(test_id=1, client_id=100)
 
         assert variant1 == variant2
+        assert variant1 in ['A', 'B']
 
     def test_variant_distribution(self):
         """Test variants are distributed evenly"""
         from agents.email_variant_assigner import EmailVariantAssigner
 
-        assigner = EmailVariantAssigner()
+        # Create mock database connection
+        db_mock = MagicMock()
+        assigner = EmailVariantAssigner(db_mock)
 
         # Count distribution across clients
         variants = {}
@@ -240,30 +245,35 @@ class TestABTestingIntegration:
         """Test statistical significance is calculated correctly"""
         from agents.statistical_tester import StatisticalTester
 
-        tester = StatisticalTester()
+        # Create mock database connection
+        db_mock = MagicMock()
+        tester = StatisticalTester(db_mock)
 
-        # Create test results
-        variant_a = {
-            'sent': 1000,
-            'opens': 350,
-            'clicks': 85,
-            'conversions': 12
+        # Create test data
+        test_data = {
+            'A': {
+                'sent': 1000,
+                'opens': 350,
+                'clicks': 85,
+                'conversions': 12
+            },
+            'B': {
+                'sent': 1000,
+                'opens': 380,
+                'clicks': 105,
+                'conversions': 18
+            }
         }
 
-        variant_b = {
-            'sent': 1000,
-            'opens': 380,
-            'clicks': 105,
-            'conversions': 18
-        }
+        # Patch get_test_results to return our test data
+        with patch.object(tester, 'get_test_results', return_value=test_data):
+            result = tester.compare_variants(test_id=1)
 
-        result = tester.compare_variants(variant_a, variant_b)
-
-        # Should return statistical measures
-        assert 'open_rate_a' in result
-        assert 'open_rate_b' in result
-        assert 'p_value' in result
-        assert 'winner' in result
+            # Should return statistical measures
+            assert result is not None
+            assert isinstance(result, dict)
+            assert 'statistics' in result
+            assert 'winner' in result
 
 
 class TestMobileOptimizationIntegration:
@@ -435,8 +445,10 @@ class TestEndToEndFeatureFlow:
         from agents.email_variant_assigner import EmailVariantAssigner
         from agents.statistical_tester import StatisticalTester
 
-        assigner = EmailVariantAssigner()
-        tester = StatisticalTester()
+        # Create mock database
+        db_mock = MagicMock()
+        assigner = EmailVariantAssigner(db_mock)
+        tester = StatisticalTester(db_mock)
 
         # Assign clients to variants
         clients_a = []
@@ -449,26 +461,47 @@ class TestEndToEndFeatureFlow:
             else:
                 clients_b.append(client_id)
 
-        # Simulate test results
-        variant_a = {
+        # Verify distribution
+        assert len(clients_a) > 0
+        assert len(clients_b) > 0
+
+        # Mock the database to return test results
+        import json
+        variant_a_data = {
             'sent': len(clients_a),
             'opens': int(len(clients_a) * 0.35),
             'clicks': int(len(clients_a) * 0.08),
             'conversions': int(len(clients_a) * 0.012)
         }
 
-        variant_b = {
+        variant_b_data = {
             'sent': len(clients_b),
             'opens': int(len(clients_b) * 0.38),
             'clicks': int(len(clients_b) * 0.10),
             'conversions': int(len(clients_b) * 0.018)
         }
 
-        # Calculate statistical significance
-        result = tester.compare_variants(variant_a, variant_b)
+        # Mock get_test_results to return our data
+        db_mock.cursor().fetchone.return_value = (
+            1,  # test_id
+            'A/B Test Name',
+            'audit_report'
+        )
 
-        # Should have winner determination
-        assert result['winner'] in ['A', 'B', 'No significant difference']
+        # Patch get_test_results to return our test data
+        with patch.object(tester, 'get_test_results') as mock_get:
+            mock_get.return_value = {
+                'A': variant_a_data,
+                'B': variant_b_data
+            }
+
+            # Calculate statistical significance
+            result = tester.compare_variants(test_id=1)
+
+            # Should have results
+            assert result is not None
+            assert 'winner' in result
+            assert result['winner'] is None or result['winner'] in ['A', 'B']
 
 
 if __name__ == "__main__":

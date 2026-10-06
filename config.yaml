@@ -6,7 +6,7 @@
 
 system:
   name: "Felix Automation - Opción C"
-  version: "8.0"
+  version: "14.0.0"  # FASE 14 Production Release
   mode: "production"  # development, staging, production
   debug: false
 
@@ -15,7 +15,7 @@ system:
 # ===============================================
 database:
   type: "sqlite"
-  path: "data/pipeline.db"
+  path: "data/pipeline.sqlite"  # Production database path
   journal_mode: "WAL"  # Write-Ahead Logging para mejor concurrencia
   timeout: 30
 
@@ -460,3 +460,179 @@ limits:
 # Se pueden sobrescribir con variables de entorno
 # Formato: FELIX_<SECTION>_<KEY> = valor
 # Ejemplo: FELIX_EMAIL_DEMO_MODE=false
+
+# ===============================================
+# FASE 14: REAL-TIME & ML FEATURES
+# ===============================================
+
+# ===============================================
+# WEBSOCKET - Real-Time Dashboard Updates
+# ===============================================
+websocket:
+  enabled: true
+  port: 8001
+  host: "0.0.0.0"
+  # WebSocket timeouts (seconds)
+  connection_timeout: 30
+  heartbeat_interval_desktop: 30
+  heartbeat_interval_mobile: 60
+  max_message_size: 1048576  # 1 MB
+  # Event history (stored per client)
+  max_event_history: 100
+  # Connection limits
+  max_connections: 1000
+  max_connections_per_user: 10
+
+# ===============================================
+# JWT AUTHENTICATION - WebSocket & API
+# ===============================================
+jwt:
+  enabled: true
+  secret_key: "${JWT_SECRET_KEY}"
+  algorithm: "HS256"
+  expiration_hours: 24
+  refresh_expiration_hours: 720  # 30 days
+  # Token validation
+  verify_expiration: true
+  verify_signature: true
+
+# ===============================================
+# ML PREDICTIONS - Real-Time Conversion Scoring
+# ===============================================
+ml_predictions:
+  enabled: true
+  # Prediction scoring (0-100%)
+  probability_weighting:
+    engagement_score: 0.40
+    platform_metrics: 0.30
+    historical_patterns: 0.20
+    temporal_factors: 0.10
+  # Confidence calculation
+  min_confidence_for_recommendation: 60
+  # Anomaly detection
+  anomaly_detection:
+    enabled: true
+    sensitivity: "medium"  # low, medium, high
+    types:
+      - "unusual_activity"
+      - "conversion_drop"
+      - "engagement_spike"
+      - "behavioral_change"
+      - "temporal_anomaly"
+  # Prediction broadcasting
+  broadcast_interval: 30  # seconds
+  include_risk_factors: true
+  include_positive_factors: true
+  include_recommendations: true
+
+# ===============================================
+# EMAIL A/B TESTING
+# ===============================================
+ab_testing:
+  enabled: true
+  # Test configuration
+  default_test_duration_days: 14
+  significance_threshold: 0.05  # p-value for winner determination
+  min_sample_size: 30  # minimum per variant
+  # Statistical testing method
+  test_method: "chi_square"  # chi_square, t_test
+  # Variant assignment
+  variant_assignment: "hash_based"  # hash_based, random
+  # Default split
+  default_split: 0.50  # 50-50 for A/B
+  # Test types
+  email_types:
+    - "first_followup"
+    - "second_followup"
+    - "proposal_reminder"
+    - "special_offer"
+
+# ===============================================
+# SHOPIFY INTEGRATION - Real API
+# ===============================================
+shopify:
+  enabled: true
+  api_version: "2024-01"
+  # Rate limiting (requests per second)
+  rate_limit: 2
+  # Connection pooling
+  connection_pool_size: 5
+  pool_timeout: 30
+  # Retry configuration
+  retry_attempts: 3
+  retry_backoff_factor: 2.0  # exponential backoff
+  # Webhook configuration
+  webhook_validation: true
+  webhook_signature_algorithm: "HMAC-SHA256"
+  webhook_topics:
+    - "orders/created"
+    - "orders/updated"
+    - "products/updated"
+  # Data collection
+  sync_interval: 3600  # seconds (1 hour)
+  orders_limit: 100
+  products_limit: 50
+  # API endpoints
+  base_url: "https://{shop_domain}/admin/api/{api_version}"
+
+# ===============================================
+# MOBILE OPTIMIZATION
+# ===============================================
+mobile:
+  enabled: true
+  # Progressive Web App (PWA)
+  pwa_enabled: true
+  service_worker_enabled: true
+  offline_capability: true
+  # Offline data caching
+  cache_strategy: "network-first"  # network-first, cache-first
+  cache_ttl_minutes: 60
+  # Touch optimization
+  min_tap_target: 44  # pixels (WCAG requirement)
+  # Charts optimization
+  chart_optimization: true
+  reduce_data_points_on_mobile: true
+  lazy_load_charts: true
+  # Connection optimization
+  reduce_event_payload: true
+  compress_floats: true  # reduce float precision to 2 decimals
+  remove_internal_fields: true
+
+# ===============================================
+# PERFORMANCE TARGETS - FASE 14
+# ===============================================
+performance:
+  # WebSocket latency targets
+  websocket_latency_max_ms: 100
+  broadcast_latency_max_ms: 100
+  # Dashboard load targets
+  dashboard_load_time_max_sec: 2.0
+  mobile_dashboard_load_time_max_sec: 3.0
+  # API response targets
+  api_response_time_max_ms: 500
+  # Database query targets
+  db_query_max_ms: 100
+  # Concurrent connection handling
+  max_concurrent_connections: 100
+  performance_test_enabled: true
+
+# ===============================================
+# MONITORING & HEALTH CHECKS
+# ===============================================
+monitoring:
+  enabled: true
+  health_check_interval: 60  # seconds
+  # Metrics to track
+  track_websocket_health: true
+  track_prediction_accuracy: true
+  track_ab_test_progress: true
+  track_shopify_sync: true
+  # Alerts
+  alert_on_latency_spike: true
+  alert_on_error_rate: true
+  alert_on_connection_drop: true
+  # Logging
+  log_all_events: true
+  log_performance_metrics: true
+  log_errors_verbose: true
+

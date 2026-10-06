@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Widgets de Predicción ML - Felix Automation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #667eea;
+            --primary-light: #7c8ff4;
+            --secondary: #f093fb;
+            --accent: #f5576c;
+            --success: #4caf50;
+            --warning: #ff9800;
+            --danger: #f44336;
+            --bg: #f8f9fa;
+            --bg-card: #ffffff;
+            --border: #e0e0e0;
+            --text-primary: #212121;
+            --text-secondary: #666666;
+            --text-light: #999999;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #121212;
+                --bg-card: #1e1e1e;
+                --border: #2e2e2e;
+                --text-primary: #ffffff;
+                --text-secondary: #b0b0b0;
+                --text-light: #757575;
+            }
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-primary);
+            padding: 24px;
+        }
+
+        .ml-widgets-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        /* ==================== PREDICTION GAUGE ==================== */
+        .prediction-gauge-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 32px 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            min-height: 380px;
+            justify-content: center;
+            transition: box-shadow 0.3s ease;
+        }
+
+        .prediction-gauge-card:hover {
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+
+        .gauge-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            align-self: flex-start;
+        }
+
+        .gauge-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .gauge-svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .gauge-background {
+            fill: none;
+            stroke: var(--border);
+            stroke-width: 8;
+            stroke-linecap: round;
+        }
+
+        .gauge-progress {
+            fill: none;
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke-dasharray: 471;
+            stroke-dashoffset: 471;
+            transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                        stroke 0.8s ease;
+            animation: gaugeIncrease 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        @keyframes gaugeIncrease {
+            from {
+                stroke-dashoffset: 471;
+            }
+            to {
+                stroke-dashoffset: calc(471 - (471 * var(--percentage) / 100));
+            }
+        }
+
+        .gauge-progress.high {
+            stroke: var(--success);
+        }
+
+        .gauge-progress.medium {
+            stroke: var(--warning);
+        }
+
+        .gauge-progress.low {
+            stroke: var(--danger);
+        }
+
+        .gauge-center {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .gauge-value {
+            font-size: 48px;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .gauge-unit {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .gauge-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 8px;
+        }
+
+        /* ==================== CONFIDENCE INDICATOR ==================== */
+        .confidence-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            transition: box-shadow 0.3s ease;
+        }
+
+        .confidence-card:hover {
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .confidence-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: help;
+        }
+
+        .info-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: rgba(102, 126, 234, 0.1);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            position: relative;
+        }
+
+        .info-icon:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 120%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--text-primary);
+            color: var(--bg);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .confidence-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .confidence-bar-container {
+            position: relative;
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .confidence-bar {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            width: 0%;
+            animation: confidenceGrow 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        @keyframes confidenceGrow {
+            from { width: 0%; }
+            to { width: var(--confidence-width); }
+        }
+
+        .confidence-text {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+        }
+
+        /* ==================== RISK FACTORS ==================== */
+        .factors-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+        }
+
+        .factors-section {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: box-shadow 0.3s ease;
+        }
+
+        .factors-section:hover {
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+
+        .factors-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .factors-title.risk::before {
+            content: '⚠️';
+            display: inline-block;
+        }
+
+        .factors-title.positive::before {
+            content: '✓';
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--success);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .factors-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .factor-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            background: var(--bg);
+            border-radius: 8px;
+            border-left: 3px solid;
+            min-height: 44px;
+            align-items: center;
+            animation: slideIn 0.4s ease-out forwards;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .factor-item.risk {
+            border-left-color: var(--danger);
+        }
+
+        .factor-item.positive {
+            border-left-color: var(--success);
+        }
+
+        .factor-icon {
+            flex-shrink: 0;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .factor-item.risk .factor-icon {
+            background: rgba(244, 67, 54, 0.1);
+        }
+
+        .factor-item.positive .factor-icon {
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        .factor-text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .factor-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .factor-description {
+            font-size: 11px;
+            color: var(--text-light);
+        }
+
+        .empty-factors {
+            text-align: center;
+            padding: 32px 16px;
+            color: var(--text-light);
+            font-size: 13px;
+        }
+
+        /* ==================== RECOMMENDATION ==================== */
+        .recommendation-card {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(240, 147, 251, 0.1) 100%);
+            border-radius: 16px;
+            padding: 24px;
+            border: 2px solid var(--primary);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .recommendation-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            width: fit-content;
+            padding: 8px 12px;
+            background: var(--primary);
+            color: white;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .recommendation-text {
+            font-size: 14px;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .timeline-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px;
+            background: var(--bg-card);
+            border-radius: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .timeline-icon {
+            font-size: 18px;
+        }
+
+        /* ==================== RESPONSIVE ==================== */
+        @media (max-width: 768px) {
+            .ml-widgets-container {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .prediction-gauge-card {
+                min-height: 320px;
+                padding: 24px 16px;
+            }
+
+            .gauge-value {
+                font-size: 36px;
+            }
+
+            .confidence-value {
+                font-size: 28px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 12px;
+            }
+
+            .prediction-gauge-card,
+            .confidence-card,
+            .factors-section,
+            .recommendation-card {
+                padding: 16px;
+            }
+
+            .gauge-value {
+                font-size: 32px;
+            }
+
+            .confidence-value {
+                font-size: 24px;
+            }
+
+            .factor-item {
+                padding: 10px;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="ml-widgets-container">
+        <!-- PREDICTION GAUGE -->
+        <div class="prediction-gauge-card">
+            <div class="gauge-title">Probabilidad de Conversión</div>
+            <div class="gauge-container">
+                <svg class="gauge-svg" viewBox="0 0 200 200">
+                    <circle class="gauge-background" cx="100" cy="100" r="75"></circle>
+                    <circle class="gauge-progress high" cx="100" cy="100" r="75" style="--percentage: 75"></circle>
+                </svg>
+                <div class="gauge-center">
+                    <div class="gauge-value">75</div>
+                    <div class="gauge-unit">%</div>
+                </div>
+            </div>
+            <div class="gauge-label">Muy Probable</div>
+        </div>
+
+        <!-- CONFIDENCE INDICATOR -->
+        <div class="confidence-card">
+            <div class="card-header">
+                <div class="card-title">Nivel de Confianza</div>
+                <div class="confidence-info">
+                    <div class="info-icon" data-tooltip="Basado en: histórico, engagement, datos del cliente">ℹ️</div>
+                </div>
+            </div>
+            <div class="confidence-value">88%</div>
+            <div class="confidence-bar-container">
+                <div class="confidence-bar" style="--confidence-width: 88%"></div>
+            </div>
+            <div class="confidence-text">
+                Confianza ALTA - Predicción muy confiable basada en múltiples factores de comportamiento
+            </div>
+        </div>
+    </div>
+
+    <!-- FACTORS GRID -->
+    <div style="max-width: 1200px; margin: 24px auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
+        <!-- RISK FACTORS -->
+        <div class="factors-section">
+            <div class="factors-title risk">Factores de Riesgo</div>
+            <div class="factors-list">
+                <div class="factor-item risk">
+                    <div class="factor-icon">⚡</div>
+                    <div class="factor-text">
+                        <div class="factor-name">Ciclo de ventas largo</div>
+                        <div class="factor-description">Típicamente requiere 45-60 días</div>
+                    </div>
+                </div>
+                <div class="factor-item risk">
+                    <div class="factor-icon">🔍</div>
+                    <div class="factor-text">
+                        <div class="factor-name">Presión competitiva</div>
+                        <div class="factor-description">Múltiples alternativas disponibles</div>
+                    </div>
+                </div>
+                <div class="factor-item risk">
+                    <div class="factor-icon">⏰</div>
+                    <div class="factor-text">
+                        <div class="factor-name">Inactividad reciente</div>
+                        <div class="factor-description">Último contacto hace 8 días</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- POSITIVE FACTORS -->
+        <div class="factors-section">
+            <div class="factors-title positive">Factores Positivos</div>
+            <div class="factors-list">
+                <div class="factor-item positive">
+                    <div class="factor-icon">🎯</div>
+                    <div class="factor-text">
+                        <div class="factor-name">Alto engagement</div>
+                        <div class="factor-description">5 clics en último email</div>
+                    </div>
+                </div>
+                <div class="factor-item positive">
+                    <div class="factor-icon">💰</div>
+                    <div class="factor-text">
+                        <div class="factor-name">Presupuesto confirmado</div>
+                        <div class="factor-description">$50,000+ disponible</div>
+                    </div>
+                </div>
+                <div class="factor-item positive">
+                    <div class="factor-icon">✅</div>
+                    <div class="factor-text">
+                        <div class="factor-name">Decisor identificado</div>
+                        <div class="factor-description">Contacto con poder de decisión</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RECOMMENDATION SECTION -->
+    <div style="max-width: 1200px; margin: 24px auto;">
+        <div class="recommendation-card">
+            <div class="recommendation-badge">💡 Recomendación</div>
+            <div class="recommendation-text">
+                Contactar hoy por llamada telefónica. La combinación de alto engagement y presupuesto confirmado sugiere que el cliente está listo para discutir términos. Aprovechar el momentum antes de que surge competencia.
+            </div>
+            <div class="timeline-info">
+                <span class="timeline-icon">📅</span>
+                <span><strong>Tiempo estimado para cerrar:</strong> 5-7 días</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Animación de carga de gauge
+        document.addEventListener('DOMContentLoaded', () => {
+            const gaugeCircle = document.querySelector('.gauge-progress');
+            if (gaugeCircle) {
+                // Trigger animation
+                setTimeout(() => {
+                    gaugeCircle.style.animation = 'none';
+                    gaugeCircle.offsetHeight; // Trigger reflow
+                    gaugeCircle.style.animation = '';
+                }, 100);
+            }
+        });
+
+        // Interactividad con WebSocket en el futuro
+        // Estos datos provendrían del servidor vía WebSocket
+        class MLPredictionWidget {
+            constructor() {
+                this.probability = 75;
+                this.confidence = 88;
+                this.riskFactors = [];
+                this.positiveFactors = [];
+            }
+
+            updatePrediction(data) {
+                if (data.probability !== undefined) {
+                    this.probability = data.probability;
+                    this.updateGauge();
+                }
+                if (data.confidence !== undefined) {
+                    this.confidence = data.confidence;
+                    this.updateConfidence();
+                }
+                if (data.riskFactors) {
+                    this.riskFactors = data.riskFactors;
+                    this.updateFactors('risk');
+                }
+                if (data.positiveFactors) {
+                    this.positiveFactors = data.positiveFactors;
+                    this.updateFactors('positive');
+                }
+            }
+
+            updateGauge() {
+                const circle = document.querySelector('.gauge-progress');
+                if (circle) {
+                    circle.style.setProperty('--percentage', this.probability);
+
+                    // Update color based on probability
+                    circle.classList.remove('high', 'medium', 'low');
+                    if (this.probability >= 60) {
+                        circle.classList.add('high');
+                    } else if (this.probability >= 35) {
+                        circle.classList.add('medium');
+                    } else {
+                        circle.classList.add('low');
+                    }
+                }
+            }
+
+            updateConfidence() {
+                const confidenceValue = document.querySelector('.confidence-value');
+                const confidenceBar = document.querySelector('.confidence-bar');
+                if (confidenceValue) {
+                    confidenceValue.textContent = this.confidence;
+                }
+                if (confidenceBar) {
+                    confidenceBar.style.setProperty('--confidence-width', this.confidence + '%');
+                }
+            }
+
+            updateFactors(type) {
+                // Implementation for dynamic factor updates
+                console.log(`Updated ${type} factors:`,
+                    type === 'risk' ? this.riskFactors : this.positiveFactors);
+            }
+        }
+
+        // Instanciar el widget
+        const mlWidget = new MLPredictionWidget();
+
+        // Ejemplo de actualización (simular WebSocket)
+        // mlWidget.updatePrediction({
+        //     probability: 82,
+        //     confidence: 91,
+        //     riskFactors: [...],
+        //     positiveFactors: [...]
+        // });
+    </script>
+</body>
+</html>

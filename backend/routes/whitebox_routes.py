@@ -78,13 +78,12 @@ class WhiteBoxAuditRequest(BaseModel):
 # ENDPOINTS: CREDENCIALES
 # ============================================================================
 
-@router.post("/api/whitebox/credentials/store")
+@router.post("/api/whitebox/credentials/store", response_model=None)
 async def store_credentials(
     token: str,
     client_id: int,
     platform: str,
-    credentials_data: Dict,
-    orchestrator: FelixAutomationOrchestrator = None
+    credentials_data: Dict
 ):
     """
     Almacenar credenciales de forma segura con encriptación.
@@ -129,12 +128,11 @@ async def store_credentials(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/whitebox/credentials/validate")
+@router.post("/api/whitebox/credentials/validate", response_model=None)
 async def validate_credentials(
     token: str,
     platform: str,
-    credentials_data: Dict,
-    orchestrator: FelixAutomationOrchestrator = None
+    credentials_data: Dict
 ):
     """
     Validar credenciales antes de almacenarlas.
@@ -180,12 +178,11 @@ async def validate_credentials(
 # ENDPOINTS: SHOPIFY WHITE-BOX AUDIT
 # ============================================================================
 
-@router.post("/api/whitebox/audit/shopify")
+@router.post("/api/whitebox/audit/shopify", response_model=None)
 async def audit_shopify_whitebox(
     token: str,
     client_id: int,
-    credentials: ShopifyCredentials,
-    orchestrator: FelixAutomationOrchestrator = None
+    credentials: ShopifyCredentials
 ):
     """
     Ejecutar white-box audit de Shopify.
@@ -243,12 +240,11 @@ async def audit_shopify_whitebox(
 # ENDPOINTS: JUMPSELLER WHITE-BOX AUDIT
 # ============================================================================
 
-@router.post("/api/whitebox/audit/jumpseller")
+@router.post("/api/whitebox/audit/jumpseller", response_model=None)
 async def audit_jumpseller_whitebox(
     token: str,
     client_id: int,
-    credentials: JumpsellerCredentials,
-    orchestrator: FelixAutomationOrchestrator = None
+    credentials: JumpsellerCredentials
 ):
     """
     Ejecutar white-box audit de Jumpseller.
@@ -306,12 +302,11 @@ async def audit_jumpseller_whitebox(
 # ENDPOINTS: CODE WHITE-BOX AUDIT
 # ============================================================================
 
-@router.post("/api/whitebox/audit/code")
+@router.post("/api/whitebox/audit/code", response_model=None)
 async def audit_code_whitebox(
     token: str,
     client_id: int,
-    credentials: CodeCredentials,
-    orchestrator: FelixAutomationOrchestrator = None
+    credentials: CodeCredentials
 ):
     """
     Ejecutar white-box audit de código/infraestructura.
@@ -369,13 +364,12 @@ async def audit_code_whitebox(
 # ENDPOINTS: AUDITORÍA COMPLETA (Multi-Plataforma)
 # ============================================================================
 
-@router.post("/api/whitebox/audit/complete")
+@router.post("/api/whitebox/audit/complete", response_model=None)
 async def audit_complete_whitebox(
     token: str,
     client_id: int,
     platforms: list,  # ["shopify", "jumpseller", "code"]
-    credentials_map: Dict,  # {"shopify": {...}, "jumpseller": {...}, "code": {...}}
-    orchestrator: FelixAutomationOrchestrator = None
+    credentials_map: Dict  # {"shopify": {...}, "jumpseller": {...}, "code": {...}}
 ):
     """
     Ejecutar auditorías white-box completas en múltiples plataformas.
@@ -456,13 +450,12 @@ async def audit_complete_whitebox(
 # ENDPOINTS: HISTORIAL Y REPORTES
 # ============================================================================
 
-@router.get("/api/whitebox/audit/history")
+@router.get("/api/whitebox/audit/history", response_model=None)
 async def get_whitebox_history(
     token: str,
     client_id: int = None,
     platform: str = None,
-    limit: int = 50,
-    orchestrator: FelixAutomationOrchestrator = None
+    limit: int = 50
 ):
     """
     Obtener historial de auditorías white-box.
@@ -534,11 +527,10 @@ async def get_whitebox_history(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/api/whitebox/audit/{audit_id}")
+@router.get("/api/whitebox/audit/{audit_id}", response_model=None)
 async def get_whitebox_audit_details(
     audit_id: int,
-    token: str,
-    orchestrator: FelixAutomationOrchestrator = None
+    token: str
 ):
     """
     Obtener detalles completos de una auditoría white-box.
@@ -594,10 +586,9 @@ async def get_whitebox_audit_details(
 # ENDPOINTS: SEGURIDAD Y MANEJO DE CREDENCIALES
 # ============================================================================
 
-@router.get("/api/whitebox/credentials/status")
+@router.get("/api/whitebox/credentials/status", response_model=None)
 async def get_credentials_status(
-    token: str,
-    orchestrator: FelixAutomationOrchestrator = None
+    token: str
 ):
     """
     Obtener estado de credenciales almacenadas.
@@ -628,10 +619,9 @@ async def get_credentials_status(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/whitebox/credentials/cleanup")
+@router.post("/api/whitebox/credentials/cleanup", response_model=None)
 async def cleanup_credentials(
-    token: str,
-    orchestrator: FelixAutomationOrchestrator = None
+    token: str
 ):
     """
     Limpiar todas las credenciales almacenadas (liberación manual).

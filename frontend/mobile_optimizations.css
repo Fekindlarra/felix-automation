@@ -1,0 +1,383 @@
+/**
+ * Mobile Optimizations for Felix Automation Dashboard
+ * - Touch-friendly tap targets (44x44px minimum)
+ * - Improved responsive layouts
+ * - Enhanced readability on small screens
+ */
+
+/* ============================================================
+   TOUCH-FRIENDLY CONTROLS (44x44px minimum)
+   ============================================================ */
+
+@media (hover: none) and (pointer: coarse) {
+    /* Touch devices - larger tap targets */
+    
+    /* Buttons and interactive elements */
+    button,
+    .kpi-card,
+    .activity-item,
+    .pipeline-stage,
+    .prediction-card,
+    input[type="button"],
+    input[type="submit"],
+    a[role="button"] {
+        min-height: 48px;
+        padding: 12px 16px;
+    }
+
+    /* Ensure minimum width for smaller elements */
+    .connection-status {
+        min-height: 48px;
+    }
+
+    /* Activity feed items */
+    .activity-item {
+        padding: 16px;
+        min-height: 56px;
+        gap: 16px;
+    }
+
+    /* Remove hover effects on touch devices */
+    .kpi-card:hover,
+    .activity-item:hover,
+    .pipeline-stage:hover,
+    .prediction-card:hover {
+        transform: none;
+    }
+
+    /* Use :active state instead on touch */
+    .kpi-card:active,
+    .activity-item:active,
+    .pipeline-stage:active {
+        opacity: 0.9;
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+
+    /* Remove tap highlight color flash */
+    * {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Larger text on small screens */
+    body {
+        font-size: 16px; /* Prevents zoom on input focus in iOS Safari */
+    }
+}
+
+/* ============================================================
+   MOBILE-FIRST BREAKPOINTS
+   ============================================================ */
+
+/* Extra small devices (< 320px) */
+@media (max-width: 320px) {
+    .header h1 {
+        font-size: 16px;
+    }
+
+    .kpi-value {
+        font-size: 20px;
+    }
+
+    .section-title {
+        font-size: 12px;
+    }
+
+    .pipeline-stage {
+        padding: 12px;
+    }
+
+    .stage-count {
+        font-size: 24px;
+    }
+}
+
+/* Small devices (320px - 480px) */
+@media (max-width: 480px) {
+    /* Ensure single column for all grids */
+    .grid,
+    .prediction-section,
+    .pipeline-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Reduce header complexity on very small screens */
+    .header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .header h1 {
+        font-size: 18px;
+        margin-bottom: 8px;
+    }
+
+    /* Improve readability with better spacing */
+    .container {
+        padding: 8px;
+        padding-top: calc(8px + env(safe-area-inset-top, 0px));
+        padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* Stack connection status below header */
+    .connection-status {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Larger section titles on mobile */
+    .section-title {
+        font-size: 14px;
+        margin: 16px 0 12px 0;
+    }
+
+    /* Card improvements */
+    .kpi-card,
+    .prediction-card,
+    .pipeline-stage {
+        padding: 12px;
+        border-radius: 8px;
+    }
+
+    /* Better text sizing */
+    .kpi-label {
+        font-size: 11px;
+    }
+
+    .kpi-value {
+        font-size: 20px;
+    }
+
+    .kpi-unit {
+        font-size: 11px;
+    }
+
+    /* Activity feed optimization */
+    .activity-feed {
+        max-height: 300px;
+        padding: 12px;
+    }
+
+    .activity-item {
+        gap: 8px;
+        padding: 10px;
+        min-height: 48px;
+    }
+
+    .activity-icon {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        font-size: 16px;
+    }
+
+    /* Prediction section optimization */
+    .prediction-gauge-container {
+        height: 120px;
+        min-height: 100px;
+    }
+
+    .timeline-container {
+        min-height: 120px;
+    }
+
+    /* Chart optimization */
+    .chart-container {
+        padding: 12px;
+        margin-bottom: 20px;
+    }
+}
+
+/* Medium devices (480px - 768px) */
+@media (max-width: 768px) and (min-width: 481px) {
+    /* Two-column layout where appropriate */
+    .grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .pipeline-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    /* Maintain good spacing */
+    .container {
+        padding: 12px;
+    }
+
+    .kpi-card {
+        padding: 12px;
+    }
+
+    .prediction-card {
+        padding: 12px;
+    }
+
+    /* Slightly reduce gauge size */
+    .prediction-gauge-container {
+        height: 160px;
+    }
+}
+
+/* Large devices (> 768px) */
+@media (min-width: 769px) {
+    /* Remove touch-specific styles on desktop */
+    * {
+        -webkit-tap-highlight-color: auto;
+    }
+
+    /* Keep hover effects */
+    .kpi-card:hover,
+    .activity-item:hover,
+    .pipeline-stage:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+}
+
+/* ============================================================
+   TABLET OPTIMIZATION (768px - 1024px)
+   ============================================================ */
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    /* Three-column layout for tablets */
+    .grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+    }
+
+    .prediction-section {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+
+    /* Slightly larger spacing for tablet */
+    .container {
+        padding: 16px;
+    }
+
+    .section-title {
+        font-size: 16px;
+    }
+}
+
+/* ============================================================
+   LANDSCAPE ORIENTATION
+   ============================================================ */
+
+@media (orientation: landscape) and (max-height: 500px) {
+    /* Reduce vertical spacing in landscape mode */
+    .header {
+        padding: 12px;
+        padding-top: calc(12px + env(safe-area-inset-top, 0px));
+    }
+
+    .container {
+        padding: 8px;
+    }
+
+    .section-title {
+        margin: 8px 0 6px 0;
+    }
+
+    /* Stack grids differently in landscape */
+    .grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+    }
+
+    .pipeline-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+    }
+
+    /* Reduce card padding */
+    .kpi-card,
+    .pipeline-stage,
+    .prediction-card {
+        padding: 8px;
+        min-height: auto;
+    }
+
+    .kpi-value {
+        font-size: 20px;
+        margin-bottom: 4px;
+    }
+
+    .prediction-gauge-container {
+        height: 120px;
+    }
+}
+
+/* ============================================================
+   ACCESSIBILITY IMPROVEMENTS
+   ============================================================ */
+
+/* Focus states for keyboard navigation */
+.kpi-card:focus-visible,
+.activity-item:focus-visible,
+.pipeline-stage:focus-visible,
+.prediction-card:focus-visible,
+button:focus-visible,
+input:focus-visible {
+    outline: 3px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: more) {
+    .kpi-card,
+    .activity-item,
+    .pipeline-stage,
+    .prediction-card {
+        border-width: 2px;
+        border-color: currentColor;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .kpi-card:hover,
+    .activity-item:hover,
+    .pipeline-stage:hover {
+        transform: none;
+    }
+}
+
+/* ============================================================
+   PRINT OPTIMIZATION
+   ============================================================ */
+
+@media print {
+    .connection-status,
+    .footer,
+    .loading,
+    .alert {
+        display: none;
+    }
+
+    .container {
+        padding: 0;
+    }
+
+    .kpi-card,
+    .activity-item,
+    .pipeline-stage,
+    .prediction-card {
+        page-break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #ccc;
+    }
+
+    body {
+        color: #000;
+        background: white;
+    }
+}

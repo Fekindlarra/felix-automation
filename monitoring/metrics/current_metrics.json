@@ -1,0 +1,33 @@
+{
+  "database": {
+    "query_time_ms": 0.32,
+    "table_counts": {
+      "ab_test_results": 1,
+      "ab_tests": 1,
+      "agent_logs": 1,
+      "anomalies": 1,
+      "audits": 1,
+      "clients": 1,
+      "dashboard_metrics": 1,
+      "email_logs": 1,
+      "followups": 1,
+      "funnel_state": 1,
+      "lead_scores": 1,
+      "prediction_history": 1,
+      "proposals": 1,
+      "sales_pipeline": 1,
+      "shopify_orders": 1,
+      "shopify_stores": 1,
+      "shopify_webhooks": 1,
+      "sqlite_sequence": 1
+    },
+    "size_mb": 0.16,
+    "timestamp": "2026-10-05T18:48:13.060980"
+  },
+  "system": {
+    "disk_total_gb": 251.97,
+    "disk_used_gb": 13.93,
+    "disk_percent": 5.5,
+    "timestamp": "2026-10-05T18:48:13.060980"
+  }
+}

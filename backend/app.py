@@ -39,8 +39,13 @@ from backend.routes.scheduler_routes import router as scheduler_router
 from backend.routes.api_enhancement_routes import router as api_enhancement_router
 from backend.routes.prediction_validator_routes import router as prediction_validator_router
 from backend.routes.whitebox_routes import router as whitebox_router
-from backend.routes.ab_testing_routes import router as ab_testing_router, init_ab_testing
-from backend.routes.shopify_webhooks import router as shopify_webhooks_router, init_webhooks
+from backend.routes.ab_testing_routes import router as ab_testing_router
+from backend.routes.ab_testing_routes import init_ab_testing
+from backend.routes.shopify_webhooks import router as shopify_webhooks_router
+from backend.routes.shopify_webhooks import init_webhooks
+from backend.routes.lead_capture_routes import router as lead_capture_router
+from backend.routes.seo_routes import router as seo_router
+from backend.routes.monitoring_routes import router as monitoring_router
 from agents.statistical_tester import StatisticalTester
 from agents.email_variant_assigner import EmailVariantAssigner
 
@@ -91,8 +96,20 @@ app.include_router(ab_testing_router)
 # Include Shopify Webhooks routes (FASE 14: Real-time Shopify events)
 app.include_router(shopify_webhooks_router)
 
+# Include Lead Capture routes (FASE 14: Landing page integration)
+app.include_router(lead_capture_router)
+
+# Include SEO Audit routes (FASE 14: SEO Analysis Integration)
+app.include_router(seo_router)
+
+# Include Monitoring routes (FASE 14: Production metrics and health checks)
+app.include_router(monitoring_router)
+
 # Global orchestrator instance
 orchestrator = None
+
+# FASE 14: Prediction system instance
+from backend.routes.lead_prediction_integration import initialize_prediction_system as init_prediction
 
 # FASE 14: A/B Testing and Statistical Analysis instances
 statistical_tester = None
@@ -122,6 +139,48 @@ def get_variant_assigner() -> EmailVariantAssigner:
     if variant_assigner is None:
         variant_assigner = EmailVariantAssigner()
     return variant_assigner
+
+
+# ============================================================================
+# STARTUP EVENT - Initialize All Systems (FASE 14)
+# ============================================================================
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize all systems on app startup"""
+    try:
+        logger.info("🚀 Felix Automation API iniciada")
+        logger.info(f"📊 Conectando a base de datos: {DATABASE_PATH}")
+
+        orch = get_orchestrator()
+        db_conn = orch.db
+        logger.info(f"✅ Base de datos conectada - {len(orch.get_all_clients())} clientes encontrados")
+
+        # Initialize prediction system (FASE 14)
+        init_prediction(orchestrator=orch)
+        logger.info("✅ Prediction system initialized at startup")
+
+        # Initialize A/B testing routes (FASE 14)
+        tester = get_statistical_tester()
+        assigner = get_variant_assigner()
+        init_ab_testing(db_conn, tester, assigner)
+        logger.info("✅ A/B Testing framework initialized at startup")
+
+        # Initialize Shopify webhooks (FASE 14)
+        init_webhooks(db_conn)
+        logger.info("✅ Shopify webhook handler initialized at startup")
+
+        # Initialize Monitoring System (FASE 14)
+        try:
+            from backend.monitoring_startup import initialize_monitoring, start_monitoring_background_tasks
+            initialize_monitoring()
+            start_monitoring_background_tasks()
+            logger.info("✅ Production Monitoring System initialized at startup")
+        except Exception as e:
+            logger.warning(f"⚠️ Monitoring system initialization warning (non-blocking): {e}")
+
+    except Exception as e:
+        logger.error(f"❌ Error conectando a BD: {str(e)}")
 
 
 # ============================================================================
@@ -518,31 +577,8 @@ async def get_portal_data(token: str):
 
 
 # ============================================================================
-# STARTUP/SHUTDOWN
+# SHUTDOWN
 # ============================================================================
-
-@app.on_event("startup")
-async def startup_event():
-    """Al iniciar la aplicación"""
-    logger.info("🚀 Felix Automation API iniciada")
-    logger.info(f"📊 Conectando a base de datos: {DATABASE_PATH}")
-    try:
-        orch = get_orchestrator()
-        logger.info(f"✅ Base de datos conectada - {len(orch.get_all_clients())} clientes encontrados")
-
-        # FASE 14: Initialize A/B Testing routes
-        tester = get_statistical_tester()
-        assigner = get_variant_assigner()
-        init_ab_testing(orch.conn, tester, assigner)
-        logger.info("✅ A/B Testing framework initialized")
-
-        # FASE 14: Initialize Shopify Webhooks routes
-        init_webhooks(orch.conn)
-        logger.info("✅ Shopify webhook handler initialized")
-
-    except Exception as e:
-        logger.error(f"❌ Error conectando a BD: {str(e)}")
-
 
 @app.on_event("shutdown")
 async def shutdown_event():

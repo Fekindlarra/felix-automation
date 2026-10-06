@@ -1,0 +1,105 @@
+# FASE 14 - Monitoring Configuration
+monitoring:
+  # WebSocket Metrics
+  websocket:
+    enabled: true
+    metric_interval: 60  # seconds
+    targets:
+      - name: "websocket_latency"
+        threshold: 100    # ms (P95)
+        alert_on_exceed: true
+      - name: "websocket_connections"
+        threshold: 100
+        alert_on_drop: true
+      - name: "websocket_errors"
+        threshold: 1      # % error rate
+        alert_on_exceed: true
+
+  # Database Metrics
+  database:
+    enabled: true
+    metric_interval: 60
+    targets:
+      - name: "query_time"
+        threshold: 50     # ms
+        alert_on_exceed: true
+      - name: "connection_pool_usage"
+        threshold: 80     # %
+        alert_on_exceed: true
+      - name: "database_size"
+        threshold: 1000   # MB
+        warn_on_exceed: true
+
+  # API Metrics
+  api:
+    enabled: true
+    metric_interval: 300  # 5 minutes
+    targets:
+      - name: "response_time"
+        threshold: 1000   # ms
+        alert_on_exceed: true
+      - name: "request_rate"
+        threshold: 1000   # requests/minute
+        alert_on_exceed: true
+      - name: "error_rate"
+        threshold: 1      # %
+        alert_on_exceed: true
+
+  # ML Predictions Metrics
+  predictions:
+    enabled: true
+    metric_interval: 300
+    targets:
+      - name: "prediction_accuracy"
+        threshold: 70     # % accuracy
+        alert_on_drop: true
+      - name: "prediction_latency"
+        threshold: 500    # ms
+        alert_on_exceed: true
+
+  # A/B Testing Metrics
+  ab_testing:
+    enabled: true
+    metric_interval: 3600  # 1 hour
+    targets:
+      - name: "statistical_error"
+        threshold: 5      # %
+        alert_on_exceed: true
+      - name: "test_duration_variance"
+        threshold: 20     # %
+        alert_on_exceed: true
+
+  # Shopify Integration Metrics
+  shopify:
+    enabled: true
+    metric_interval: 300
+    targets:
+      - name: "api_success_rate"
+        threshold: 95     # %
+        alert_on_drop: true
+      - name: "sync_latency"
+        threshold: 30000  # ms (30 seconds)
+        alert_on_exceed: true
+      - name: "webhook_delivery_rate"
+        threshold: 99     # %
+        alert_on_drop: true
+
+  # Alerting Configuration
+  alerts:
+    enabled: true
+    channels:
+      - type: "file"
+        path: "monitoring/logs/alerts.log"
+      - type: "stdout"
+        enabled: true
+
+    escalation:
+      critical: 5      # minutes
+      warning: 15      # minutes
+      info: 60         # minutes
+
+  # Retention
+  retention:
+    metrics: 30       # days
+    alerts: 90        # days
+    logs: 60          # days

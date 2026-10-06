@@ -154,6 +154,30 @@ def verify_client_token(token: str) -> Dict:
     return payload
 
 
+def generate_jwt_token(user_id: int, role: str = "client",
+                       expires_delta: Optional[timedelta] = None) -> str:
+    """
+    Generar JWT token con user_id y role.
+    Función standalone para facilitar generación de tokens.
+
+    Args:
+        user_id: ID del usuario
+        role: Rol del usuario (client, admin)
+        expires_delta: Tiempo de expiración personalizado
+
+    Returns:
+        JWT token string
+    """
+    return AuthManager.create_access_token(
+        data={
+            "sub": f"user_{user_id}",
+            "user_id": user_id,
+            "role": role
+        },
+        expires_delta=expires_delta
+    )
+
+
 def verify_jwt_token(token: str) -> Optional[Dict]:
     """
     Verificar y decodificar JWT token sin lanzar excepciones.

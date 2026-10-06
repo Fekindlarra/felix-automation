@@ -1,0 +1,104 @@
+# FASE 14 - Alert Rules and Thresholds
+
+alert_rules:
+  # Critical Alerts (require immediate action)
+  critical:
+    - name: "websocket_high_latency"
+      metric: "websocket_latency"
+      condition: "p95 > 100ms"
+      severity: "CRITICAL"
+      notification: ["stdout", "log"]
+
+    - name: "database_unavailable"
+      metric: "database_connection"
+      condition: "fails"
+      severity: "CRITICAL"
+      notification: ["stdout", "log"]
+
+    - name: "disk_full"
+      metric: "disk_usage"
+      condition: "> 95%"
+      severity: "CRITICAL"
+      notification: ["stdout", "log"]
+
+    - name: "api_error_rate_high"
+      metric: "api_errors"
+      condition: "> 5%"
+      severity: "CRITICAL"
+      notification: ["stdout", "log"]
+
+  # Warning Alerts
+  warning:
+    - name: "database_slow_queries"
+      metric: "query_time"
+      condition: "> 50ms (mean)"
+      severity: "WARNING"
+      notification: ["log"]
+
+    - name: "websocket_connection_drops"
+      metric: "websocket_connections"
+      condition: "drop > 10%"
+      severity: "WARNING"
+      notification: ["log"]
+
+    - name: "disk_usage_high"
+      metric: "disk_usage"
+      condition: "> 80%"
+      severity: "WARNING"
+      notification: ["log"]
+
+    - name: "shopify_sync_failing"
+      metric: "shopify_success_rate"
+      condition: "< 95%"
+      severity: "WARNING"
+      notification: ["log"]
+
+    - name: "prediction_accuracy_drop"
+      metric: "prediction_accuracy"
+      condition: "< 70%"
+      severity: "WARNING"
+      notification: ["log"]
+
+  # Info Alerts
+  info:
+    - name: "daily_metrics_summary"
+      metric: "all"
+      condition: "every 24h"
+      severity: "INFO"
+      notification: ["log"]
+
+    - name: "database_size_growth"
+      metric: "database_size"
+      condition: "increased > 10%"
+      severity: "INFO"
+      notification: ["log"]
+
+# Notification Channels
+notification_channels:
+  stdout:
+    enabled: true
+    format: "[{severity}] {name}: {message}"
+
+  log:
+    enabled: true
+    file: "monitoring/logs/alerts.log"
+    format: "[{timestamp}] [{severity}] {name}: {message}"
+
+  email:
+    enabled: false
+    recipients:
+      - "felipe@enbuenamesa.com"
+    smtp_server: "smtp.sendgrid.net"
+    use_api: true
+
+# Auto-remediation (if enabled)
+auto_remediation:
+  enabled: false
+  actions:
+    - trigger: "database_connection_fails"
+      action: "restart_database"
+      delay_seconds: 30
+
+    - trigger: "websocket_high_latency"
+      action: "scale_up_connections"
+      delay_seconds: 60

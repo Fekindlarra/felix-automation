@@ -1,0 +1,57 @@
+/home/claude/felix-automation/backend/routes/scheduler_routes.py:65: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  analysis_type: str = Query("full", regex="^(full|quick|custom)$")
+/home/claude/felix-automation/backend/routes/scheduler_routes.py:131: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  status_filter: Optional[str] = Query(None, regex="^(success|failed)$")
+/home/claude/felix-automation/backend/routes/api_enhancement_routes.py:32: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  stage: Optional[str] = Query(None, regex="^(prospecto|propuesta|negociacion|cerrado)$"),
+/home/claude/felix-automation/backend/routes/api_enhancement_routes.py:33: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  sort_by: str = Query("probability", regex="^(probability|confidence|timeline)$"),
+/home/claude/felix-automation/backend/routes/api_enhancement_routes.py:34: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  sort_order: str = Query("desc", regex="^(asc|desc)$"),
+/home/claude/felix-automation/backend/routes/api_enhancement_routes.py:116: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  severity: Optional[str] = Query(None, regex="^(CRITICAL|HIGH|MEDIUM|LOW)$"),
+/home/claude/felix-automation/backend/routes/api_enhancement_routes.py:120: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  sort_by: str = Query("severity", regex="^(severity|affected_clients|timestamp)$"),
+/home/claude/felix-automation/backend/routes/api_enhancement_routes.py:194: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  new_stage: str = Query(..., regex="^(prospecto|propuesta|negociacion|cerrado)$")
+/home/claude/felix-automation/backend/routes/api_enhancement_routes.py:241: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  analysis_type: str = Query("full", regex="^(full|quick)$")
+/home/claude/felix-automation/backend/routes/api_enhancement_routes.py:502: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  events: List[str] = Query(
+/home/claude/felix-automation/backend/app.py:494: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @app.on_event("startup")
+/home/claude/felix-automation/backend/app.py:506: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @app.on_event("shutdown")
+
+╔════════════════════════════════════════════════════════════════╗
+║      FELIX AUTOMATION - BACKEND API FASE 12 + FASE 13         ║
+║    Dashboard Interno + Portal Cliente + WebSocket Real-Time   ║
+╚════════════════════════════════════════════════════════════════╝
+    
+
+📡 Iniciando servidor...
+   URL: http://localhost:8000
+   Docs: http://localhost:8000/docs
+   ReDoc: http://localhost:8000/redoc
+
+🔐 Credenciales demo:
+   Email: felipe@enbuenamesa.com
+   Password: admin123
+
+INFO:     Started server process [2254]
+INFO:     Waiting for application startup.
+INFO:__main__:🚀 Felix Automation API iniciada
+INFO:__main__:📊 Conectando a base de datos: /home/claude/felix-automation/data/pipeline.db
+INFO:__main__:✅ Base de datos conectada - 3 clientes encontrados
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)

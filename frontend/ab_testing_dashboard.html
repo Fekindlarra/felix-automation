@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Pruebas A/B</title>
+    <style>
+        :root {
+            --primary: #667eea;
+            --success: #4caf50;
+            --warning: #ff9800;
+            --danger: #f44336;
+            --info: #2196f3;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --border-color: #e0e0e0;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #1e1e1e;
+                --bg-secondary: #2a2a2a;
+                --text-primary: #ffffff;
+                --text-secondary: #aaaaaa;
+                --border-color: #444444;
+                --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            margin-bottom: 32px;
+        }
+
+        .header h1 {
+            margin: 0 0 8px 0;
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .header p {
+            margin: 0;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .section {
+            margin-bottom: 32px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .tests-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
+        }
+
+        .test-card {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
+        }
+
+        .test-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .test-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-badge.active {
+            background-color: rgba(76, 175, 80, 0.1);
+            color: #4caf50;
+        }
+
+        .status-badge.completed {
+            background-color: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        .status-badge.winner {
+            background-color: rgba(76, 175, 80, 0.15);
+            color: #2e7d32;
+            border: 1px solid #4caf50;
+        }
+
+        .test-description {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .metrics-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .metric {
+            flex: 1;
+            background-color: var(--bg-secondary);
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .metric-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .variant-comparison {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .variant-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+
+        .variant-label {
+            font-weight: 600;
+            color: var(--text-primary);
+            min-width: 60px;
+        }
+
+        .variant-metrics {
+            flex: 1;
+            display: flex;
+            gap: 16px;
+            margin: 0 12px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .variant-metric {
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .variant-metric-value {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .significance-bar {
+            flex: 0 0 100px;
+            height: 4px;
+            background-color: var(--bg-secondary);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .significance-fill {
+            height: 100%;
+            background-color: var(--success);
+            transition: width 0.3s ease;
+        }
+
+        .significance-low .significance-fill {
+            background-color: var(--danger);
+        }
+
+        .significance-medium .significance-fill {
+            background-color: var(--warning);
+        }
+
+        .significance-high .significance-fill {
+            background-color: var(--success);
+        }
+
+        .progress-section {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .progress-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background-color: var(--bg-secondary);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: var(--primary);
+            transition: width 0.3s ease;
+            border-radius: 3px;
+        }
+
+        .winner-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 12px;
+            padding: 8px 12px;
+            background-color: rgba(76, 175, 80, 0.1);
+            border: 1px solid #4caf50;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #2e7d32;
+        }
+
+        .winner-badge::before {
+            content: "✓";
+            font-weight: 700;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state p {
+            margin: 0;
+            font-size: 14px;
+        }
+
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--primary);
+            font-variant-numeric: tabular-nums;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        @media (max-width: 768px) {
+            .tests-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .variant-metrics {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .test-header {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .status-badge {
+                align-self: flex-start;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 12px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .metrics-row {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .stats-overview {
+                grid-template-columns: 1fr;
+            }
+
+            .test-card {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Panel de Pruebas A/B</h1>
+            <p>Gestiona, monitorea y optimiza tus pruebas de correo electrónico con análisis estadístico en tiempo real</p>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="stats-overview">
+            <div class="stat-card">
+                <div class="stat-number" id="totalTests">2</div>
+                <div class="stat-label">Pruebas Activas</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="completedTests">1</div>
+                <div class="stat-label">Pruebas Completadas</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalSent">1,245</div>
+                <div class="stat-label">Total Enviados</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="winnerCount">1</div>
+                <div class="stat-label">Ganadores Identificados</div>
+            </div>
+        </div>
+
+        <!-- Active Tests Section -->
+        <div class="section">
+            <h2 class="section-title">Pruebas Activas</h2>
+            <div class="tests-grid" id="activeTests"></div>
+        </div>
+
+        <!-- Completed Tests Section -->
+        <div class="section">
+            <h2 class="section-title">Pruebas Completadas</h2>
+            <div class="tests-grid" id="completedTestsGrid"></div>
+        </div>
+    </div>
+
+    <script>
+        // Mock data for A/B tests
+        const testsData = {
+            active: [
+                {
+                    id: 1,
+                    name: 'Prueba de Línea de Asunto',
+                    description: 'Comparando líneas de asunto de urgencia vs. curiosidad',
+                    type: 'subject_line',
+                    startDate: '2026-10-01',
+                    endDate: '2026-10-15',
+                    variants: {
+                        a: { name: 'Urgencia', opens: 245, clicks: 48, conversions: 12, sent: 500 },
+                        b: { name: 'Curiosidad', opens: 268, clicks: 62, conversions: 18, sent: 500 }
+                    },
+                    pValue: 0.042,
+                    progress: 45
+                },
+                {
+                    id: 2,
+                    name: 'Prueba de CTA',
+                    description: 'Botón vs. Enlace para llamadas a la acción',
+                    type: 'cta',
+                    startDate: '2026-10-03',
+                    endDate: '2026-10-10',
+                    variants: {
+                        a: { name: 'Botón', opens: 310, clicks: 78, conversions: 22, sent: 620 },
+                        b: { name: 'Enlace', opens: 295, clicks: 65, conversions: 15, sent: 620 }
+                    },
+                    pValue: 0.156,
+                    progress: 28
+                }
+            ],
+            completed: [
+                {
+                    id: 3,
+                    name: 'Prueba de Contenido',
+                    description: 'Contenido corto vs. contenido detallado',
+                    type: 'content',
+                    startDate: '2026-09-20',
+                    endDate: '2026-10-04',
+                    winner: 'a',
+                    variants: {
+                        a: { name: 'Corto', opens: 425, clicks: 142, conversions: 48, sent: 800 },
+                        b: { name: 'Detallado', opens: 398, clicks: 118, conversions: 35, sent: 800 }
+                    },
+                    pValue: 0.003,
+                    confidence: 99.7
+                }
+            ]
+        };
+
+        function getSignificanceLevel(pValue) {
+            if (pValue < 0.05) return { level: 'high', percentage: 95, text: '95%+ confianza' };
+            if (pValue < 0.10) return { level: 'medium', percentage: 90, text: '90%+ confianza' };
+            return { level: 'low', percentage: 65, text: 'No significativo' };
+        }
+
+        function calculateMetricPercentage(value, total) {
+            return ((value / total) * 100).toFixed(1);
+        }
+
+        function createTestCard(test, isCompleted = false) {
+            const variantA = test.variants.a;
+            const variantB = test.variants.b;
+            const significance = getSignificanceLevel(test.pValue);
+            const totalSent = variantA.sent + variantB.sent;
+
+            const openRateA = calculateMetricPercentage(variantA.opens, variantA.sent);
+            const openRateB = calculateMetricPercentage(variantB.opens, variantB.sent);
+            const clickRateA = calculateMetricPercentage(variantA.clicks, variantA.sent);
+            const clickRateB = calculateMetricPercentage(variantB.clicks, variantB.sent);
+            const conversionRateA = calculateMetricPercentage(variantA.conversions, variantA.sent);
+            const conversionRateB = calculateMetricPercentage(variantB.conversions, variantB.sent);
+
+            const card = document.createElement('div');
+            card.className = 'test-card';
+
+            let statusBadgeClass = isCompleted ? 'completed' : 'active';
+            let statusText = isCompleted ? 'Completada' : 'Activa';
+
+            let contentHTML = `
+                <div class="test-header">
+                    <h3 class="test-name">${test.name}</h3>
+                    <span class="status-badge ${statusBadgeClass}">${statusText}</span>
+                </div>
+                <p class="test-description">${test.description}</p>
+
+                <div class="variant-comparison">
+                    <div class="variant-row">
+                        <span class="variant-label">${variantA.name}</span>
+                        <div class="variant-metrics">
+                            <div class="variant-metric">
+                                <div class="variant-metric-value">${openRateA}%</div>
+                                <div class="variant-metric">Aperturas</div>
+                            </div>
+                            <div class="variant-metric">
+                                <div class="variant-metric-value">${clickRateA}%</div>
+                                <div class="variant-metric">Clics</div>
+                            </div>
+                            <div class="variant-metric">
+                                <div class="variant-metric-value">${conversionRateA}%</div>
+                                <div class="variant-metric">Conversiones</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="variant-row">
+                        <span class="variant-label">${variantB.name}</span>
+                        <div class="variant-metrics">
+                            <div class="variant-metric">
+                                <div class="variant-metric-value">${openRateB}%</div>
+                                <div class="variant-metric">Aperturas</div>
+                            </div>
+                            <div class="variant-metric">
+                                <div class="variant-metric-value">${clickRateB}%</div>
+                                <div class="variant-metric">Clics</div>
+                            </div>
+                            <div class="variant-metric">
+                                <div class="variant-metric-value">${conversionRateB}%</div>
+                                <div class="variant-metric">Conversiones</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="variant-comparison">
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Significancia Estadística</div>
+                    <div class="significance-bar significance-${significance.level}">
+                        <div class="significance-fill" style="width: ${significance.percentage}%"></div>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; text-align: right;">${significance.text}</div>
+                </div>
+            `;
+
+            if (isCompleted) {
+                if (test.winner) {
+                    const winnerName = test.winner === 'a' ? variantA.name : variantB.name;
+                    contentHTML += `
+                        <div class="winner-badge">
+                            ${winnerName} es el ganador
+                        </div>
+                    `;
+                }
+            } else {
+                contentHTML += `
+                    <div class="progress-section">
+                        <div class="progress-label">
+                            <span>Progreso</span>
+                            <span>${test.progress}%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${test.progress}%"></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            card.innerHTML = contentHTML;
+            return card;
+        }
+
+        function renderTests() {
+            const activeContainer = document.getElementById('activeTests');
+            const completedContainer = document.getElementById('completedTestsGrid');
+
+            // Render active tests
+            if (testsData.active.length === 0) {
+                activeContainer.innerHTML = '<div class="empty-state"><p>No hay pruebas activas</p></div>';
+            } else {
+                activeContainer.innerHTML = '';
+                testsData.active.forEach(test => {
+                    activeContainer.appendChild(createTestCard(test, false));
+                });
+            }
+
+            // Render completed tests
+            if (testsData.completed.length === 0) {
+                completedContainer.innerHTML = '<div class="empty-state"><p>No hay pruebas completadas</p></div>';
+            } else {
+                completedContainer.innerHTML = '';
+                testsData.completed.forEach(test => {
+                    completedContainer.appendChild(createTestCard(test, true));
+                });
+            }
+
+            // Update stats
+            document.getElementById('totalTests').textContent = testsData.active.length;
+            document.getElementById('completedTests').textContent = testsData.completed.length;
+            document.getElementById('winnerCount').textContent = testsData.completed.filter(t => t.winner).length;
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', renderTests);
+
+        // WebSocket integration ready (when connected to dashboard)
+        window.ABTestingDashboard = {
+            updateTest: function(testId, newMetrics) {
+                // Find and update test in data
+                const allTests = [...testsData.active, ...testsData.completed];
+                const test = allTests.find(t => t.id === testId);
+                if (test) {
+                    Object.assign(test.variants.a, newMetrics.a || {});
+                    Object.assign(test.variants.b, newMetrics.b || {});
+                    renderTests();
+                }
+            },
+            completeTest: function(testId, winner) {
+                const testIndex = testsData.active.findIndex(t => t.id === testId);
+                if (testIndex !== -1) {
+                    const test = testsData.active[testIndex];
+                    test.winner = winner;
+                    testsData.active.splice(testIndex, 1);
+                    testsData.completed.push(test);
+                    renderTests();
+                }
+            }
+        };
+    </script>
+</body>
+</html>

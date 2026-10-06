@@ -2,12 +2,27 @@
 """
 ORCHESTRATOR BASE - Felix Automation
 Clase base que todos los agentes usan
+
+FASE 14 INTEGRATION: Production monitoring metrics collection
 """
 
 import sqlite3
+import time
 from pathlib import Path
 from typing import Dict, List, Optional
 from dataclasses import dataclass
+
+# FASE 14: Import monitoring (optional - graceful degradation if not available)
+try:
+    from backend.monitoring import (
+        get_metrics_collector,
+        get_performance_profiler,
+        HealthMetric,
+        MetricType
+    )
+    MONITORING_ENABLED = True
+except ImportError:
+    MONITORING_ENABLED = False
 
 
 @dataclass
@@ -99,9 +114,35 @@ class FelixAutomationOrchestrator:
     
     def connect_database(self):
         """Conectar a la base de datos SQLite"""
-        self.conn = sqlite3.connect(self.db_path)
-        self.conn.row_factory = sqlite3.Row
-        self._create_tables()
+        start_time = time.time() if MONITORING_ENABLED else None
+
+        try:
+            self.conn = sqlite3.connect(self.db_path)
+            self.conn.row_factory = sqlite3.Row
+            self._create_tables()
+
+            # FASE 14: Record connection time
+            if MONITORING_ENABLED and start_time:
+                duration_ms = (time.time() - start_time) * 1000
+                collector = get_metrics_collector()
+                collector.record(HealthMetric(
+                    name="database_connection_time_ms",
+                    value=duration_ms,
+                    metric_type=MetricType.TIMER,
+                    timestamp=None,
+                    unit="ms"
+                ))
+        except Exception as e:
+            # FASE 14: Record connection error
+            if MONITORING_ENABLED:
+                collector = get_metrics_collector()
+                collector.record(HealthMetric(
+                    name="database_connection_errors",
+                    value=1.0,
+                    metric_type=MetricType.COUNTER,
+                    timestamp=None
+                ))
+            raise
     
     def _create_tables(self):
         """Crear tablas necesarias"""
@@ -199,63 +240,79 @@ class FelixAutomationOrchestrator:
     
     def get_client(self, client_id: int) -> Optional[Client]:
         """Obtener un cliente por ID"""
-        if not self.conn:
-            self.connect_database()
+        # FASE 14: Performance profiling
+        profiler = get_performance_profiler() if MONITORING_ENABLED else None
+        context = profiler.profile("database.get_client") if profiler else None
 
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT id, name, email, company, industry, stage, score,
-                   business_type, company_size, website_url, estimated_budget
-            FROM clients WHERE id = ?
-        """, (client_id,))
+        try:
+            if not self.conn:
+                self.connect_database()
 
-        row = cursor.fetchone()
-        if row:
-            return Client(
-                id=row[0],
-                name=row[1],
-                email=row[2],
-                company=row[3],
-                industry=row[4],
-                stage=row[5],
-                score=row[6],
-                business_type=row[7] if row[7] else "ecommerce",
-                company_size=row[8] if row[8] else "pequeña",
-                website_url=row[9],
-                estimated_budget=row[10]
-            )
-        return None
+            cursor = self.conn.cursor()
+            cursor.execute("""
+                SELECT id, name, email, company, industry, stage, score,
+                       business_type, company_size, website_url, estimated_budget
+                FROM clients WHERE id = ?
+            """, (client_id,))
+
+            row = cursor.fetchone()
+            if row:
+                return Client(
+                    id=row[0],
+                    name=row[1],
+                    email=row[2],
+                    company=row[3],
+                    industry=row[4],
+                    stage=row[5],
+                    score=row[6],
+                    business_type=row[7] if row[7] else "ecommerce",
+                    company_size=row[8] if row[8] else "pequeña",
+                    website_url=row[9],
+                    estimated_budget=row[10]
+                )
+            return None
+        finally:
+            if context:
+                context.__exit__(None, None, None)
     
     def get_all_clients(self) -> List[Client]:
         """Obtener todos los clientes"""
-        if not self.conn:
-            self.connect_database()
+        # FASE 14: Performance profiling
+        profiler = get_performance_profiler() if MONITORING_ENABLED else None
+        context = profiler.profile("database.get_all_clients") if profiler else None
 
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT id, name, email, company, industry, stage, score,
-                   business_type, company_size, website_url, estimated_budget
-            FROM clients ORDER BY id
-        """)
+        try:
+            if not self.conn:
+                self.connect_database()
 
-        clients = []
-        for row in cursor.fetchall():
-            client = Client(
-                id=row[0],
-                name=row[1],
-                email=row[2],
-                company=row[3],
-                industry=row[4],
-                stage=row[5],
-                score=row[6],
-                business_type=row[7] if row[7] else "ecommerce",
-                company_size=row[8] if row[8] else "pequeña",
-                website_url=row[9],
-                estimated_budget=row[10]
-            )
-            clients.append(client)
+            cursor = self.conn.cursor()
+            cursor.execute("""
+                SELECT id, name, email, company, industry, stage, score,
+                       business_type, company_size, website_url, estimated_budget
+                FROM clients ORDER BY id
+            """)
 
-        return clients
+            clients = []
+            for row in cursor.fetchall():
+                client = Client(
+                    id=row[0],
+                    name=row[1],
+                    email=row[2],
+                    company=row[3],
+                    industry=row[4],
+                    stage=row[5],
+                    score=row[6],
+                    business_type=row[7] if row[7] else "ecommerce",
+                    company_size=row[8] if row[8] else "pequeña",
+                    website_url=row[9],
+                    estimated_budget=row[10]
+                )
+                clients.append(client)
+
+            return clients
+        finally:
+            if context:
+                context.__exit__(None, None, None)
 
     def list_clients(self) -> List[Client]:
         """Alias para get_all_clients() - obtener todos los clientes"""
@@ -263,33 +320,52 @@ class FelixAutomationOrchestrator:
     
     def update_client_stage(self, client_id: int, new_stage: str, reason: str = ""):
         """Actualizar etapa de un cliente"""
-        if not self.conn:
-            self.connect_database()
+        # FASE 14: Performance profiling and metrics
+        profiler = get_performance_profiler() if MONITORING_ENABLED else None
+        context = profiler.profile("pipeline.update_stage") if profiler else None
 
-        cursor = self.conn.cursor()
+        try:
+            if not self.conn:
+                self.connect_database()
 
-        # Obtener etapa actual
-        cursor.execute("SELECT stage FROM clients WHERE id = ?", (client_id,))
-        row = cursor.fetchone()
-        old_stage = row[0] if row else "prospecto"
+            cursor = self.conn.cursor()
 
-        # Actualizar cliente
-        cursor.execute("""
-            UPDATE clients
-            SET stage = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-        """, (new_stage, client_id))
+            # Obtener etapa actual
+            cursor.execute("SELECT stage FROM clients WHERE id = ?", (client_id,))
+            row = cursor.fetchone()
+            old_stage = row[0] if row else "prospecto"
 
-        # Registrar en historial
-        cursor.execute("""
-            INSERT INTO pipeline_history (client_id, from_stage, to_stage, reason)
-            VALUES (?, ?, ?, ?)
-        """, (client_id, old_stage, new_stage, reason))
+            # Actualizar cliente
+            cursor.execute("""
+                UPDATE clients
+                SET stage = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            """, (new_stage, client_id))
 
-        self.conn.commit()
+            # Registrar en historial
+            cursor.execute("""
+                INSERT INTO pipeline_history (client_id, from_stage, to_stage, reason)
+                VALUES (?, ?, ?, ?)
+            """, (client_id, old_stage, new_stage, reason))
 
-        # 🔌 FASE 13 Day 3: Emitir evento WebSocket
-        self._emit_pipeline_event(client_id, old_stage, new_stage)
+            self.conn.commit()
+
+            # FASE 14: Record stage transition metric
+            if MONITORING_ENABLED:
+                collector = get_metrics_collector()
+                collector.record(HealthMetric(
+                    name="pipeline_stage_transitions",
+                    value=1.0,
+                    metric_type=MetricType.COUNTER,
+                    timestamp=None,
+                    labels={"from_stage": old_stage, "to_stage": new_stage}
+                ))
+
+            # 🔌 FASE 13 Day 3: Emitir evento WebSocket
+            self._emit_pipeline_event(client_id, old_stage, new_stage)
+        finally:
+            if context:
+                context.__exit__(None, None, None)
     
     def update_client_score(self, client_id: int, score: int):
         """Actualizar score de un cliente"""
@@ -307,35 +383,89 @@ class FelixAutomationOrchestrator:
     
     def save_audit(self, client_id: int, platform: str, score: int, details: Dict = None) -> int:
         """Guardar una auditoría"""
-        if not self.conn:
-            self.connect_database()
+        # FASE 14: Performance profiling
+        profiler = get_performance_profiler() if MONITORING_ENABLED else None
+        context = profiler.profile("audit.save") if profiler else None
 
-        import json
-        cursor = self.conn.cursor()
+        try:
+            if not self.conn:
+                self.connect_database()
 
-        cursor.execute("""
-            INSERT INTO audits (client_id, platform, score, details)
-            VALUES (?, ?, ?, ?)
-        """, (client_id, platform, score, json.dumps(details) if details else None))
+            import json
+            cursor = self.conn.cursor()
 
-        self.conn.commit()
-        return cursor.lastrowid
+            cursor.execute("""
+                INSERT INTO audits (client_id, platform, score, details)
+                VALUES (?, ?, ?, ?)
+            """, (client_id, platform, score, json.dumps(details) if details else None))
+
+            self.conn.commit()
+
+            # FASE 14: Record audit creation
+            if MONITORING_ENABLED:
+                collector = get_metrics_collector()
+                collector.record(HealthMetric(
+                    name="audits_created",
+                    value=1.0,
+                    metric_type=MetricType.COUNTER,
+                    timestamp=None,
+                    labels={"platform": platform}
+                ))
+                collector.record(HealthMetric(
+                    name="audit_score",
+                    value=float(score),
+                    metric_type=MetricType.GAUGE,
+                    timestamp=None,
+                    labels={"platform": platform}
+                ))
+
+            return cursor.lastrowid
+        finally:
+            if context:
+                context.__exit__(None, None, None)
 
     def create_audit(self, audit: 'Audit') -> int:
         """Crear una auditoría desde un objeto Audit"""
-        if not self.conn:
-            self.connect_database()
+        # FASE 14: Performance profiling
+        profiler = get_performance_profiler() if MONITORING_ENABLED else None
+        context = profiler.profile("audit.create") if profiler else None
 
-        import json
-        cursor = self.conn.cursor()
+        try:
+            if not self.conn:
+                self.connect_database()
 
-        cursor.execute("""
-            INSERT INTO audits (client_id, platform, score, details)
-            VALUES (?, ?, ?, ?)
-        """, (audit.client_id, audit.platform, audit.score, json.dumps(audit.details) if audit.details else None))
+            import json
+            cursor = self.conn.cursor()
 
-        self.conn.commit()
-        return cursor.lastrowid
+            cursor.execute("""
+                INSERT INTO audits (client_id, platform, score, details)
+                VALUES (?, ?, ?, ?)
+            """, (audit.client_id, audit.platform, audit.score, json.dumps(audit.details) if audit.details else None))
+
+            self.conn.commit()
+
+            # FASE 14: Record audit creation
+            if MONITORING_ENABLED:
+                collector = get_metrics_collector()
+                collector.record(HealthMetric(
+                    name="audits_created",
+                    value=1.0,
+                    metric_type=MetricType.COUNTER,
+                    timestamp=None,
+                    labels={"platform": audit.platform}
+                ))
+                collector.record(HealthMetric(
+                    name="audit_score",
+                    value=float(audit.score),
+                    metric_type=MetricType.GAUGE,
+                    timestamp=None,
+                    labels={"platform": audit.platform}
+                ))
+
+            return cursor.lastrowid
+        finally:
+            if context:
+                context.__exit__(None, None, None)
 
     def update_audit_score(self, audit_id: int, score: int, details: Dict = None):
         """Actualizar el score de una auditoría"""
@@ -387,17 +517,44 @@ class FelixAutomationOrchestrator:
 
     def create_proposal(self, proposal: 'Proposal') -> int:
         """Crear una propuesta desde un objeto Proposal"""
-        if not self.conn:
-            self.connect_database()
+        # FASE 14: Performance profiling
+        profiler = get_performance_profiler() if MONITORING_ENABLED else None
+        context = profiler.profile("proposal.create") if profiler else None
 
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO proposals (client_id, html_content, pdf_path)
-            VALUES (?, ?, ?)
-        """, (proposal.client_id, proposal.html_content, proposal.pdf_path))
+        try:
+            if not self.conn:
+                self.connect_database()
 
-        self.conn.commit()
-        return cursor.lastrowid
+            cursor = self.conn.cursor()
+            cursor.execute("""
+                INSERT INTO proposals (client_id, html_content, pdf_path)
+                VALUES (?, ?, ?)
+            """, (proposal.client_id, proposal.html_content, proposal.pdf_path))
+
+            self.conn.commit()
+
+            # FASE 14: Record proposal creation
+            if MONITORING_ENABLED:
+                collector = get_metrics_collector()
+                collector.record(HealthMetric(
+                    name="proposals_created",
+                    value=1.0,
+                    metric_type=MetricType.COUNTER,
+                    timestamp=None
+                ))
+                if proposal.estimated_cost:
+                    collector.record(HealthMetric(
+                        name="proposal_estimated_value",
+                        value=float(proposal.estimated_cost),
+                        metric_type=MetricType.GAUGE,
+                        timestamp=None,
+                        unit="USD"
+                    ))
+
+            return cursor.lastrowid
+        finally:
+            if context:
+                context.__exit__(None, None, None)
 
     def close(self):
         """Cerrar conexión a base de datos"""
@@ -424,21 +581,44 @@ class FelixAutomationOrchestrator:
 
     def log_email(self, client_id: int, email_type: str, recipient: str, subject: str, proposal_id: int = None) -> int:
         """Registrar envío de email en base de datos"""
-        if not self.conn:
-            self.connect_database()
+        # FASE 14: Performance profiling
+        profiler = get_performance_profiler() if MONITORING_ENABLED else None
+        context = profiler.profile("email.log") if profiler else None
 
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO emails (client_id, type, subject, status, sent_at)
-            VALUES (?, ?, ?, 'sent', CURRENT_TIMESTAMP)
-        """, (client_id, email_type, subject))
+        try:
+            if not self.conn:
+                self.connect_database()
 
-        self.conn.commit()
-        return cursor.lastrowid
+            cursor = self.conn.cursor()
+            cursor.execute("""
+                INSERT INTO emails (client_id, type, subject, status, sent_at)
+                VALUES (?, ?, ?, 'sent', CURRENT_TIMESTAMP)
+            """, (client_id, email_type, subject))
+
+            self.conn.commit()
+
+            # FASE 14: Record email event
+            if MONITORING_ENABLED:
+                collector = get_metrics_collector()
+                collector.record(HealthMetric(
+                    name="emails_sent",
+                    value=1.0,
+                    metric_type=MetricType.COUNTER,
+                    timestamp=None,
+                    labels={"email_type": email_type}
+                ))
+
+            return cursor.lastrowid
+        finally:
+            if context:
+                context.__exit__(None, None, None)
 
     # 🔌 FASE 13 Day 3: WebSocket Event Emission
     def _emit_pipeline_event(self, client_id: int, old_stage: str, new_stage: str):
         """Emitir evento de cambio de etapa (WebSocket)"""
+        profiler = get_performance_profiler() if MONITORING_ENABLED else None
+        context = profiler.profile("websocket.pipeline_event") if profiler else None
+
         try:
             import asyncio
             from backend.websocket_manager import get_event_broadcaster
@@ -452,13 +632,40 @@ class FelixAutomationOrchestrator:
                     user_id=0  # Sistema
                 )
 
+                # FASE 14: Record WebSocket event
+                if MONITORING_ENABLED:
+                    collector = get_metrics_collector()
+                    collector.record(HealthMetric(
+                        name="websocket_events_emitted",
+                        value=1.0,
+                        metric_type=MetricType.COUNTER,
+                        timestamp=None,
+                        labels={"event_type": "pipeline"}
+                    ))
+
             asyncio.run(emit())
         except Exception as e:
+            # FASE 14: Record WebSocket error
+            if MONITORING_ENABLED:
+                collector = get_metrics_collector()
+                collector.record(HealthMetric(
+                    name="websocket_event_errors",
+                    value=1.0,
+                    metric_type=MetricType.COUNTER,
+                    timestamp=None,
+                    labels={"event_type": "pipeline"}
+                ))
             # Ignorar si WebSocket no está disponible (dev mode)
             pass
+        finally:
+            if context:
+                context.__exit__(None, None, None)
 
     def _emit_audit_event(self, client_id: int, platform: str, score: float, audit_id: int):
         """Emitir evento de auditoría completada (WebSocket)"""
+        profiler = get_performance_profiler() if MONITORING_ENABLED else None
+        context = profiler.profile("websocket.audit_event") if profiler else None
+
         try:
             import asyncio
             from backend.websocket_manager import get_event_broadcaster
@@ -473,13 +680,40 @@ class FelixAutomationOrchestrator:
                     user_id=0
                 )
 
+                # FASE 14: Record WebSocket event
+                if MONITORING_ENABLED:
+                    collector = get_metrics_collector()
+                    collector.record(HealthMetric(
+                        name="websocket_events_emitted",
+                        value=1.0,
+                        metric_type=MetricType.COUNTER,
+                        timestamp=None,
+                        labels={"event_type": "audit"}
+                    ))
+
             asyncio.run(emit())
         except Exception as e:
+            # FASE 14: Record WebSocket error
+            if MONITORING_ENABLED:
+                collector = get_metrics_collector()
+                collector.record(HealthMetric(
+                    name="websocket_event_errors",
+                    value=1.0,
+                    metric_type=MetricType.COUNTER,
+                    timestamp=None,
+                    labels={"event_type": "audit"}
+                ))
             # Ignorar si WebSocket no está disponible (dev mode)
             pass
+        finally:
+            if context:
+                context.__exit__(None, None, None)
 
     def _emit_email_event(self, client_id: int, email_type: str, action: str):
         """Emitir evento de email (WebSocket)"""
+        profiler = get_performance_profiler() if MONITORING_ENABLED else None
+        context = profiler.profile("websocket.email_event") if profiler else None
+
         try:
             import asyncio
             from backend.websocket_manager import get_event_broadcaster
@@ -494,13 +728,40 @@ class FelixAutomationOrchestrator:
                     user_id=0
                 )
 
+                # FASE 14: Record WebSocket event
+                if MONITORING_ENABLED:
+                    collector = get_metrics_collector()
+                    collector.record(HealthMetric(
+                        name="websocket_events_emitted",
+                        value=1.0,
+                        metric_type=MetricType.COUNTER,
+                        timestamp=None,
+                        labels={"event_type": "email"}
+                    ))
+
             asyncio.run(emit())
         except Exception as e:
+            # FASE 14: Record WebSocket error
+            if MONITORING_ENABLED:
+                collector = get_metrics_collector()
+                collector.record(HealthMetric(
+                    name="websocket_event_errors",
+                    value=1.0,
+                    metric_type=MetricType.COUNTER,
+                    timestamp=None,
+                    labels={"event_type": "email"}
+                ))
             # Ignorar si WebSocket no está disponible (dev mode)
             pass
+        finally:
+            if context:
+                context.__exit__(None, None, None)
 
     def _emit_proposal_event(self, client_id: int, proposal_id: int, amount: float):
         """Emitir evento de propuesta generada (WebSocket)"""
+        profiler = get_performance_profiler() if MONITORING_ENABLED else None
+        context = profiler.profile("websocket.proposal_event") if profiler else None
+
         try:
             import asyncio
             from backend.websocket_manager import get_event_broadcaster
@@ -514,7 +775,38 @@ class FelixAutomationOrchestrator:
                     user_id=0
                 )
 
+                # FASE 14: Record WebSocket event
+                if MONITORING_ENABLED:
+                    collector = get_metrics_collector()
+                    collector.record(HealthMetric(
+                        name="websocket_events_emitted",
+                        value=1.0,
+                        metric_type=MetricType.COUNTER,
+                        timestamp=None,
+                        labels={"event_type": "proposal"}
+                    ))
+                    collector.record(HealthMetric(
+                        name="proposal_value_emitted",
+                        value=float(amount),
+                        metric_type=MetricType.GAUGE,
+                        timestamp=None,
+                        unit="USD"
+                    ))
+
             asyncio.run(emit())
         except Exception as e:
+            # FASE 14: Record WebSocket error
+            if MONITORING_ENABLED:
+                collector = get_metrics_collector()
+                collector.record(HealthMetric(
+                    name="websocket_event_errors",
+                    value=1.0,
+                    metric_type=MetricType.COUNTER,
+                    timestamp=None,
+                    labels={"event_type": "proposal"}
+                ))
             # Ignorar si WebSocket no está disponible (dev mode)
             pass
+        finally:
+            if context:
+                context.__exit__(None, None, None)

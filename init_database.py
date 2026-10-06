@@ -13,8 +13,11 @@ from pathlib import Path
 class DatabaseManager:
     """Gestor de base de datos SQLite para Felix Automation"""
 
-    def __init__(self, db_path="./felix_automation.db"):
+    def __init__(self, db_path="data/pipeline.sqlite"):
+        # Production deployment uses data/pipeline.sqlite
         self.db_path = Path(db_path)
+        # Ensure parent directory exists
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.connection = None
 
     def connect(self):
@@ -371,14 +374,14 @@ class DatabaseManager:
 
 
 def main():
-    """Inicializar base de datos"""
-    db = DatabaseManager("./felix_automation.db")
+    """Inicializar base de datos - usa ruta de producción"""
+    db = DatabaseManager("data/pipeline.sqlite")  # Production path
     db.connect()
     db.init_schema()
     db.seed_sample_data()
     db.close()
     print("\n" + "="*60)
-    print("✅ BASE DE DATOS INICIALIZADA CORRECTAMENTE")
+    print("✅ BASE DE DATOS INICIALIZADA CORRECTAMENTE EN: data/pipeline.sqlite")
     print("="*60)
 
 
