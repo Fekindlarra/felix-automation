@@ -48,6 +48,17 @@ class EventType(Enum):
     PREDICTION_GENERATED = "prediction:generated"
     ANOMALY_DETECTED = "anomaly:detected"
 
+    # A/B Testing Events (FASE 15 Phase 3)
+    TEST_CREATED = "test:created"
+    TEST_STARTED = "test:started"
+    TEST_COMPLETED = "test:completed"
+    TEST_PAUSED = "test:paused"
+    TEST_WINNER_ANNOUNCED = "test:winner_announced"
+
+    # Comparison Events (FASE 15 Phase 3)
+    COMPARISON_STARTED = "comparison:started"
+    COMPARISON_COMPLETED = "comparison:completed"
+
     # Notification Events
     NOTIFICATION_CREATED = "notification:created"
     NOTIFICATION_DISMISSED = "notification:dismissed"
@@ -195,6 +206,50 @@ class AnomalyEvent(EventPayload):
                 "severity": self.severity,
                 "description": self.description,
                 "affected_metric": self.affected_metric
+            }
+
+
+@dataclass
+class ABTestEvent(EventPayload):
+    """A/B Test lifecycle event (FASE 15 Phase 3)"""
+    test_id: Optional[int] = None
+    test_name: Optional[str] = None
+    active: Optional[bool] = None
+    variant_winner: Optional[str] = None  # "A" or "B"
+    email_type: Optional[str] = None
+    duration_days: Optional[int] = None
+
+    def __post_init__(self):
+        if self.data is None:
+            self.data = {
+                "test_id": self.test_id,
+                "test_name": self.test_name,
+                "active": self.active,
+                "variant_winner": self.variant_winner,
+                "email_type": self.email_type,
+                "duration_days": self.duration_days
+            }
+
+
+@dataclass
+class ComparisonEvent(EventPayload):
+    """ML vs Rules comparison event (FASE 15 Phase 3)"""
+    test_id: Optional[int] = None
+    ml_accuracy: Optional[float] = None
+    rules_accuracy: Optional[float] = None
+    sample_size: Optional[int] = None
+    winner: Optional[str] = None  # "ML" or "RULES"
+    confidence_interval: Optional[Dict] = None  # {"lower": x, "upper": y}
+
+    def __post_init__(self):
+        if self.data is None:
+            self.data = {
+                "test_id": self.test_id,
+                "ml_accuracy": self.ml_accuracy,
+                "rules_accuracy": self.rules_accuracy,
+                "sample_size": self.sample_size,
+                "winner": self.winner,
+                "confidence_interval": self.confidence_interval or {}
             }
 
 
@@ -347,6 +402,111 @@ class EventFactory:
         )
 
     @staticmethod
+    def test_created(client_id: int, test_id: int, test_name: str,
+                    email_type: str, duration_days: int,
+                    user_id: Optional[int] = None) -> ABTestEvent:
+        """Create A/B test created event (FASE 15 Phase 3)"""
+        return ABTestEvent(
+            event_type=EventType.TEST_CREATED,
+            timestamp=datetime.utcnow(),
+            client_id=client_id,
+            user_id=user_id,
+            test_id=test_id,
+            test_name=test_name,
+            email_type=email_type,
+            duration_days=duration_days,
+            active=True
+        )
+
+    @staticmethod
+    def test_started(client_id: int, test_id: int, test_name: str,
+                    user_id: Optional[int] = None) -> ABTestEvent:
+        """Create A/B test started event (FASE 15 Phase 3)"""
+        return ABTestEvent(
+            event_type=EventType.TEST_STARTED,
+            timestamp=datetime.utcnow(),
+            client_id=client_id,
+            user_id=user_id,
+            test_id=test_id,
+            test_name=test_name,
+            active=True
+        )
+
+    @staticmethod
+    def test_completed(client_id: int, test_id: int, test_name: str,
+                      variant_winner: str, user_id: Optional[int] = None) -> ABTestEvent:
+        """Create A/B test completed event (FASE 15 Phase 3)"""
+        return ABTestEvent(
+            event_type=EventType.TEST_COMPLETED,
+            timestamp=datetime.utcnow(),
+            client_id=client_id,
+            user_id=user_id,
+            test_id=test_id,
+            test_name=test_name,
+            variant_winner=variant_winner,
+            active=False
+        )
+
+    @staticmethod
+    def test_paused(client_id: int, test_id: int, test_name: str,
+                   user_id: Optional[int] = None) -> ABTestEvent:
+        """Create A/B test paused event (FASE 15 Phase 3)"""
+        return ABTestEvent(
+            event_type=EventType.TEST_PAUSED,
+            timestamp=datetime.utcnow(),
+            client_id=client_id,
+            user_id=user_id,
+            test_id=test_id,
+            test_name=test_name,
+            active=False
+        )
+
+    @staticmethod
+    def test_winner_announced(client_id: int, test_id: int, test_name: str,
+                             variant_winner: str, user_id: Optional[int] = None) -> ABTestEvent:
+        """Create A/B test winner announced event (FASE 15 Phase 3)"""
+        return ABTestEvent(
+            event_type=EventType.TEST_WINNER_ANNOUNCED,
+            timestamp=datetime.utcnow(),
+            client_id=client_id,
+            user_id=user_id,
+            test_id=test_id,
+            test_name=test_name,
+            variant_winner=variant_winner,
+            active=False
+        )
+
+    @staticmethod
+    def comparison_started(client_id: int, test_id: int, user_id: Optional[int] = None) -> ComparisonEvent:
+        """Create comparison started event (FASE 15 Phase 3)"""
+        return ComparisonEvent(
+            event_type=EventType.COMPARISON_STARTED,
+            timestamp=datetime.utcnow(),
+            client_id=client_id,
+            user_id=user_id,
+            test_id=test_id
+        )
+
+    @staticmethod
+    def comparison_completed(client_id: int, test_id: int, ml_accuracy: float,
+                            rules_accuracy: float, sample_size: int,
+                            winner: str, confidence_interval: Dict,
+                            user_id: Optional[int] = None) -> ComparisonEvent:
+        """Create comparison completed event (FASE 15 Phase 3)"""
+        return ComparisonEvent(
+            event_type=EventType.COMPARISON_COMPLETED,
+            timestamp=datetime.utcnow(),
+            client_id=client_id,
+            user_id=user_id,
+            test_id=test_id,
+            ml_accuracy=ml_accuracy,
+            rules_accuracy=rules_accuracy,
+            sample_size=sample_size,
+            winner=winner,
+            confidence_interval=confidence_interval
+        )
+
+    @staticmethod
     def notification_created(client_id: int, title: str, message: str,
                             notification_type: str = "info",
                             user_id: Optional[int] = None) -> NotificationEvent:
@@ -404,6 +564,13 @@ EVENT_ROUTING = {
     EventType.METRIC_SNAPSHOT: ["admin"],
     EventType.PREDICTION_GENERATED: ["admin", "client"],  # FASE 14
     EventType.ANOMALY_DETECTED: ["admin"],  # FASE 14
+    EventType.TEST_CREATED: ["admin"],  # FASE 15 Phase 3
+    EventType.TEST_STARTED: ["admin"],  # FASE 15 Phase 3
+    EventType.TEST_COMPLETED: ["admin"],  # FASE 15 Phase 3
+    EventType.TEST_PAUSED: ["admin"],  # FASE 15 Phase 3
+    EventType.TEST_WINNER_ANNOUNCED: ["admin"],  # FASE 15 Phase 3
+    EventType.COMPARISON_STARTED: ["admin"],  # FASE 15 Phase 3
+    EventType.COMPARISON_COMPLETED: ["admin"],  # FASE 15 Phase 3
     EventType.NOTIFICATION_CREATED: ["admin", "client"],
 }
 

@@ -18,6 +18,9 @@ logger = logging.getLogger(__name__)
 # Global database connection (will be injected by main app)
 database = None
 
+# Global WebSocket manager (will be injected by main app)
+websocket_manager = None
+
 # Module-level router
 router = APIRouter(prefix="/api/tests", tags=["A/B Testing"])
 
@@ -77,11 +80,14 @@ class WinnerResponse(BaseModel):
 
 # ==================== INITIALIZATION ====================
 
-def init_ab_testing(db_connection: Connection):
-    """Initialize A/B testing routes with database connection"""
-    global database
+def init_ab_testing(db_connection: Connection, ws_manager=None):
+    """Initialize A/B testing routes with database connection and optional WebSocket manager"""
+    global database, websocket_manager
     database = db_connection
+    websocket_manager = ws_manager
     logger.info("✅ A/B Testing routes initialized with database connection")
+    if websocket_manager:
+        logger.info("✅ A/B Testing routes connected to WebSocket manager")
 
 
 def create_ab_testing_router(db_connection: Connection):
@@ -146,6 +152,22 @@ async def create_test(request: CreateABTestRequest):
         test_id = cursor.lastrowid
 
         logger.info(f"✅ A/B test created: ID {test_id}")
+
+        # Broadcast test creation event to WebSocket
+        if websocket_manager:
+            try:
+                from backend.events import EventFactory
+                event = EventFactory.test_created(
+                    test_id=test_id,
+                    test_name=request.test_name,
+                    active=True,
+                    email_type=request.email_type,
+                    duration_days=request.duration_days
+                )
+                websocket_manager.broadcast(event, role='admin')
+                logger.info(f"📢 Broadcasted test:created for test {test_id}")
+            except Exception as e:
+                logger.error(f"⚠️ Failed to broadcast test:created: {e}")
 
         return ABTestResponse(
             id=test_id,
@@ -342,7 +364,7 @@ async def mark_winner(test_id: int, winner: str = Query(..., description="Winner
         logger.info(f"🏆 Marking variant {winner} as winner for test {test_id}")
 
         cursor = database.cursor()
-        cursor.execute("SELECT test_name FROM ab_tests WHERE id = ?", (test_id,))
+        cursor.execute("SELECT test_name, email_type, planned_duration_days FROM ab_tests WHERE id = ?", (test_id,))
         test = cursor.fetchone()
 
         if not test:
@@ -350,6 +372,8 @@ async def mark_winner(test_id: int, winner: str = Query(..., description="Winner
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Test {test_id} not found"
             )
+
+        test_name, email_type, duration_days = test
 
         # Update test
         cursor.execute(
@@ -359,6 +383,15 @@ async def mark_winner(test_id: int, winner: str = Query(..., description="Winner
         database.commit()
 
         logger.info(f"✅ Winner marked: variant {winner} for test {test_id}")
+
+        # Apply personalization and broadcast winner announcement
+        try:
+            from agents.personalization_engine import PersonalizationEngine
+            engine = PersonalizationEngine(database)
+            engine.apply_test_winner(test_id, winner, websocket_manager)
+            logger.info(f"✅ Personalization applied for test {test_id}")
+        except Exception as e:
+            logger.error(f"⚠️ Error applying personalization: {e}")
 
         return WinnerResponse(
             test_id=test_id,
@@ -391,12 +424,32 @@ async def pause_test(test_id: int):
 
         cursor = database.cursor()
         cursor.execute(
+            "SELECT test_name, email_type FROM ab_tests WHERE id = ?",
+            (test_id,)
+        )
+        test_row = cursor.fetchone()
+
+        cursor.execute(
             "UPDATE ab_tests SET active = 0 WHERE id = ?",
             (test_id,)
         )
         database.commit()
 
         logger.info(f"✅ Test {test_id} paused")
+
+        # Broadcast test paused event
+        if websocket_manager and test_row:
+            try:
+                from backend.events import EventFactory
+                event = EventFactory.test_paused(
+                    test_id=test_id,
+                    test_name=test_row[0],
+                    active=False
+                )
+                websocket_manager.broadcast(event, role='admin')
+                logger.info(f"📢 Broadcasted test:paused for test {test_id}")
+            except Exception as e:
+                logger.error(f"⚠️ Failed to broadcast test:paused: {e}")
 
         return {
             "status": "paused",

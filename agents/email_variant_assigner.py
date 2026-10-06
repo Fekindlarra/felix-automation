@@ -31,7 +31,9 @@ class EmailVariantAssigner:
 
     def assign_variant(self, test_id: int, client_id: int) -> str:
         """
-        Determine variant (A or B) for client in test using deterministic hash.
+        Determine variant (A or B) for client in test.
+        First checks for personalized winner from completed test.
+        Falls back to deterministic hash-based assignment.
         Same client always gets same variant for a given test.
 
         Args:
@@ -42,7 +44,26 @@ class EmailVariantAssigner:
             'A' or 'B' variant
         """
         try:
-            # Create deterministic hash from test_id and client_id
+            # Phase 3.5 Integration: Check for personalized variant first
+            if self.db and self.cursor:
+                try:
+                    self.cursor.execute(
+                        """
+                        SELECT winning_variant FROM personalization_variants
+                        WHERE test_id = ? AND client_id = ?
+                        """,
+                        (test_id, client_id)
+                    )
+                    personalized = self.cursor.fetchone()
+
+                    if personalized:
+                        variant = personalized[0]
+                        logger.info(f"✅ Using personalized variant: client {client_id} → {variant} (test {test_id})")
+                        return variant
+                except Exception as e:
+                    logger.debug(f"⚠️ Personalization check skipped: {e}")
+
+            # Fall back to deterministic hash assignment
             hash_input = f"{test_id}_{client_id}"
             hash_value = hashlib.md5(hash_input.encode()).hexdigest()
             hash_int = int(hash_value, 16)
@@ -50,7 +71,7 @@ class EmailVariantAssigner:
             # Assign based on hash parity (deterministic)
             variant = 'A' if hash_int % 2 == 0 else 'B'
 
-            logger.debug(f"✅ Variant assigned: client {client_id} → {variant} (test {test_id})")
+            logger.debug(f"✅ Variant assigned (hash-based): client {client_id} → {variant} (test {test_id})")
             return variant
 
         except Exception as e:

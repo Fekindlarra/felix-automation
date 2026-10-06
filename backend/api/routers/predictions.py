@@ -152,6 +152,49 @@ async def generate_prediction(request: PredictionRequest, db: Session = Depends(
 
         logger.info(f"✅ Prediction generated for {request.client_id}: {probability}% conversion probability")
 
+        # Record ML prediction for A/B test comparison if active
+        try:
+            import sqlite3
+            ml_prob = confidence  # Use confidence as probability for comparison
+
+            # Try to find and record in ab_test_ml_predictions if test is active
+            try:
+                sqlite_conn = sqlite3.connect('data/pipeline.sqlite')
+                sqlite_conn.row_factory = sqlite3.Row
+                cursor = sqlite_conn.cursor()
+
+                # Get active test for this client (if any)
+                cursor.execute("""
+                    SELECT id FROM ab_tests WHERE active = 1 LIMIT 1
+                """)
+                active_test = cursor.fetchone()
+
+                if active_test:
+                    test_id = active_test['id']
+
+                    # Calculate rule-based probability for comparison
+                    avg_score = (request.web_score + request.facebook_score + request.google_score) / 3
+                    rules_prob = avg_score * 0.9 / 100.0  # Normalize to 0-1
+
+                    if request.business_type == "ecommerce":
+                        rules_prob = min(1.0, rules_prob + 0.05)
+
+                    # Record both predictions
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO ab_test_ml_predictions
+                        (test_id, client_id, ml_probability, rules_probability, created_at)
+                        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    """, (test_id, request.client_id, ml_prob, rules_prob))
+
+                    sqlite_conn.commit()
+                    logger.info(f"📊 Recorded ML vs rules comparison for test {test_id}, client {request.client_id}")
+
+                sqlite_conn.close()
+            except Exception as comparison_error:
+                logger.warning(f"⚠️ Could not record comparison data: {comparison_error}")
+        except Exception as e:
+            logger.warning(f"⚠️ Skipping comparison recording: {e}")
+
         # 📡 BROADCAST TO WEBSOCKET: Send prediction to all connected clients
         try:
             broadcast_payload = {
@@ -234,6 +277,41 @@ async def generate_prediction(request: PredictionRequest, db: Session = Depends(
         )
 
         logger.warning(f"⚠️ Using fallback rule-based prediction for {request.client_id}")
+
+        # Record rule-based prediction for comparison (since ML failed)
+        try:
+            import sqlite3
+            rules_prob = confidence
+
+            try:
+                sqlite_conn = sqlite3.connect('data/pipeline.sqlite')
+                sqlite_conn.row_factory = sqlite3.Row
+                cursor = sqlite_conn.cursor()
+
+                # Get active test for this client (if any)
+                cursor.execute("""
+                    SELECT id FROM ab_tests WHERE active = 1 LIMIT 1
+                """)
+                active_test = cursor.fetchone()
+
+                if active_test:
+                    test_id = active_test['id']
+
+                    # For fallback, use rules prob for both since ML failed
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO ab_test_ml_predictions
+                        (test_id, client_id, ml_probability, rules_probability, created_at)
+                        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    """, (test_id, request.client_id, rules_prob, rules_prob))
+
+                    sqlite_conn.commit()
+                    logger.info(f"📊 Recorded fallback prediction for test {test_id}, client {request.client_id}")
+
+                sqlite_conn.close()
+            except Exception as comparison_error:
+                logger.warning(f"⚠️ Could not record fallback comparison data: {comparison_error}")
+        except Exception as e:
+            logger.warning(f"⚠️ Skipping fallback comparison recording: {e}")
 
         return response
 

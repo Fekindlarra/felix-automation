@@ -310,6 +310,60 @@ class DatabaseManager:
         )
         """)
 
+        # ========== FASE 15 PHASE 3: A/B Testing + ML Comparison Tables ==========
+
+        # ====== TABLA: AB_TEST_ML_PREDICTIONS (ML vs Rules Comparison Tracking) ======
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ab_test_ml_predictions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            test_id INTEGER NOT NULL,
+            client_id INTEGER NOT NULL,
+            ml_probability REAL NOT NULL,
+            rules_probability REAL NOT NULL,
+            actual_outcome INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            outcome_date TIMESTAMP,
+            FOREIGN KEY (test_id) REFERENCES ab_tests(id),
+            FOREIGN KEY (client_id) REFERENCES clients(id),
+            UNIQUE(test_id, client_id)
+        )
+        """)
+
+        # ====== TABLA: PERSONALIZATION_VARIANTS (Winner Application & Gradual Rollout) ======
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS personalization_variants (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER NOT NULL,
+            test_id INTEGER NOT NULL,
+            winning_variant TEXT NOT NULL,
+            rollout_phase INTEGER DEFAULT 1,
+            applied_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            effective_until TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (test_id) REFERENCES ab_tests(id),
+            FOREIGN KEY (client_id) REFERENCES clients(id),
+            UNIQUE(test_id, client_id)
+        )
+        """)
+
+        # ====== TABLA: COMPARISON_REPORTS (ML vs Rules Summary Reports) ======
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS comparison_reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            test_id INTEGER NOT NULL,
+            ml_accuracy REAL,
+            rules_accuracy REAL,
+            ml_avg_confidence REAL,
+            winner TEXT,
+            confidence_interval TEXT,
+            sample_size INTEGER,
+            generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (test_id) REFERENCES ab_tests(id),
+            UNIQUE(test_id)
+        )
+        """)
+
         # ====== TABLA: ANOMALIES (Detection & Tracking) ======
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS anomalies (
@@ -340,6 +394,12 @@ class DatabaseManager:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_ab_test_results_test ON ab_test_results(test_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_ab_test_results_client ON ab_test_results(client_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_anomalies_client ON anomalies(client_id)")
+        # FASE 15 Phase 3 indices
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_ab_test_ml_predictions_test ON ab_test_ml_predictions(test_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_ab_test_ml_predictions_client ON ab_test_ml_predictions(client_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_personalization_variants_test ON personalization_variants(test_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_personalization_variants_client ON personalization_variants(client_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_comparison_reports_test ON comparison_reports(test_id)")
 
         self.connection.commit()
         print("✅ Schema de base de datos inicializado")

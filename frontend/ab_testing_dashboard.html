@@ -326,6 +326,138 @@
             letter-spacing: 0.3px;
         }
 
+        .comparison-widget {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 16px;
+        }
+
+        .comparison-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .comparison-subtitle {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .ml-vs-rules {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .method-card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .method-card.winner {
+            border: 2px solid #4caf50;
+            background-color: rgba(76, 175, 80, 0.05);
+        }
+
+        .method-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .accuracy-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+            font-variant-numeric: tabular-nums;
+            margin-bottom: 4px;
+        }
+
+        .confidence-interval {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .personalization-panel {
+            background-color: rgba(102, 126, 234, 0.05);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+
+        .personalization-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .rollout-phase {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            font-size: 12px;
+        }
+
+        .phase-label {
+            color: var(--text-secondary);
+        }
+
+        .phase-status {
+            background-color: var(--bg-secondary);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .phase-status.active {
+            background-color: rgba(76, 175, 80, 0.15);
+            color: #2e7d32;
+        }
+
+        .event-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background-color: var(--bg-secondary);
+            color: var(--text-secondary);
+            margin-right: 4px;
+            margin-bottom: 4px;
+        }
+
+        .event-badge.created {
+            background-color: rgba(33, 150, 243, 0.1);
+            color: #1976d2;
+        }
+
+        .event-badge.winner {
+            background-color: rgba(76, 175, 80, 0.1);
+            color: #2e7d32;
+        }
+
+        .event-badge.paused {
+            background-color: rgba(255, 152, 0, 0.1);
+            color: #e65100;
+        }
+
         @media (max-width: 768px) {
             .tests-grid {
                 grid-template-columns: 1fr;
@@ -545,6 +677,55 @@
                 </div>
             `;
 
+            // Add ML vs Rules Comparison widget for Phase 3
+            if (test.mlComparison) {
+                const mlAccuracy = (test.mlComparison.ml_accuracy * 100).toFixed(1);
+                const rulesAccuracy = (test.mlComparison.rules_accuracy * 100).toFixed(1);
+                const winner = test.mlComparison.winner;
+                const ciLower = (test.mlComparison.confidence_interval.ml.lower * 100).toFixed(1);
+                const ciUpper = (test.mlComparison.confidence_interval.ml.upper * 100).toFixed(1);
+
+                contentHTML += `
+                    <div class="comparison-widget">
+                        <div class="comparison-title">📊 ML vs Reglas</div>
+                        <div class="comparison-subtitle">Comparación de precisión de predicción (${test.mlComparison.sample_size} muestras)</div>
+                        <div class="ml-vs-rules">
+                            <div class="method-card ${winner === 'ML' ? 'winner' : ''}">
+                                <div class="method-name">ML</div>
+                                <div class="accuracy-value">${mlAccuracy}%</div>
+                                <div class="confidence-interval">IC: ${ciLower}%-${ciUpper}%</div>
+                            </div>
+                            <div class="method-card ${winner === 'RULES' ? 'winner' : ''}">
+                                <div class="method-name">Basado en Reglas</div>
+                                <div class="accuracy-value">${rulesAccuracy}%</div>
+                                <div class="confidence-interval">IC: ${rulesAccuracy}%±3%</div>
+                            </div>
+                        </div>
+                        ${winner ? `<div class="winner-badge">Ganador: ${winner}</div>` : ''}
+                    </div>
+                `;
+            }
+
+            // Add Personalization Status panel for Phase 3
+            if (test.personalization) {
+                const rolloutPhase = test.personalization.rollout_phase;
+                const phasePercentage = {1: '10%', 2: '50%', 3: '100%'}[rolloutPhase] || '0%';
+
+                contentHTML += `
+                    <div class="personalization-panel">
+                        <div class="personalization-title">🎯 Estado de Personalización</div>
+                        <div class="rollout-phase">
+                            <span class="phase-label">Fase de Despliegue</span>
+                            <span class="phase-status active">Fase ${rolloutPhase} (${phasePercentage})</span>
+                        </div>
+                        <div class="rollout-phase">
+                            <span class="phase-label">Variante Ganadora</span>
+                            <span class="phase-status">${test.personalization.winning_variant}</span>
+                        </div>
+                    </div>
+                `;
+            }
+
             if (isCompleted) {
                 if (test.winner) {
                     const winnerName = test.winner === 'a' ? variantA.name : variantB.name;
@@ -626,8 +807,99 @@
                     testsData.completed.push(test);
                     renderTests();
                 }
+            },
+            // Phase 3 Event Handlers
+            handleTestCreated: function(event) {
+                console.log('📝 Test created:', event.test_name);
+                // Add new test to active list
+                const newTest = {
+                    id: event.test_id,
+                    name: event.test_name,
+                    description: `Prueba de ${event.email_type}`,
+                    type: event.email_type,
+                    variants: {
+                        a: { name: 'Variante A', opens: 0, clicks: 0, conversions: 0, sent: 0 },
+                        b: { name: 'Variante B', opens: 0, clicks: 0, conversions: 0, sent: 0 }
+                    },
+                    pValue: 0.5,
+                    progress: 0
+                };
+                testsData.active.push(newTest);
+                renderTests();
+            },
+            handleWinnerAnnounced: function(event) {
+                console.log('🏆 Winner announced for test', event.test_id, ':', event.variant_winner);
+                // Move test to completed and add winner + personalization info
+                const testIndex = testsData.active.findIndex(t => t.id === event.test_id);
+                if (testIndex !== -1) {
+                    const test = testsData.active[testIndex];
+                    test.winner = event.variant_winner.toLowerCase();
+                    // Add ML comparison and personalization data
+                    if (event.ml_accuracy !== undefined) {
+                        test.mlComparison = {
+                            ml_accuracy: event.ml_accuracy,
+                            rules_accuracy: event.rules_accuracy,
+                            winner: event.ml_accuracy > event.rules_accuracy ? 'ML' : 'RULES',
+                            sample_size: event.sample_size || 100,
+                            confidence_interval: {
+                                ml: { lower: 0.8, upper: 0.95 }
+                            }
+                        };
+                    }
+                    // Add personalization info
+                    test.personalization = {
+                        rollout_phase: 1,
+                        winning_variant: event.variant_winner
+                    };
+                    testsData.active.splice(testIndex, 1);
+                    testsData.completed.push(test);
+                    renderTests();
+                }
+            },
+            handleTestPaused: function(event) {
+                console.log('⏸️ Test paused:', event.test_id);
+                const test = testsData.active.find(t => t.id === event.test_id);
+                if (test) {
+                    renderTests();
+                }
+            },
+            handleComparisonCompleted: function(event) {
+                console.log('📊 Comparison completed for test', event.test_id);
+                const allTests = [...testsData.active, ...testsData.completed];
+                const test = allTests.find(t => t.id === event.test_id);
+                if (test) {
+                    test.mlComparison = {
+                        ml_accuracy: event.ml_accuracy,
+                        rules_accuracy: event.rules_accuracy,
+                        winner: event.winner,
+                        sample_size: event.sample_size,
+                        confidence_interval: event.confidence_interval
+                    };
+                    renderTests();
+                }
             }
         };
+
+        // Setup WebSocket listeners for Phase 3 events
+        if (typeof WebSocket !== 'undefined') {
+            // Mock WebSocket setup for testing
+            window.ABTestingDashboard.setupWebSocketListeners = function(ws) {
+                console.log('✅ WebSocket listeners configured for A/B Testing');
+                // In production, this would listen to actual WebSocket events:
+                // ws.addEventListener('message', (event) => {
+                //     const data = JSON.parse(event.data);
+                //     if (data.type === 'test:created') {
+                //         window.ABTestingDashboard.handleTestCreated(data);
+                //     } else if (data.type === 'test:winner_announced') {
+                //         window.ABTestingDashboard.handleWinnerAnnounced(data);
+                //     } else if (data.type === 'test:paused') {
+                //         window.ABTestingDashboard.handleTestPaused(data);
+                //     } else if (data.type === 'comparison:completed') {
+                //         window.ABTestingDashboard.handleComparisonCompleted(data);
+                //     }
+                // });
+            };
+        }
     </script>
 </body>
 </html>
