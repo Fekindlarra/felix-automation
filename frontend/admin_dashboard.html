@@ -128,6 +128,28 @@
             50% { opacity: 0.5; }
         }
 
+        /* Disable animations on mobile and when prefers-reduced-motion is set */
+        @media (max-width: 768px), (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+
+            .status-indicator {
+                animation: none !important;
+            }
+
+            .kpi-card {
+                transition: none !important;
+            }
+
+            .kpi-card:hover,
+            .kpi-card:active {
+                transform: none;
+            }
+        }
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
@@ -773,8 +795,28 @@
                 this.reconnectAttempts = 0;
                 this.maxReconnectAttempts = 5;
                 this.reconnectDelay = 3000;
-                this.heartbeatInterval = 30000;
+                this.isMobile = this._detectMobileDevice();
+                // Use 60s heartbeat on mobile to reduce battery drain, 30s on desktop
+                this.heartbeatInterval = this.isMobile ? 60000 : 30000;
                 this.heartbeatTimer = null;
+            }
+
+            _detectMobileDevice() {
+                /**
+                 * Detect if client is mobile based on:
+                 * 1. User agent (iOS/Android patterns)
+                 * 2. Viewport width < 768px
+                 * 3. Touch capability
+                 */
+                const mobileUserAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|CriOS/i.test(navigator.userAgent);
+                const mobileViewport = window.innerWidth < 768;
+                const touchCapable = () => {
+                    return (('ontouchstart' in window) ||
+                            (navigator.maxTouchPoints > 0) ||
+                            (navigator.msMaxTouchPoints > 0));
+                };
+
+                return mobileUserAgent || (mobileViewport && touchCapable());
             }
 
             connect(token) {

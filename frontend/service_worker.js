@@ -10,6 +10,22 @@ const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
+// Mobile optimization: Cache size limits for memory efficiency
+const CACHE_SIZE_LIMITS = {
+    static: 50 * 1024 * 1024,      // 50 MB for static assets
+    dynamic: 20 * 1024 * 1024,     // 20 MB for dynamic content
+    api: 10 * 1024 * 1024          // 10 MB for API responses
+};
+
+// Track if device is mobile
+let isMobileDevice = false;
+if ('connection' in navigator) {
+    // Use saveData API to detect low-end devices or slow networks
+    isMobileDevice = navigator.connection.saveData ||
+                     navigator.connection.effectiveType === '4g' ||
+                     navigator.connection.effectiveType === '3g';
+}
+
 // Files to cache on install
 const STATIC_ASSETS = [
     '/frontend/admin_dashboard.html',
@@ -69,8 +85,24 @@ self.addEventListener('activate', (event) => {
 });
 
 /**
+ * Manage cache size to prevent storage overflow on mobile devices
+ */
+async function limitCacheSize(cacheName, maxItems = 50) {
+    const cache = await caches.open(cacheName);
+    const keys = await cache.keys();
+
+    if (keys.length > maxItems) {
+        // Remove oldest entries (FIFO)
+        await cache.delete(keys[0]);
+        // Recursively limit until under max
+        await limitCacheSize(cacheName, maxItems);
+    }
+}
+
+/**
  * Fetch event - implement caching strategy
  * Network-first for API calls, cache-first for static assets, stale-while-revalidate for dynamics
+ * FASE 14: Mobile-optimized with reduced cache sizes for low-memory devices
  */
 self.addEventListener('fetch', (event) => {
     const { request } = event;
@@ -112,6 +144,7 @@ self.addEventListener('fetch', (event) => {
 /**
  * Cache-first strategy: Try cache first, fallback to network
  * Best for: Static assets that rarely change
+ * FASE 14: Optimized for mobile with cache size limits
  */
 async function cacheFirst(request) {
     const cache = await caches.open(STATIC_CACHE);
@@ -126,6 +159,8 @@ async function cacheFirst(request) {
         const response = await fetch(request);
         if (response.ok) {
             cache.put(request, response.clone());
+            // Limit cache size on mobile to 30 items for memory efficiency
+            await limitCacheSize(STATIC_CACHE, isMobileDevice ? 30 : 50);
         }
         return response;
     } catch (error) {
@@ -137,25 +172,40 @@ async function cacheFirst(request) {
 /**
  * Network-first strategy: Try network first, fallback to cache
  * Best for: API calls and dynamic content
+ * FASE 14: Optimized for mobile with timeout and cache limits
  */
 async function networkFirst(request) {
     const cache = await caches.open(
         request.url.includes('/api/') ? API_CACHE : DYNAMIC_CACHE
     );
 
+    // Mobile optimization: Faster timeout on slower networks
+    const fetchTimeout = isMobileDevice ? 5000 : 10000; // 5s vs 10s
+
     try {
-        const response = await fetch(request);
-        
+        // Implement timeout for slow networks
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), fetchTimeout);
+
+        const response = await fetch(request, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
         if (response.ok) {
             cache.put(request, response.clone());
+            // Limit cache size: smaller on mobile
+            if (request.url.includes('/api/')) {
+                await limitCacheSize(API_CACHE, isMobileDevice ? 20 : 50);
+            } else {
+                await limitCacheSize(DYNAMIC_CACHE, isMobileDevice ? 20 : 50);
+            }
             console.log('✅ Network success:', request.url);
         }
-        
+
         return response;
     } catch (error) {
         console.warn('⚠️  Network failed, trying cache:', request.url);
         const cached = await cache.match(request);
-        
+
         if (cached) {
             console.log('✅ Using cached response:', request.url);
             return cached;
@@ -176,6 +226,7 @@ async function networkFirst(request) {
 /**
  * Stale-while-revalidate strategy: Return cache immediately, update in background
  * Best for: HTML documents and content that can be slightly stale
+ * FASE 14: Optimized for mobile - skip background revalidate on slow networks
  */
 async function staleWhileRevalidate(request) {
     const cache = await caches.open(DYNAMIC_CACHE);
@@ -184,16 +235,21 @@ async function staleWhileRevalidate(request) {
     // Return cached version immediately
     if (cached) {
         console.log('✅ Serving stale (revalidating):', request.url);
-        
-        // Update cache in background
-        fetch(request).then((response) => {
-            if (response.ok) {
-                cache.put(request, response.clone());
-                console.log('🔄 Cache updated:', request.url);
-            }
-        }).catch((error) => {
-            console.warn('🔄 Background fetch failed:', request.url, error);
-        });
+
+        // Mobile optimization: Only revalidate on faster networks or desktop
+        if (!isMobileDevice || (navigator.connection && navigator.connection.effectiveType === '4g')) {
+            // Update cache in background (non-blocking)
+            fetch(request).then((response) => {
+                if (response.ok) {
+                    cache.put(request, response.clone());
+                    // Limit cache size
+                    limitCacheSize(DYNAMIC_CACHE, isMobileDevice ? 20 : 50);
+                    console.log('🔄 Cache updated:', request.url);
+                }
+            }).catch((error) => {
+                console.warn('🔄 Background fetch failed:', request.url, error);
+            });
+        }
 
         return cached;
     }
@@ -203,6 +259,8 @@ async function staleWhileRevalidate(request) {
         const response = await fetch(request);
         if (response.ok) {
             cache.put(request, response.clone());
+            // Limit cache size
+            await limitCacheSize(DYNAMIC_CACHE, isMobileDevice ? 20 : 50);
         }
         return response;
     } catch (error) {
