@@ -19,15 +19,15 @@ class EmailVariantAssigner:
     Uses deterministic hash-based assignment so same client always gets same variant.
     """
 
-    def __init__(self, db_connection: Connection):
+    def __init__(self, db_connection: Optional[Connection] = None):
         """
         Initialize variant assigner with database connection.
 
         Args:
-            db_connection: SQLite database connection
+            db_connection: SQLite database connection (optional)
         """
         self.db = db_connection
-        self.cursor = self.db.cursor()
+        self.cursor = self.db.cursor() if db_connection else None
 
     def assign_variant(self, test_id: int, client_id: int) -> str:
         """
@@ -69,6 +69,17 @@ class EmailVariantAssigner:
         Returns:
             Dict with variant, test_id, client_id, created_at, or None on error
         """
+        if not self.cursor:
+            logger.warning("⚠️ No database connection available, using deterministic assignment only")
+            variant = self.assign_variant(test_id, client_id)
+            return {
+                'variant': variant,
+                'test_id': test_id,
+                'client_id': client_id,
+                'created_at': datetime.utcnow().isoformat(),
+                'existing': False
+            }
+
         try:
             # Check if assignment already exists
             self.cursor.execute(
@@ -314,11 +325,6 @@ class EmailVariantAssigner:
         except Exception as e:
             logger.error(f"❌ Error incrementing sent count: {e}")
             return False
-
-
-if __name__ == "__main__":
-    print("✅ EmailVariantAssigner module loaded (import it in email_sender_agent.py)")
-
     def get_active_test_for_email_type(self, email_type: str) -> Optional[Dict]:
         """
         Get the currently active A/B test for an email type.
@@ -329,6 +335,10 @@ if __name__ == "__main__":
         Returns:
             Dict with test data including variant_a and variant_b content, or None
         """
+        if not self.cursor:
+            logger.warning("⚠️ No database connection available")
+            return None
+
         try:
             self.cursor.execute(
                 """
@@ -391,6 +401,10 @@ if __name__ == "__main__":
         Returns:
             True if successful
         """
+        if not self.cursor:
+            logger.warning("⚠️ No database connection available")
+            return False
+
         try:
             self.cursor.execute(
                 """
@@ -410,3 +424,7 @@ if __name__ == "__main__":
         except Exception as e:
             logger.error(f"❌ Error recording send: {e}")
             return False
+
+
+if __name__ == "__main__":
+    print("✅ EmailVariantAssigner module loaded (import it in email_sender_agent.py)")
