@@ -48,6 +48,7 @@ from backend.routes.seo_routes import router as seo_router
 from backend.routes.monitoring_routes import router as monitoring_router
 from backend.routes.prometheus_routes import router as prometheus_router
 from backend.routes.alert_routing_routes import router as alert_routing_router
+from backend.routes.fase14_monitoring_routes import router as fase14_monitoring_router
 from agents.statistical_tester import StatisticalTester
 from agents.email_variant_assigner import EmailVariantAssigner
 
@@ -112,6 +113,9 @@ app.include_router(prometheus_router)
 
 # Include Alert Routing routes (FASE 14 Week 2 Track C: Alert routing & notifications)
 app.include_router(alert_routing_router)
+
+# Include FASE 14 Phase 1 Monitoring routes (Production Infrastructure)
+app.include_router(fase14_monitoring_router)
 
 # Global orchestrator instance
 orchestrator = None

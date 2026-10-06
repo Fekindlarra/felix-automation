@@ -1,0 +1,385 @@
+# FASE 14 Configuration - Production Ready
+# Aplicar estos settings después de crear la base de datos
+# Generated: 2026-10-06
+
+# ========================================
+# DATABASE
+# ========================================
+database:
+  type: sqlite
+  path: database.sqlite
+  pool_size: 5
+  timeout: 30
+  check_same_thread: false
+
+# ========================================
+# TRACK B: SHOPIFY INTEGRATION
+# ========================================
+shopify:
+  enabled: true
+
+  # API Configuration
+  api_version: "2024-01"  # Latest Shopify API version
+  api_base_url: "https://{shop_domain}/admin/api/{api_version}"
+
+  # Rate Limiting (Shopify standard: 2 requests per second)
+  rate_limit:
+    max_requests: 2
+    time_window_seconds: 1
+    retry_delay_base: 1  # exponential backoff starts at 1s
+    max_retries: 3
+
+  # Connection Pooling
+  connection_pool:
+    size: 5
+    timeout: 30
+    keepalive_interval: 60
+
+  # Webhook Configuration
+  webhook_validation: true
+  webhook_secret: "${SHOPIFY_WEBHOOK_SECRET}"  # Set via environment variable
+  webhook_timeout: 10
+  webhook_events:
+    - "orders/created"
+    - "orders/updated"
+    - "orders/fulfilled"
+    - "products/created"
+    - "products/updated"
+    - "products/delete"
+    - "fulfillments/create"
+
+  # Data Sync
+  sync:
+    enabled: true
+    schedule: "0 */6 * * *"  # Every 6 hours
+    batch_size: 100
+    lookback_days: 30
+
+  # Credentials
+  credentials:
+    format: "oauth"  # oauth token, format: shpat_*
+    encryption: "fernet"
+    storage: "database"
+
+  # Health Check
+  health_check:
+    enabled: true
+    interval_minutes: 60
+    timeout_seconds: 10
+
+# ========================================
+# TRACK C: ML PREDICTIONS & BROADCASTING
+# ========================================
+predictions:
+  enabled: true
+
+  # Prediction Configuration
+  scoring:
+    min_probability: 0.0
+    max_probability: 100.0
+    confidence_threshold: 50.0  # Minimum confidence to display
+
+  # Batch Processing
+  batch:
+    enabled: true
+    schedule: "0 9 * * *"  # Daily at 9 AM
+    batch_size: 100
+    lookback_days: 90
+
+  # Broadcasting
+  broadcast:
+    enabled: true
+    method: "websocket"
+    frequency_seconds: 300  # Update every 5 minutes
+    high_priority_threshold: 75.0  # Probability > 75% = high priority
+
+  # Factors Configuration
+  risk_factors:
+    - "Long sales cycle"
+    - "Budget constraints"
+    - "Competitor engagement"
+    - "No recent activity"
+    - "Multiple decision makers"
+
+  positive_factors:
+    - "Multiple touches"
+    - "High engagement"
+    - "Website visits"
+    - "Email opens"
+    - "Shared content"
+
+  # Anomaly Detection
+  anomaly_detection:
+    enabled: true
+    types:
+      - conversion_drop
+      - engagement_drop
+      - unusual_pattern
+      - revenue_anomaly
+      - activity_spike
+    thresholds:
+      conversion_drop: 0.30  # 30% drop
+      engagement_drop: 0.25  # 25% drop
+      revenue_anomaly: 0.40  # 40% change
+      activity_spike: 2.0    # 2x increase
+
+# ========================================
+# TRACK D: EMAIL A/B TESTING FRAMEWORK
+# ========================================
+ab_testing:
+  enabled: true
+
+  # Test Configuration
+  testing:
+    default_test_duration_days: 14
+    min_sample_size: 30  # Minimum emails per variant for significance
+    significance_threshold: 0.05  # p-value for 95% confidence
+    default_split_ratio: 50  # 50/50 split between A and B
+
+  # Variant Assignment
+  assignment:
+    method: "hash_deterministic"  # hash_deterministic or random
+    seed: "test_id_client_id"  # Hash input format
+    caching: true
+    cache_ttl_minutes: 1440  # 24 hours
+
+  # Statistical Testing
+  statistics:
+    test_type: "chi_square"  # chi_square test for independence
+    confidence_level: 0.95  # 95% confidence interval
+    power_analysis: true  # Calculate statistical power
+    minimum_power: 0.80  # Aim for 80% power
+
+  # Email Types
+  email_types:
+    - welcome
+    - followup
+    - promotional
+    - nurture
+    - recovery
+
+  # Results Dashboard
+  results:
+    auto_declare_winner: true
+    winner_threshold_p_value: 0.05
+    min_samples_before_analysis: 60  # Need at least 60 samples total
+
+  # Tracking
+  tracking:
+    track_opens: true
+    track_clicks: true
+    track_conversions: true
+    event_retention_days: 365
+
+# ========================================
+# WEBSOCKET & REAL-TIME UPDATES
+# ========================================
+websocket:
+  enabled: true
+
+  # Server Configuration
+  host: "0.0.0.0"
+  port: 8001
+  ssl: true
+  ssl_cert: "certs/server.crt"
+  ssl_key: "certs/server.key"
+
+  # Connection Management
+  max_connections: 1000
+  timeout: 300  # Connection timeout in seconds
+  heartbeat_interval_desktop: 30  # Send heartbeat every 30s (desktop)
+  heartbeat_interval_mobile: 60   # Send heartbeat every 60s (mobile)
+
+  # Authentication
+  auth:
+    method: "jwt"
+    secret: "${JWT_SECRET}"
+    algorithm: "HS256"
+    expiration_minutes: 1440  # 24 hours
+
+  # Events
+  events:
+    # Shopify events
+    - type: "order:created"
+      broadcast: true
+      retention_hours: 24
+    - type: "order:updated"
+      broadcast: true
+      retention_hours: 24
+
+    # Prediction events
+    - type: "prediction:generated"
+      broadcast: true
+      retention_hours: 48
+    - type: "anomaly:detected"
+      broadcast: true
+      retention_hours: 48
+    - type: "prediction:updated"
+      broadcast: true
+      retention_hours: 48
+
+    # A/B Testing events
+    - type: "test:created"
+      broadcast: true
+      retention_hours: 168  # 7 days
+    - type: "test:started"
+      broadcast: true
+      retention_hours: 168
+    - type: "test:completed"
+      broadcast: true
+      retention_hours: 168
+    - type: "test:winner_declared"
+      broadcast: true
+      retention_hours: 168
+
+    # Recommendations
+    - type: "recommendation:generated"
+      broadcast: true
+      retention_hours: 48
+
+  # Dashboard Updates
+  dashboard:
+    prediction_widget_update_interval: 30  # seconds
+    order_feed_update_interval: 60  # seconds
+    test_results_update_interval: 300  # seconds (5 min)
+
+# ========================================
+# AUTHENTICATION & SECURITY
+# ========================================
+auth:
+  jwt_secret: "${JWT_SECRET}"
+  jwt_algorithm: "HS256"
+  jwt_expiration_minutes: 1440
+
+  # OAuth
+  oauth:
+    shopify_client_id: "${SHOPIFY_CLIENT_ID}"
+    shopify_client_secret: "${SHOPIFY_CLIENT_SECRET}"
+    shopify_redirect_uri: "https://your-domain.com/auth/shopify/callback"
+
+  # Encryption
+  encryption:
+    method: "fernet"  # Fernet (AES-128) for credential storage
+    key: "${ENCRYPTION_KEY}"
+
+  # API Keys
+  api_keys:
+    sendgrid_key: "${SENDGRID_API_KEY}"
+    facebook_token: "${FACEBOOK_API_TOKEN}"
+    google_token: "${GOOGLE_API_TOKEN}"
+
+# ========================================
+# LOGGING & MONITORING
+# ========================================
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "json"  # json or text
+
+  handlers:
+    file:
+      enabled: true
+      path: "logs/fase14.log"
+      rotation: "midnight"
+      retention_days: 30
+      max_size_mb: 100
+
+    console:
+      enabled: true
+      level: "INFO"
+
+    database:
+      enabled: true
+      log_webhook_events: true
+      log_predictions: true
+      log_ab_tests: true
+      retention_days: 90
+
+monitoring:
+  enabled: true
+
+  # Health Checks
+  health_checks:
+    - name: "database"
+      interval_minutes: 5
+      timeout_seconds: 10
+    - name: "shopify_api"
+      interval_minutes: 10
+      timeout_seconds: 10
+    - name: "websocket"
+      interval_minutes: 1
+      timeout_seconds: 5
+
+  # Metrics
+  metrics:
+    enabled: true
+    endpoint: "/metrics"
+    retention_days: 30
+
+    track:
+      - websocket_connections
+      - prediction_broadcasts
+      - ab_test_events
+      - shopify_api_calls
+      - api_latency
+      - database_queries
+
+# ========================================
+# FEATURE FLAGS
+# ========================================
+features:
+  shopify_real_api: true
+  ml_predictions: true
+  ab_testing: true
+  websocket_broadcasting: true
+  mobile_optimization: true
+  offline_mode: true
+  anomaly_detection: true
+
+# ========================================
+# ENVIRONMENT SPECIFIC
+# ========================================
+environments:
+  development:
+    debug: true
+    log_level: "DEBUG"
+    shopify:
+      sandbox_mode: true
+    websocket:
+      ssl: false
+
+  staging:
+    debug: false
+    log_level: "INFO"
+    shopify:
+      sandbox_mode: false
+      rate_limit:
+        max_requests: 2
+    monitoring:
+      alerting_enabled: true
+
+  production:
+    debug: false
+    log_level: "WARNING"
+    shopify:
+      sandbox_mode: false
+      rate_limit:
+        max_requests: 2
+    websocket:
+      max_connections: 10000
+    monitoring:
+      alerting_enabled: true
+      slack_webhook: "${SLACK_WEBHOOK_URL}"
+
+# ========================================
+# REQUIRED ENVIRONMENT VARIABLES
+# ========================================
+# Export these before running:
+# export JWT_SECRET="your-jwt-secret-key-min-32-chars"
+# export ENCRYPTION_KEY="your-fernet-key"
+# export SHOPIFY_WEBHOOK_SECRET="your-shopify-webhook-secret"
+# export SHOPIFY_CLIENT_ID="your-shopify-client-id"
+# export SHOPIFY_CLIENT_SECRET="your-shopify-client-secret"
+# export SENDGRID_API_KEY="SG.xxx"
+# export FACEBOOK_API_TOKEN="EAAA..."
+# export GOOGLE_API_TOKEN="ya29.xxx"
+# export SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."

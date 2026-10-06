@@ -12,6 +12,9 @@ import sqlite3
 from pathlib import Path
 from datetime import datetime, timedelta
 
+# Fix Python path for imports
+sys.path.insert(0, '/home/claude/felix-automation')
+
 # Test results tracker
 test_results = {
     "total": 0,
