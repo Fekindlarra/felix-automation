@@ -1,0 +1,151 @@
+# FASE 14 Production Configuration
+# Version: v14.0.0
+# Date: 2026-10-06
+
+environment: production
+debug: false
+log_level: INFO
+
+# Database Configuration
+database:
+  type: postgresql
+  host: ${DB_HOST}
+  port: 5432
+  name: felix_automation_prod
+  user: ${DB_USER}
+  password: ${DB_PASSWORD}
+  pool_size: 20
+  max_overflow: 10
+  pool_recycle: 3600
+  echo: false
+
+# WebSocket Configuration
+websocket:
+  enabled: true
+  heartbeat_interval_desktop: 30  # seconds
+  heartbeat_interval_mobile: 60   # seconds (battery efficient)
+  max_message_size: 1048576       # 1 MB
+  max_connections_per_server: 1000
+  event_history_max: 1000
+  event_cleanup_interval: 300     # Clean old events every 5 minutes
+
+# Shopify Integration
+shopify:
+  api_version: "2024-01"
+  rate_limit: 2                    # requests per second
+  connection_pool_min: 10
+  connection_pool_max: 50
+  request_timeout: 30
+  retry_attempts: 3
+  retry_backoff: 1.5
+  webhook_validation: true
+  webhook_topics:
+    - orders/created
+    - orders/updated
+    - orders/fulfilled
+    - products/create
+    - products/update
+
+# ML Predictions
+predictions:
+  enabled: true
+  confidence_threshold: 0.40       # Show predictions with 40%+ confidence
+  broadcast_interval: 30           # seconds
+  update_on_event: true
+  factors_weight:
+    deal_size: 0.25
+    engagement_level: 0.25
+    product_fit: 0.20
+    timeline: 0.15
+    buying_signal: 0.15
+
+# A/B Testing
+ab_testing:
+  enabled: true
+  default_test_duration_days: 14
+  significance_threshold: 0.05     # p-value for winner determination
+  min_sample_size: 100
+  confidence_level: 0.95
+  auto_winner_determination: true
+
+# Mobile Optimization
+mobile:
+  enabled: true
+  touch_target_min_size: 48        # pixels
+  heartbeat_optimization: true
+  offline_caching: true
+  lazy_load_charts: true
+  max_cache_size_mb: 50
+  network_aware: true
+
+# Security Configuration
+security:
+  https_only: true
+  jwt_secret: ${JWT_SECRET}
+  jwt_expiration_hours: 1
+  fernet_key: ${FERNET_KEY}
+  allow_origins: ["https://felix-automation.app", "https://admin.felix-automation.app"]
+  allowed_hosts: ["felix-automation.app", "admin.felix-automation.app"]
+  cors_credentials: true
+  rate_limit_enabled: true
+  rate_limit_requests: 100
+  rate_limit_window: 60            # seconds
+
+# Email Configuration
+email:
+  provider: sendgrid
+  api_key: ${SENDGRID_API_KEY}
+  from_email: ${SENDER_EMAIL}
+  from_name: "Felix Automation"
+  tracking_enabled: true
+  a_b_testing_enabled: true
+
+# Monitoring & Logging
+monitoring:
+  prometheus_enabled: true
+  prometheus_port: 9090
+  metrics_prefix: "felix_automation_"
+  health_check_interval: 60        # seconds
+
+logging:
+  format: "json"
+  handlers:
+    - type: "stdout"
+      level: "INFO"
+    - type: "file"
+      path: "/var/log/felix/app.log"
+      level: "DEBUG"
+      max_size_mb: 100
+      backup_count: 10
+    - type: "syslog"
+      facility: "local0"
+      level: "WARNING"
+
+# Performance Tuning
+performance:
+  enable_compression: true
+  compression_level: 6
+  cache_enabled: true
+  cache_ttl_seconds: 3600
+  connection_timeout: 30
+  request_timeout: 60
+
+# Feature Flags
+features:
+  real_time_dashboard: true
+  shopify_analytics: true
+  ml_predictions: true
+  ab_testing: true
+  mobile_optimization: true
+  prediction_broadcasting: true
+  webhook_processing: true
+  offline_mode: true
+
+# Deployment Info
+deployment:
+  version: "v14.0.0"
+  build_date: "2026-10-06"
+  revision: "67b407b"
+  status: "production"
+  canary_deployment: false          # Set to true during canary phase
+  canary_traffic_percentage: 0      # Set to 10 during canary
