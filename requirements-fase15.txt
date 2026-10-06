@@ -1,0 +1,56 @@
+# FASE 15 - Python Dependencies
+# Backend API + ML Pipeline
+
+# Core Framework
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Database
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+alembic==1.13.0
+
+# ML / Data Science
+pandas==2.1.3
+numpy==1.26.2
+scikit-learn==1.3.2
+scipy==1.11.4
+shap==0.43.0
+
+# Data Processing
+jupyter==1.0.0
+jupyterlab==4.0.9
+matplotlib==3.8.2
+seaborn==0.13.0
+
+# Authentication / Security
+pyjwt==2.8.1
+python-multipart==0.0.6
+cryptography==41.0.7
+python-dotenv==1.0.0
+
+# WebSocket / Real-time
+websockets==12.0
+aioredis==2.0.1
+
+# Testing
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-asyncio==0.21.1
+httpx==0.25.2
+
+# Code Quality
+black==23.12.0
+isort==5.13.2
+pylint==3.0.3
+bandit==1.7.5
+
+# Monitoring / Logging
+python-logging-loki==0.3.2
+prometheus-client==0.19.0
+
+# Utilities
+requests==2.31.0
+click==8.1.7
