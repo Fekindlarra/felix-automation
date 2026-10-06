@@ -58,8 +58,10 @@ class EmailVariantAssigner:
 
                     if personalized:
                         variant = personalized[0]
-                        logger.info(f"✅ Using personalized variant: client {client_id} → {variant} (test {test_id})")
-                        return variant
+                        # Validate that variant is a string (not a mock or invalid type)
+                        if isinstance(variant, str) and variant in ['A', 'B']:
+                            logger.info(f"✅ Using personalized variant: client {client_id} → {variant} (test {test_id})")
+                            return variant
                 except Exception as e:
                     logger.debug(f"⚠️ Personalization check skipped: {e}")
 

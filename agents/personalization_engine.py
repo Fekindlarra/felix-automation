@@ -66,7 +66,7 @@ class PersonalizationEngine:
             # Initiate Phase 1: 10% rollout
             # Get all active clients to seed personalization
             cursor.execute("""
-                SELECT DISTINCT client_id FROM clients
+                SELECT DISTINCT id FROM clients
                 WHERE id NOT IN (
                     SELECT DISTINCT client_id FROM personalization_variants
                     WHERE test_id = ?
@@ -79,7 +79,7 @@ class PersonalizationEngine:
 
             # Assign Phase 1 clients deterministically based on client_id hash
             for idx, client_row in enumerate(clients):
-                client_id = client_row['client_id']
+                client_id = client_row['id']
 
                 # Deterministic assignment: if hash(client_id) < 0.1, assign variant
                 if self._should_assign_variant(client_id, 0.1):
