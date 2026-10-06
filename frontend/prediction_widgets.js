@@ -543,11 +543,146 @@ class AnomalyAlertWidget {
     }
 }
 
+/**
+ * Recommendation Widget for suggested next actions
+ */
+class RecommendationWidget {
+    constructor(containerId) {
+        this.containerId = containerId;
+        this.recommendations = [];
+    }
+
+    /**
+     * Set recommendations
+     */
+    setRecommendations(recommendations) {
+        this.recommendations = recommendations || [];
+        this.render();
+    }
+
+    /**
+     * Render recommendations
+     */
+    render() {
+        const container = document.getElementById(this.containerId);
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (this.recommendations.length === 0) {
+            container.innerHTML = `
+                <div style="
+                    text-align: center;
+                    padding: 20px;
+                    color: var(--text-secondary);
+                    font-size: 13px;
+                ">
+                    Esperando recomendaciones...
+                </div>
+            `;
+            return;
+        }
+
+        const list = document.createElement('div');
+        list.style.cssText = 'display: flex; flex-direction: column; gap: 12px;';
+
+        this.recommendations.forEach((rec, idx) => {
+            const item = this.createRecommendationItem(rec, idx);
+            list.appendChild(item);
+        });
+
+        container.appendChild(list);
+    }
+
+    /**
+     * Create a single recommendation item
+     */
+    createRecommendationItem(recommendation, index) {
+        const urgencyColors = {
+            'urgent': '#f44336',
+            'high': '#ff9800',
+            'normal': '#2196f3',
+            'low': '#4caf50'
+        };
+
+        const actionIcons = {
+            'email': '📧',
+            'call': '📞',
+            'follow-up': '📋',
+            'meeting': '📅',
+            'proposal': '📄'
+        };
+
+        const urgency = recommendation.urgency || 'normal';
+        const color = urgencyColors[urgency] || '#2196f3';
+        const icon = actionIcons[recommendation.action_type] || '💡';
+
+        const item = document.createElement('div');
+        item.style.cssText = `
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            background: ${color}15;
+            border-left: 3px solid ${color};
+            border-radius: 8px;
+            animation: slideIn 0.3s ease forwards;
+            animation-delay: ${index * 0.1}s;
+            opacity: 0;
+        `;
+
+        const actionIcon = document.createElement('div');
+        actionIcon.style.cssText = `
+            flex-shrink: 0;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+        actionIcon.textContent = icon;
+
+        const content = document.createElement('div');
+        content.style.cssText = 'flex: 1; font-size: 13px;';
+        content.innerHTML = `
+            <div style="font-weight: 600; color: ${color}; margin-bottom: 4px;">
+                ${recommendation.recommendation || 'Sin descripción'}
+            </div>
+            <div style="color: var(--text-secondary); font-size: 12px;">
+                ${recommendation.action_type ? `Acción: ${recommendation.action_type}` : ''}
+            </div>
+        `;
+
+        item.appendChild(actionIcon);
+        item.appendChild(content);
+
+        return item;
+    }
+}
+
+// Add CSS animation for slide-in effect
+if (!document.getElementById('prediction-widgets-styles')) {
+    const style = document.createElement('style');
+    style.id = 'prediction-widgets-styles';
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
 // Export for use in HTML
 window.PredictionWidgets = {
     PredictionGauge,
     RiskFactorsWidget,
     PositiveFactorsWidget,
     TimelineWidget,
-    AnomalyAlertWidget
+    AnomalyAlertWidget,
+    RecommendationWidget
 };

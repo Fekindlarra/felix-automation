@@ -15,19 +15,54 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 from fastapi import APIRouter, Request, HTTPException, status
 from fastapi.responses import JSONResponse
+from cryptography.fernet import Fernet
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Global database connection (will be injected by main app)
 database = None
+prediction_broadcaster = None  # For real-time events
 
 
-def init_webhooks(db):
-    """Initialize webhook handler with database connection"""
-    global database
+def init_webhooks(db, broadcaster=None):
+    """Initialize webhook handler with database connection and optional broadcaster"""
+    global database, prediction_broadcaster
     database = db
+    prediction_broadcaster = broadcaster
     logger.info("✅ Shopify webhook handler initialized")
+
+
+def get_webhook_secret_for_store(store_id: int) -> Optional[str]:
+    """
+    Retrieve webhook secret from database for a given store
+
+    Args:
+        store_id: Shopify store ID
+
+    Returns:
+        Webhook secret or None if not found
+    """
+    try:
+        if not database:
+            logger.warning("⚠️ Database not configured")
+            return None
+
+        cursor = database.cursor()
+        cursor.execute("""
+        SELECT webhook_secret FROM shopify_stores WHERE shop_id = ?
+        """, (store_id,))
+
+        result = cursor.fetchone()
+        if result and result[0]:
+            return result[0]
+
+        logger.debug(f"ℹ️ No webhook secret found for store {store_id}")
+        return None
+
+    except Exception as e:
+        logger.error(f"❌ Error retrieving webhook secret: {str(e)}")
+        return None
 
 
 def validate_webhook_signature(signature: str, body: bytes, secret: str) -> bool:
@@ -146,7 +181,29 @@ async def process_orders_created(store_id: int, order_data: Dict[str, Any]):
         ))
 
         database.commit()
-        logger.info(f"✅ Order {order_number} stored in database")
+        logger.info(f"✅ Order {order_number} stored in database (${total_price})")
+
+        # Broadcast real-time event via WebSocket if broadcaster available
+        if prediction_broadcaster:
+            try:
+                # Trigger analytics update event
+                event = {
+                    'type': 'shopify:order_created',
+                    'store_id': store_id,
+                    'order_id': order_id,
+                    'order_number': order_number,
+                    'total_price': total_price,
+                    'timestamp': datetime.utcnow().isoformat()
+                }
+                # Log to event history for dashboard
+                prediction_broadcaster._log_event('shopify:order_created', {
+                    'order_id': order_id,
+                    'store_id': store_id,
+                    'total_price': total_price
+                })
+                logger.debug(f"📡 Broadcasted order created event")
+            except Exception as e:
+                logger.warning(f"⚠️ Could not broadcast event: {str(e)}")
 
     except Exception as e:
         logger.error(f"❌ Error processing order: {str(e)}")
@@ -244,13 +301,21 @@ async def webhook_orders_created(request: Request):
         # Get raw body for signature validation
         body = await request.body()
 
-        # For now, skip signature validation if secret not configured
-        # In production, validate against stored webhook secret
-        webhook_secret = None  # TODO: Get from database or environment
+        # Extract store ID first to get webhook secret
+        try:
+            temp_shop_id = int(shop_id) if shop_id else 0
+        except ValueError:
+            temp_shop_id = 0
+
+        # Retrieve webhook secret from database
+        webhook_secret = get_webhook_secret_for_store(temp_shop_id)
+
         if webhook_secret:
             if not validate_webhook_signature(signature, body, webhook_secret):
                 logger.warning("⚠️ Invalid webhook signature")
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid signature")
+        else:
+            logger.debug("ℹ️ Webhook secret not configured, skipping signature validation")
 
         # Parse JSON
         try:
@@ -303,23 +368,25 @@ async def webhook_orders_updated(request: Request):
         # Get raw body
         body = await request.body()
 
-        # Signature validation (optional for now)
-        webhook_secret = None  # TODO: Get from database
+        # Extract store ID first to get webhook secret
+        try:
+            store_id = int(shop_id) if shop_id else 0
+        except ValueError:
+            store_id = 0
+
+        # Retrieve and validate webhook signature
+        webhook_secret = get_webhook_secret_for_store(store_id)
         if webhook_secret:
             if not validate_webhook_signature(signature, body, webhook_secret):
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid signature")
+        else:
+            logger.debug("ℹ️ Webhook secret not configured, skipping signature validation")
 
         # Parse JSON
         try:
             data = json.loads(body)
         except json.JSONDecodeError:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON")
-
-        # Extract store ID
-        try:
-            store_id = int(shop_id) if shop_id else 0
-        except ValueError:
-            store_id = 0
 
         # Store webhook event
         store_webhook_event(store_id, topic or "orders/updated", data)
@@ -360,23 +427,25 @@ async def webhook_products_updated(request: Request):
         # Get raw body
         body = await request.body()
 
-        # Signature validation (optional for now)
-        webhook_secret = None  # TODO: Get from database
+        # Extract store ID first to get webhook secret
+        try:
+            store_id = int(shop_id) if shop_id else 0
+        except ValueError:
+            store_id = 0
+
+        # Retrieve and validate webhook signature
+        webhook_secret = get_webhook_secret_for_store(store_id)
         if webhook_secret:
             if not validate_webhook_signature(signature, body, webhook_secret):
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid signature")
+        else:
+            logger.debug("ℹ️ Webhook secret not configured, skipping signature validation")
 
         # Parse JSON
         try:
             data = json.loads(body)
         except json.JSONDecodeError:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON")
-
-        # Extract store ID
-        try:
-            store_id = int(shop_id) if shop_id else 0
-        except ValueError:
-            store_id = 0
 
         # Store webhook event
         store_webhook_event(store_id, topic or "products/updated", data)

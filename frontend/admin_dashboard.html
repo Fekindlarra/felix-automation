@@ -724,6 +724,14 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Recommendations -->
+            <div class="prediction-card">
+                <div class="kpi-label">💡 Acciones Recomendadas</div>
+                <div id="recommendationsContainer" style="padding: 12px 0;">
+                    <!-- Recommendations will be populated here -->
+                </div>
+            </div>
         </div>
 
         <!-- Connection Stats -->
@@ -1022,6 +1030,7 @@
         let positiveFactorsWidget = null;
         let timelineWidget = null;
         let anomalyWidget = null;
+        let recommendationWidget = null;
 
         function initializePredictionWidgets() {
             // Initialize gauge
@@ -1074,6 +1083,21 @@
                     type: 'Comportamiento Inusual',
                     severity: 'medium',
                     description: 'Patrón de visitas a web site cambió significativamente esta semana'
+                }
+            ]);
+
+            // Initialize recommendations widget
+            recommendationWidget = new PredictionWidgets.RecommendationWidget('recommendationsContainer');
+            recommendationWidget.setRecommendations([
+                {
+                    recommendation: 'Enviar propuesta personalizada',
+                    action_type: 'email',
+                    urgency: 'high'
+                },
+                {
+                    recommendation: 'Agendar reunión con decisor',
+                    action_type: 'meeting',
+                    urgency: 'normal'
                 }
             ]);
 
@@ -1133,17 +1157,32 @@
             if (eventType === 'prediction:generated') {
                 handlePredictionUpdate(message.data);
             } else if (eventType === 'anomaly:detected') {
-                // Update anomaly widget
+                // Update anomaly widget - keep recent anomalies
                 if (anomalyWidget) {
                     const current = anomalyWidget.anomalies || [];
-                    anomalyWidget.setAnomalies([
-                        ...current,
+                    const updated = [
                         {
-                            type: message.data.type,
+                            type: message.data.anomaly_type || message.data.type,
                             severity: message.data.severity,
                             description: message.data.description
-                        }
-                    ]);
+                        },
+                        ...current
+                    ].slice(0, 5); // Keep last 5
+                    anomalyWidget.setAnomalies(updated);
+                }
+            } else if (eventType === 'recommendation:generated') {
+                // Add recommendation to widget
+                if (recommendationWidget) {
+                    const current = recommendationWidget.recommendations || [];
+                    const updated = [
+                        {
+                            recommendation: message.data.recommendation,
+                            action_type: message.data.action_type,
+                            urgency: message.data.urgency
+                        },
+                        ...current
+                    ].slice(0, 5); // Keep last 5
+                    recommendationWidget.setRecommendations(updated);
                 }
             }
 
@@ -1188,6 +1227,31 @@
                 });
             }
         }, 15000);
+
+        // Simulate recommendations and anomalies
+        setInterval(() => {
+            if (Math.random() > 0.8) {
+                const actionTypes = ['email', 'call', 'follow-up', 'meeting', 'proposal'];
+                const urgencies = ['low', 'normal', 'high', 'urgent'];
+                const recommendations = [
+                    'Enviar propuesta personalizada',
+                    'Agendar reunión con decisor',
+                    'Realizar seguimiento telefónico',
+                    'Actualizar propuesta económica',
+                    'Proporcionar casos de éxito'
+                ];
+
+                if (recommendationWidget) {
+                    recommendationWidget.setRecommendations([
+                        {
+                            recommendation: recommendations[Math.floor(Math.random() * recommendations.length)],
+                            action_type: actionTypes[Math.floor(Math.random() * actionTypes.length)],
+                            urgency: urgencies[Math.floor(Math.random() * urgencies.length)]
+                        }
+                    ]);
+                }
+            }
+        }, 20000);
     </script>
 
     <!-- Service Worker Registration for PWA & Offline Support -->
