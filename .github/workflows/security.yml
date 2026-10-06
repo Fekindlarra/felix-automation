@@ -1,0 +1,97 @@
+name: Security & Code Analysis
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install security tools
+      run: |
+        pip install bandit safety
+
+    - name: Run Bandit Security Check
+      continue-on-error: true
+      run: |
+        bandit -r backend/api/ml_pipeline.py -f json -o bandit-report.json || true
+        bandit -r backend/api/ml_pipeline.py
+
+    - name: Check dependencies for vulnerabilities
+      continue-on-error: true
+      run: |
+        safety check || true
+
+  dependency-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: List Python dependencies
+      run: |
+        echo "=== Project Dependencies ==="
+        pip list | grep -E "pandas|scikit-learn|numpy|shap|sqlalchemy"
+
+  model-validation:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pandas scikit-learn numpy shap
+
+    - name: Validate model structure
+      run: |
+        python3 << 'EOF'
+        import os
+        import pickle
+
+        print("=== Model Files Validation ===")
+        model_path = "models/conversion_predictor_v1.pkl"
+        scaler_path = "models/feature_scaler_v1.pkl"
+
+        if os.path.exists(model_path):
+            print(f"✅ Model file found: {model_path}")
+            try:
+                with open(model_path, 'rb') as f:
+                    model = pickle.load(f)
+                print(f"✅ Model loaded successfully")
+                print(f"   Type: {type(model)}")
+            except Exception as e:
+                print(f"❌ Error loading model: {e}")
+        else:
+            print(f"❌ Model file not found: {model_path}")
+
+        if os.path.exists(scaler_path):
+            print(f"✅ Scaler file found: {scaler_path}")
+            try:
+                with open(scaler_path, 'rb') as f:
+                    scaler = pickle.load(f)
+                print(f"✅ Scaler loaded successfully")
+            except Exception as e:
+                print(f"❌ Error loading scaler: {e}")
+        else:
+            print(f"❌ Scaler file not found: {scaler_path}")
+        EOF

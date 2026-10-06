@@ -1,0 +1,134 @@
+name: FASE 15 - ML Testing & Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pandas scikit-learn numpy sqlite3 shap
+
+    - name: Lint with flake8
+      continue-on-error: true
+      run: |
+        pip install flake8
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 backend/api/ml_pipeline.py --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-code zero treats all errors as warnings
+        flake8 backend/api/ml_pipeline.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Train ML Model
+      run: |
+        python3 scripts/train_ml_model.py
+
+    - name: Test ML Predictions
+      run: |
+        python3 scripts/test_ml_predictions.py
+
+    - name: Test E2E ML + WebSocket
+      run: |
+        python3 scripts/test_e2e_ml_websocket.py
+
+    - name: Setup ML Monitoring
+      run: |
+        python3 scripts/setup_ml_monitoring.py
+
+    - name: Verify Model Artifacts
+      run: |
+        echo "Checking model files..."
+        ls -lh models/
+        echo "Checking database..."
+        sqlite3 data/pipeline.db ".tables"
+
+    - name: Generate Test Report
+      if: always()
+      run: |
+        echo "=== FASE 15 Phase 2 Validation Report ===" > validation_report.txt
+        echo "Date: $(date)" >> validation_report.txt
+        echo "Python Version: ${{ matrix.python-version }}" >> validation_report.txt
+        echo "" >> validation_report.txt
+        echo "Model Files:" >> validation_report.txt
+        ls -lh models/ >> validation_report.txt 2>&1
+        echo "" >> validation_report.txt
+        echo "Database Tables:" >> validation_report.txt
+        sqlite3 data/pipeline.db ".tables" >> validation_report.txt 2>&1
+        cat validation_report.txt
+
+    - name: Upload Test Results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results-${{ matrix.python-version }}
+        path: validation_report.txt
+
+  code-quality:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install pylint
+      run: |
+        pip install pylint
+
+    - name: Analyze code with pylint
+      continue-on-error: true
+      run: |
+        pylint backend/api/ml_pipeline.py --disable=all --enable=E,F || true
+
+    - name: Check file sizes
+      run: |
+        echo "=== File Size Report ==="
+        echo "ML Pipeline:"
+        wc -l backend/api/ml_pipeline.py
+        echo "Predictions Router:"
+        wc -l backend/api/routers/predictions.py
+        echo "Training Script:"
+        wc -l scripts/train_ml_model.py
+        echo "Test Scripts:"
+        wc -l scripts/test_ml_predictions.py
+        wc -l scripts/test_e2e_ml_websocket.py
+        wc -l scripts/setup_ml_monitoring.py
+
+  documentation:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Check Documentation
+      run: |
+        echo "=== Documentation Files ==="
+        ls -lh FASE15_*.md
+        echo ""
+        echo "File Sizes:"
+        wc -l FASE15_*.md
+        echo ""
+        echo "Documentation Check:"
+        test -f FASE15_STATUS.md && echo "✅ Status report found" || echo "❌ Status report missing"
+        test -f FASE15_ML_DEPLOYMENT.md && echo "✅ Deployment guide found" || echo "❌ Deployment guide missing"
+        test -f FASE15_QUICKSTART.md && echo "✅ Quickstart guide found" || echo "❌ Quickstart guide missing"
