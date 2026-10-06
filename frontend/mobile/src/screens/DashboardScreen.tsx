@@ -6,27 +6,95 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "../store";
 import { getRecentEvents } from "../services/api";
+import WebSocketManager from "../services/websocket";
+import {
+  addEvent,
+  setConnectionStatus,
+  setWsLatency,
+} from "../store/slices/dashboardSlice";
 
 /**
  * Dashboard Screen (FASE 15 - Track A)
  *
  * Features:
- * - Real-time prediction updates via WebSocket
+ * - Real-time prediction updates via WebSocket ✨ LIVE
  * - Conversion probability gauge
  * - Risk factors display
  * - Event history
+ * - Auto-reconnect with exponential backoff
  */
 export default function DashboardScreen() {
   const dashboardState = useSelector((state: RootState) => state.dashboard);
   const authState = useSelector((state: RootState) => state.auth);
+  const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
+  const [wsManager, setWsManager] = useState<WebSocketManager | null>(null);
 
   useEffect(() => {
     loadInitialData();
+    initializeWebSocket();
+
+    return () => {
+      // Cleanup on unmount
+      if (wsManager) {
+        wsManager.disconnect();
+      }
+    };
   }, []);
+
+  const initializeWebSocket = async () => {
+    try {
+      const token = authState.token || "guest";
+      const userId = authState.user?.id || "user_001";
+
+      // WebSocket URL pointing to backend
+      const wsUrl = `ws://localhost:8000/ws/predictions/${userId}/client_001?token=${token}`;
+
+      const manager = new WebSocketManager({
+        url: wsUrl,
+        token: token,
+      });
+
+      // Subscribe to prediction events
+      manager.subscribe("prediction:generated", (prediction) => {
+        console.log("📊 Real-time prediction received:", prediction);
+
+        // Dispatch to Redux to update dashboard
+        dispatch(
+          addEvent({
+            client_id:
+              parseInt(
+                prediction.data?.client_id?.split("_")[1]?.padStart(0, "0") || "0"
+              ) || 0,
+            probability: prediction.data?.probability || 0,
+            confidence: prediction.data?.confidence || 0,
+            risk_factors: prediction.data?.risk_factors || [],
+            positive_factors: prediction.data?.positive_factors || [],
+            timestamp: prediction.timestamp,
+          })
+        );
+      });
+
+      // Subscribe to connection status
+      manager.subscribe("connection_confirmed", () => {
+        console.log("✅ WebSocket connected and authenticated");
+        dispatch(setConnectionStatus("connected"));
+      });
+
+      // Subscribe to heartbeat for latency tracking
+      manager.subscribe("heartbeat", () => {
+        dispatch(setWsLatency(Math.random() * 50)); // Simulated: TODO calculate real
+      });
+
+      await manager.connect();
+      setWsManager(manager);
+    } catch (error) {
+      console.error("❌ WebSocket initialization failed:", error);
+    }
+  };
 
   const loadInitialData = async () => {
     try {
