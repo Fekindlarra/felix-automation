@@ -1,0 +1,14 @@
+[0;32m[2026-10-06 12:08:20][0m ===================================================================
+[0;32m[2026-10-06 12:08:20][0m Felix Automation FASE 14 - Deployment Script
+[0;32m[2026-10-06 12:08:20][0m Environment: production
+[0;32m[2026-10-06 12:08:20][0m Version: v14.0.0
+[0;32m[2026-10-06 12:08:20][0m ===================================================================
+[0;32m[2026-10-06 12:08:20][0m Running pre-deployment checks...
+[0;32m[2026-10-06 12:08:20][0m ✓ Docker is installed
+[0;32m[2026-10-06 12:08:20][0m ✓ Docker Compose is installed
+[0;32m[2026-10-06 12:08:20][0m ✓ Environment file found
+[0;32m[2026-10-06 12:08:20][0m ✓ Environment variables configured
+[0;32m[2026-10-06 12:08:20][0m Creating database backup...
+time="2026-10-06T12:08:20-03:00" level=warning msg="/home/claude/felix-automation/docker-compose.prod.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+failed to connect to the docker API at unix:///var/run/docker.sock; check if the path is correct and if the daemon is running: dial unix /var/run/docker.sock: connect: no such file or directory
+[0;31m[2026-10-06 12:08:20] ERROR:[0m Database backup failed

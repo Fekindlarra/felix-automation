@@ -1,0 +1,12 @@
+[0;32m[2026-10-06 11:55:09][0m ===================================================================
+[0;32m[2026-10-06 11:55:09][0m Felix Automation FASE 14 - Deployment Script
+[0;32m[2026-10-06 11:55:09][0m Environment: production
+[0;32m[2026-10-06 11:55:09][0m Version: v14.0.0
+[0;32m[2026-10-06 11:55:09][0m ===================================================================
+[0;32m[2026-10-06 11:55:09][0m Running pre-deployment checks...
+[0;32m[2026-10-06 11:55:09][0m ✓ Docker is installed
+[0;32m[2026-10-06 11:55:09][0m ✓ Docker Compose is installed
+[0;32m[2026-10-06 11:55:09][0m ✓ Environment file found
+[0;32m[2026-10-06 11:55:09][0m ✓ Environment variables configured
+[0;32m[2026-10-06 11:55:09][0m Creating database backup...
+[0;31m[2026-10-06 11:55:09] ERROR:[0m Database backup failed

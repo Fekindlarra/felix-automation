@@ -21,12 +21,18 @@ from orchestrator import FelixAutomationOrchestrator, Audit
 from auditors.facebook_ads_auditor import FacebookAdsAuditor, create_sample_facebook_audit
 from auditors.google_ads_auditor import GoogleAdsAuditor, create_sample_google_audit
 from auditors.seo_auditor import SEOAuditor
+from auditors.tracking_scripts_auditor import TrackingScriptsAuditor, audit_tracking_scripts
 from whitebox.shopify_auditor import ShopifyAuditor
 from whitebox.jumpseller_auditor import JumpsellerAuditor
 from whitebox.code_auditor import CodeAuditor
 from whitebox.credentials_manager import CredentialsManager
 from whitebox.facebook_ads_live_auditor import FacebookAdsLiveAuditor
 from whitebox.google_ads_live_auditor import GoogleAdsLiveAuditor
+from whitebox.gsc_auditor import GSCAuditor, audit_gsc
+from whitebox.gtm_auditor import GTMAuditor, audit_gtm
+from whitebox.instagram_auditor import InstagramAuditor, audit_instagram
+from analytics.customer_profile_analyzer import CustomerProfileAnalyzer, analyze_customer_profile
+from analytics.content_recommendation_engine import ContentRecommendationEngine, generate_content_recommendations
 
 # Logging
 logging.basicConfig(level=logging.INFO)
@@ -464,6 +470,263 @@ class MultiPlatformAuditorAgent:
         avg_score = int(sum(scores) / len(scores)) if scores else 0
 
         logger.info(f"  💾 Guardando resultados - Score promedio: {avg_score}/100")
+
+    def audit_tracking_scripts(self, client_id: int, site_url: str = None) -> Dict:
+        """
+        Auditoría de Scripts de Tracking (GTM, GA4, Facebook Pixel, etc.)
+        No requiere credenciales - análisis estático del HTML
+
+        Args:
+            client_id: ID del cliente
+            site_url: URL del sitio (si no, se obtiene del cliente)
+
+        Returns:
+            Diccionario con resultados de auditoría
+        """
+        try:
+            client = self.orchestrator.get_client(client_id)
+            website_url = site_url or getattr(client, 'website', None)
+
+            if not website_url:
+                logger.warning(f"⚠️ Cliente {client.name} sin URL de website")
+                return {
+                    "platform": "tracking",
+                    "status": "failed",
+                    "error": "No website URL available"
+                }
+
+            logger.info(f"📊 Auditando Tracking Scripts para {client.name}")
+
+            # Fetch HTML
+            try:
+                response = requests.get(website_url, timeout=10)
+                response.raise_for_status()
+                html = response.text
+            except Exception as e:
+                logger.warning(f"⚠️ Error fetching {website_url}: {str(e)}")
+                return {
+                    "platform": "tracking",
+                    "status": "failed",
+                    "error": str(e)
+                }
+
+            # Auditar con TrackingScriptsAuditor
+            auditor = TrackingScriptsAuditor()
+            audit_result = auditor.audit({
+                'url': website_url,
+                'html_content': html
+            })
+
+            # Guardar en BD
+            self._save_audit_results(client_id, {"tracking": audit_result})
+
+            logger.info(f"✅ Tracking Scripts Audit completado - Score: {audit_result.get('score', 0)}/100")
+            return audit_result
+
+        except Exception as e:
+            logger.error(f"❌ Error en Tracking Scripts Audit: {str(e)}")
+            return {
+                "platform": "tracking",
+                "status": "failed",
+                "error": str(e)
+            }
+
+    def audit_gsc(self, client_id: int, gsc_credentials: Dict = None) -> Dict:
+        """
+        Auditoría de Google Search Console (White-Box)
+        Requiere credenciales OAuth de GSC
+
+        Args:
+            client_id: ID del cliente
+            gsc_credentials: Dict con:
+                - access_token: Token OAuth de Google
+                - site_url: URL del sitio (ej: https://example.com/)
+                - property_id: Property ID en GSC (opcional)
+
+        Returns:
+            Diccionario con resultados de auditoría
+        """
+        try:
+            client = self.orchestrator.get_client(client_id)
+            logger.info(f"🔍 Iniciando Google Search Console Audit para {client.name}")
+
+            if not gsc_credentials or 'access_token' not in gsc_credentials:
+                logger.warning("⚠️ Credenciales GSC no proporcionadas")
+                return audit_gsc(None)  # Retorna reporte de "necesita credenciales"
+
+            # Crear auditor GSC
+            auditor = GSCAuditor(gsc_credentials)
+            audit_result = auditor.audit()
+
+            # Guardar en BD
+            self._save_audit_results(client_id, {"gsc": audit_result})
+
+            logger.info(f"✅ GSC Audit completado - Score: {audit_result.get('score', 0)}/100")
+            return audit_result
+
+        except Exception as e:
+            logger.error(f"❌ Error en GSC Audit: {str(e)}")
+            return {
+                "platform": "gsc",
+                "status": "failed",
+                "error": str(e)
+            }
+
+    def audit_gtm(self, client_id: int, gtm_credentials: Dict = None) -> Dict:
+        """
+        Auditoría de Google Tag Manager (White-Box)
+        Requiere credenciales OAuth de GTM
+
+        Args:
+            client_id: ID del cliente
+            gtm_credentials: Dict con:
+                - access_token: Token OAuth de Google
+                - account_id: Account ID en GTM
+                - container_id: Container ID en GTM
+                - gtm_id: GTM-XXXXX del sitio
+
+        Returns:
+            Diccionario con resultados de auditoría
+        """
+        try:
+            client = self.orchestrator.get_client(client_id)
+            logger.info(f"🏷️ Iniciando Google Tag Manager Audit para {client.name}")
+
+            if not gtm_credentials or 'access_token' not in gtm_credentials:
+                logger.warning("⚠️ Credenciales GTM no proporcionadas")
+                return audit_gtm(None)  # Retorna reporte de "necesita credenciales"
+
+            # Crear auditor GTM
+            auditor = GTMAuditor(gtm_credentials)
+            audit_result = auditor.audit()
+
+            # Guardar en BD
+            self._save_audit_results(client_id, {"gtm": audit_result})
+
+            logger.info(f"✅ GTM Audit completado - Score: {audit_result.get('score', 0)}/100")
+            return audit_result
+
+        except Exception as e:
+            logger.error(f"❌ Error en GTM Audit: {str(e)}")
+            return {
+                "platform": "gtm",
+                "status": "failed",
+                "error": str(e)
+            }
+
+    def audit_instagram(self, client_id: int, instagram_credentials: Dict = None) -> Dict:
+        """
+        Auditar Instagram Business Account del cliente
+
+        Args:
+            client_id: ID del cliente
+            instagram_credentials: {
+                'access_token': str,
+                'instagram_business_account_id': str,
+                'page_id': str
+            }
+
+        Returns:
+            Resultado del audit de Instagram
+        """
+        try:
+            # Crear auditor Instagram
+            auditor = InstagramAuditor(instagram_credentials)
+
+            # Ejecutar audit
+            audit_result = auditor.audit()
+
+            # Guardar en BD
+            self._save_audit_results(client_id, {"instagram": audit_result})
+
+            logger.info(f"✅ Instagram Audit completado - Score: {audit_result.get('score', 0)}/100")
+            return audit_result
+
+        except Exception as e:
+            logger.error(f"❌ Error en Instagram Audit: {str(e)}")
+            return {
+                "platform": "instagram",
+                "status": "failed",
+                "error": str(e)
+            }
+
+    def analyze_customer_profile(self, client_id: int, instagram_audit: Dict, site_audit: Dict = None, tracking_audit: Dict = None) -> Dict:
+        """
+        Analizar perfil de cliente correlacionando Instagram + Site data
+
+        Args:
+            client_id: ID del cliente
+            instagram_audit: Resultados del audit de Instagram
+            site_audit: Resultados del audit del sitio (opcional)
+            tracking_audit: Resultados del audit de tracking (opcional)
+
+        Returns:
+            Análisis de perfil con recomendaciones personalizadas
+        """
+        try:
+            # Crear analizador
+            analyzer = CustomerProfileAnalyzer()
+
+            # Preparar datos del sitio
+            site_data = site_audit or {}
+
+            # Ejecutar análisis
+            analysis_result = analyzer.analyze(instagram_audit, site_data, tracking_audit)
+
+            # Guardar en BD
+            self._save_audit_results(client_id, {"customer_profile": analysis_result})
+
+            logger.info(f"✅ Customer Profile Analysis completado")
+            logger.info(f"   Total gaps: {analysis_result.get('summary', {}).get('total_gaps', 0)}")
+            logger.info(f"   Recommendations: {analysis_result.get('summary', {}).get('total_recommendations', 0)}")
+
+            return analysis_result
+
+        except Exception as e:
+            logger.error(f"❌ Error en Customer Profile Analysis: {str(e)}")
+            return {
+                "status": "failed",
+                "error": str(e)
+            }
+
+    def generate_content_plan(self, client_id: int, instagram_audit: Dict, site_audit: Dict, customer_profile: Dict) -> Dict:
+        """
+        Generar plan de contenido para 3 meses basado en perfil de cliente
+
+        Args:
+            client_id: ID del cliente
+            instagram_audit: Resultados del auditor de Instagram
+            site_audit: Resultados del auditor del sitio
+            customer_profile: Perfil de cliente ideal
+
+        Returns:
+            Dict con plan de contenido por 3 meses
+        """
+        try:
+            client = self.orchestrator.get_client(client_id)
+            logger.info(f"📝 Generando plan de contenido para {client.name} (3 meses)")
+
+            # Generar recomendaciones
+            content_engine = ContentRecommendationEngine()
+            content_plan = content_engine.generate_recommendations(
+                instagram_audit,
+                site_audit,
+                customer_profile
+            )
+
+            logger.info(f"✅ Plan de contenido generado")
+            logger.info(f"   Total posts: {content_plan.get('total_posts_recommended', 0)}")
+            logger.info(f"   Content pillars: {len(content_plan.get('content_pillars', []))}")
+            logger.info(f"   Semana 1 inicio: {content_plan.get('summary', {}).get('week_1_start', 'N/A')}")
+
+            return content_plan
+
+        except Exception as e:
+            logger.error(f"❌ Error generando plan de contenido: {str(e)}")
+            return {
+                "status": "failed",
+                "error": str(e)
+            }
 
 
 def main():
