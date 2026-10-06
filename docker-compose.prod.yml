@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database (upgraded from SQLite for production)
+  db:
+    image: postgres:15-alpine
+    container_name: felix_db_prod
+    environment:
+      POSTGRES_DB: felix_automation
+      POSTGRES_USER: ${DB_USER:-felix_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./backend/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-felix_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - felix_network
+    restart: unless-stopped
+
+  # Redis Cache for WebSocket session management
+  cache:
+    image: redis:7-alpine
+    container_name: felix_cache_prod
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - cache_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - felix_network
+    restart: unless-stopped
+
+  # Felix Automation Web Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: felix_app_prod
+    environment:
+      FLASK_ENV: production
+      DATABASE_URL: postgresql://${DB_USER:-felix_user}:${DB_PASSWORD}@db:5432/felix_automation
+      REDIS_URL: redis://:${REDIS_PASSWORD}@cache:6379/0
+      JWT_SECRET: ${JWT_SECRET}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
+      SHOPIFY_API_KEY: ${SHOPIFY_API_KEY}
+      SHOPIFY_API_SECRET: ${SHOPIFY_API_SECRET}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - felix_network
+    restart: unless-stopped
+    labels:
+      com.example.description: "Felix Automation Sales Pipeline - Production"
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: felix_proxy_prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - app
+    networks:
+      - felix_network
+    restart: unless-stopped
+
+volumes:
+  db_data:
+    driver: local
+  cache_data:
+    driver: local
+
+networks:
+  felix_network:
+    driver: bridge

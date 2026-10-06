@@ -46,6 +46,8 @@ from backend.routes.shopify_webhooks import init_webhooks
 from backend.routes.lead_capture_routes import router as lead_capture_router
 from backend.routes.seo_routes import router as seo_router
 from backend.routes.monitoring_routes import router as monitoring_router
+from backend.routes.prometheus_routes import router as prometheus_router
+from backend.routes.alert_routing_routes import router as alert_routing_router
 from agents.statistical_tester import StatisticalTester
 from agents.email_variant_assigner import EmailVariantAssigner
 
@@ -104,6 +106,12 @@ app.include_router(seo_router)
 
 # Include Monitoring routes (FASE 14: Production metrics and health checks)
 app.include_router(monitoring_router)
+
+# Include Prometheus routes (FASE 14 Week 2: Metrics export for Grafana)
+app.include_router(prometheus_router)
+
+# Include Alert Routing routes (FASE 14 Week 2 Track C: Alert routing & notifications)
+app.include_router(alert_routing_router)
 
 # Global orchestrator instance
 orchestrator = None

@@ -1,0 +1,104 @@
+# Prometheus Configuration for Felix Automation
+# FASE 14 Week 2: Prometheus/Grafana Integration
+
+global:
+  scrape_interval: 15s        # Default: scrape every 15 seconds
+  evaluation_interval: 15s    # Evaluate rules every 15 seconds
+  external_labels:
+    monitor: 'felix-automation'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - localhost:9093
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - "alert_rules.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+  # Felix Automation API
+  - job_name: 'felix-automation'
+    static_configs:
+      - targets: ['localhost:8000']
+        labels:
+          service: 'felix-automation'
+          environment: 'production'
+          team: 'engineering'
+
+    # Scrape Felix monitoring metrics
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+    # Relabel configurations
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+
+  # Felix Automation - Health metrics only (more frequent)
+  - job_name: 'felix-health'
+    static_configs:
+      - targets: ['localhost:8000']
+        labels:
+          service: 'felix-automation'
+          metrics_type: 'health'
+
+    metrics_path: '/metrics/health'
+    scrape_interval: 10s  # More frequent health checks
+    scrape_timeout: 5s
+
+  # Felix Automation - Alerts (frequent updates)
+  - job_name: 'felix-alerts'
+    static_configs:
+      - targets: ['localhost:8000']
+        labels:
+          service: 'felix-automation'
+          metrics_type: 'alerts'
+
+    metrics_path: '/metrics/alerts'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Felix Automation - Performance metrics
+  - job_name: 'felix-performance'
+    static_configs:
+      - targets: ['localhost:8000']
+        labels:
+          service: 'felix-automation'
+          metrics_type: 'performance'
+
+    metrics_path: '/metrics/performance'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Felix Automation - WebSocket metrics
+  - job_name: 'felix-websocket'
+    static_configs:
+      - targets: ['localhost:8000']
+        labels:
+          service: 'felix-automation'
+          metrics_type: 'websocket'
+
+    metrics_path: '/metrics/websocket'
+    scrape_interval: 20s
+    scrape_timeout: 10s
+
+  # Node Exporter (if monitoring system resources)
+  # Uncomment if you have node_exporter running on port 9100
+  # - job_name: 'node-exporter'
+  #   static_configs:
+  #     - targets: ['localhost:9100']
+  #       labels:
+  #         service: 'node-exporter'

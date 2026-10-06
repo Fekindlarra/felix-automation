@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#3b82f6">
+  <meta name="description" content="Felix Automation - Real-time Alert Monitoring Dashboard">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Felix">
+  
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%233b82f6' width='192' height='192'/><text x='96' y='120' font-size='100' font-weight='bold' fill='white' text-anchor='middle' font-family='Arial'>FA</text></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%233b82f6' width='192' height='192' rx='40'/><text x='96' y='120' font-size='100' font-weight='bold' fill='white' text-anchor='middle' font-family='Arial'>FA</text></svg>">
+  
+  <link rel="stylesheet" href="/styles/mobile.css">
+  <title>Felix Dashboard</title>
+  
+  <style>
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f9fafb;
+      --fg-primary: #111827;
+      --fg-secondary: #6b7280;
+      --accent: #3b82f6;
+    }
+    
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg-primary: #1f2937;
+        --bg-secondary: #111827;
+        --fg-primary: #f3f4f6;
+        --fg-secondary: #d1d5db;
+        color-scheme: dark;
+      }
+    }
+    
+    body {
+      background-color: var(--bg-primary);
+      color: var(--fg-primary);
+    }
+    
+    header {
+      background-color: var(--accent);
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+    
+    .alert-badge {
+      display: inline-block;
+      background-color: #ef4444;
+      color: white;
+      padding: 0.25rem 0.5rem;
+      border-radius: 12px;
+      font-size: 0.875rem;
+      font-weight: bold;
+      margin-left: 0.5rem;
+    }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+      margin: 1rem;
+    }
+    
+    @media (min-width: 768px) {
+      .grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    
+    .card {
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-color, #e5e7eb);
+      border-radius: 8px;
+      padding: 1.5rem;
+    }
+    
+    .card h3 {
+      margin: 0 0 1rem 0;
+      font-size: 1.1rem;
+      color: var(--fg-primary);
+    }
+    
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: var(--accent);
+      margin: 0.5rem 0;
+    }
+    
+    .stat-label {
+      font-size: 0.875rem;
+      color: var(--fg-secondary);
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    
+    .status-online {
+      background-color: rgba(16, 185, 129, 0.1);
+      color: #10b981;
+    }
+    
+    .status-offline {
+      background-color: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+    }
+    
+    .chart-container {
+      min-height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+    
+    .button-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    
+    button {
+      min-height: 44px;
+      padding: 0.75rem 1rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 150ms ease-in-out;
+    }
+    
+    .btn-primary {
+      background-color: var(--accent);
+      color: white;
+    }
+    
+    .btn-primary:active {
+      transform: scale(0.98);
+    }
+    
+    .btn-secondary {
+      background-color: var(--bg-secondary);
+      color: var(--fg-primary);
+      border: 1px solid var(--fg-secondary);
+    }
+    
+    #offline-indicator {
+      position: fixed;
+      bottom: 1rem;
+      left: 1rem;
+      right: 1rem;
+      padding: 1rem;
+      background-color: #f59e0b;
+      color: white;
+      border-radius: 6px;
+      display: none;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 500;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    footer {
+      margin-top: 2rem;
+      padding: 1.5rem 1rem;
+      text-align: center;
+      border-top: 1px solid var(--fg-secondary);
+      color: var(--fg-secondary);
+      font-size: 0.875rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Felix Dashboard <span class="alert-badge">0</span></h1>
+    <p>Real-time Alert Monitoring</p>
+  </header>
+
+  <main>
+    <!-- Status Card -->
+    <div class="grid">
+      <div class="card">
+        <h3>System Status</h3>
+        <div class="status-badge status-online">🟢 Online</div>
+        <p style="margin-top: 1rem; font-size: 0.875rem; color: var(--fg-secondary);">
+          Connected to monitoring system
+        </p>
+      </div>
+      
+      <div class="card">
+        <h3>Active Alerts</h3>
+        <div class="stat-value" id="alert-count">0</div>
+        <div class="stat-label">alerts in system</div>
+      </div>
+    </div>
+
+    <!-- Metrics Row -->
+    <div class="grid">
+      <div class="card">
+        <h3>Critical</h3>
+        <div class="stat-value" style="color: #ef4444;" id="critical-count">0</div>
+        <div class="stat-label">critical severity</div>
+      </div>
+      
+      <div class="card">
+        <h3>Warning</h3>
+        <div class="stat-value" style="color: #f59e0b;" id="warning-count">0</div>
+        <div class="stat-label">warning severity</div>
+      </div>
+    </div>
+
+    <!-- Chart Area -->
+    <div class="grid">
+      <div class="card" style="grid-column: 1 / -1;">
+        <h3>Alert Timeline</h3>
+        <div class="chart-container" data-chart="timeline">
+          <span style="color: var(--fg-secondary);">📊 Chart loading...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Alerts -->
+    <div class="grid">
+      <div class="card" style="grid-column: 1 / -1;">
+        <h3>Recent Alerts</h3>
+        <div id="alert-list">
+          <p style="color: var(--fg-secondary); text-align: center;">No alerts currently</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div style="margin: 1rem;">
+      <div class="button-group">
+        <button class="btn-primary" onclick="location.href='/admin_dashboard.html'">Full Dashboard</button>
+        <button class="btn-secondary" onclick="installApp()" id="install-button" style="display: none;">Install App</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Offline Indicator -->
+  <div id="offline-indicator">
+    📡 You are offline
+  </div>
+
+  <footer>
+    <p>Felix Automation Dashboard v1.0.0</p>
+    <p>Last updated: <span id="last-update">just now</span></p>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="/js/app_mobile.js"></script>
+  <script>
+    /**
+     * Mock data updates for dashboard
+     * In production, would connect to WebSocket
+     */
+    
+    function updateMetrics() {
+      // Simulate data updates
+      const criticalCount = Math.floor(Math.random() * 5);
+      const warningCount = Math.floor(Math.random() * 10);
+      const totalAlerts = criticalCount + warningCount;
+      
+      document.getElementById('critical-count').textContent = criticalCount;
+      document.getElementById('warning-count').textContent = warningCount;
+      document.getElementById('alert-count').textContent = totalAlerts;
+      
+      // Update alert badge
+      const badge = document.querySelector('.alert-badge');
+      if (badge) {
+        badge.textContent = totalAlerts;
+      }
+      
+      // Update timestamp
+      const now = new Date();
+      document.getElementById('last-update').textContent = now.toLocaleTimeString();
+    }
+    
+    function installApp() {
+      console.log('Installing app...');
+    }
+    
+    // Update metrics on load and periodically
+    updateMetrics();
+    setInterval(updateMetrics, 30000); // Update every 30s
+    
+    // In production, would connect to WebSocket:
+    // const ws = new WebSocket('ws://localhost:8000/ws/alerts');
+    // ws.onmessage = (event) => {
+    //   const data = JSON.parse(event.data);
+    //   updateMetricsFromData(data);
+    // };
+  </script>
+</body>
+</html>

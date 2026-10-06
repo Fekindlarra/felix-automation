@@ -1,0 +1,250 @@
+# Prometheus Alert Rules for Felix Automation
+# FASE 14 Week 2: Alert Thresholds and Conditions
+
+groups:
+  - name: felix_alerts
+    interval: 15s
+    rules:
+      # ======================================================================
+      # System Health Alerts
+      # ======================================================================
+
+      - alert: FelixSystemUnhealthy
+        expr: felix_health_status < 0
+        for: 5m
+        labels:
+          severity: critical
+          service: felix-automation
+        annotations:
+          summary: "Felix System Unhealthy"
+          description: "System health status is unhealthy for more than 5 minutes"
+          dashboard: "http://localhost:3000/d/felix-overview"
+
+      - alert: FelixSystemDegraded
+        expr: felix_health_status == 0
+        for: 10m
+        labels:
+          severity: warning
+          service: felix-automation
+        annotations:
+          summary: "Felix System Degraded"
+          description: "System health is degraded - check monitoring dashboard"
+          dashboard: "http://localhost:3000/d/felix-overview"
+
+      # ======================================================================
+      # WebSocket Alerts
+      # ======================================================================
+
+      - alert: HighWebSocketLatency
+        expr: felix_websocket_latency > 200
+        for: 5m
+        labels:
+          severity: warning
+          component: websocket
+        annotations:
+          summary: "High WebSocket Latency"
+          description: "WebSocket latency is {{ $value }}ms (threshold: 200ms)"
+          impact: "Real-time updates may be delayed"
+
+      - alert: CriticalWebSocketLatency
+        expr: felix_websocket_latency > 500
+        for: 2m
+        labels:
+          severity: critical
+          component: websocket
+        annotations:
+          summary: "Critical WebSocket Latency"
+          description: "WebSocket latency is {{ $value }}ms (critical threshold: 500ms)"
+          impact: "Real-time functionality severely degraded"
+
+      - alert: LowWebSocketConnections
+        expr: felix_websocket_connections < 1
+        for: 10m
+        labels:
+          severity: warning
+          component: websocket
+        annotations:
+          summary: "No WebSocket Connections"
+          description: "No active WebSocket connections detected"
+          impact: "Dashboard real-time updates not working"
+
+      - alert: HighWebSocketErrorRate
+        expr: (felix_websocket_errors / (felix_websocket_events_emitted + 1)) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: websocket
+        annotations:
+          summary: "High WebSocket Error Rate"
+          description: "WebSocket error rate is {{ $value | humanizePercentage }}"
+          impact: "Some real-time events may not be delivered"
+
+      # ======================================================================
+      # API Performance Alerts
+      # ======================================================================
+
+      - alert: HighAPIResponseTime
+        expr: felix_api_response_time > 1000
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High API Response Time"
+          description: "API response time is {{ $value }}ms (threshold: 1000ms)"
+          impact: "API requests may timeout"
+
+      - alert: CriticalAPIResponseTime
+        expr: felix_api_response_time > 5000
+        for: 2m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "Critical API Response Time"
+          description: "API response time is {{ $value }}ms (critical threshold: 5000ms)"
+          impact: "API service severely degraded"
+
+      # ======================================================================
+      # Cache & Performance Alerts
+      # ======================================================================
+
+      - alert: LowCacheHitRate
+        expr: felix_cache_hit_rate < 70
+        for: 15m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Low Cache Hit Rate"
+          description: "Cache hit rate is {{ $value }}% (threshold: 70%)"
+          impact: "Database load may increase"
+
+      - alert: CriticalCacheHitRate
+        expr: felix_cache_hit_rate < 50
+        for: 5m
+        labels:
+          severity: critical
+          component: cache
+        annotations:
+          summary: "Critical Cache Hit Rate"
+          description: "Cache hit rate is {{ $value }}% (critical threshold: 50%)"
+          impact: "Database overwhelmed - immediate action required"
+
+      # ======================================================================
+      # Error Rate Alerts
+      # ======================================================================
+
+      - alert: HighErrorRate
+        expr: felix_error_rate > 5
+        for: 10m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High Error Rate"
+          description: "System error rate is {{ $value }}% (threshold: 5%)"
+          impact: "System reliability compromised"
+
+      - alert: CriticalErrorRate
+        expr: felix_error_rate > 10
+        for: 5m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "Critical Error Rate"
+          description: "System error rate is {{ $value }}% (critical threshold: 10%)"
+          impact: "System functioning degraded - immediate investigation required"
+
+      # ======================================================================
+      # Active Alert Count Thresholds
+      # ======================================================================
+
+      - alert: MultipleActiveAlerts
+        expr: (felix_alerts_active{severity="critical"} > 0) and (changes(felix_alerts_active{severity="critical"}[5m]) > 0)
+        for: 5m
+        labels:
+          severity: critical
+          component: monitoring
+        annotations:
+          summary: "Multiple Critical Alerts Active"
+          description: "{{ $value }} critical alerts are active"
+          action: "Check monitoring dashboard immediately"
+
+      - alert: WarningAlertsEscalating
+        expr: rate(felix_alerts_active{severity="warning"}[5m]) > 0
+        for: 20m
+        labels:
+          severity: warning
+          component: monitoring
+        annotations:
+          summary: "Warning Alerts Escalating"
+          description: "Warning alert count increasing - investigate pattern"
+          action: "Review alert history to identify root cause"
+
+      # ======================================================================
+      # Uptime & Availability Alerts
+      # ======================================================================
+
+      - alert: SystemRestartDetected
+        expr: increase(felix_uptime_seconds[5m]) < 0
+        for: 1m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "System Restart Detected"
+          description: "Felix Automation system has restarted"
+          action: "Review system logs for restart cause"
+
+      # ======================================================================
+      # Health Check Status Alerts
+      # ======================================================================
+
+      - alert: WebSocketLatencyHealthCheck
+        expr: felix_health_check{check="websocket_latency"} <= 0
+        for: 5m
+        labels:
+          severity: warning
+          check_type: "websocket_latency"
+        annotations:
+          summary: "WebSocket Latency Health Check Triggered"
+          description: "WebSocket latency exceeded warning threshold"
+
+      - alert: CacheHitRateHealthCheck
+        expr: felix_health_check{check="cache_hit_rate"} <= 0
+        for: 10m
+        labels:
+          severity: warning
+          check_type: "cache_hit_rate"
+        annotations:
+          summary: "Cache Hit Rate Health Check Triggered"
+          description: "Cache performance below expected levels"
+
+      - alert: DatabaseConnectionPoolHealthCheck
+        expr: felix_health_check{check="database_connection_pool"} <= 0
+        for: 5m
+        labels:
+          severity: critical
+          check_type: "database_pool"
+        annotations:
+          summary: "Database Connection Pool Critical"
+          description: "Database connection pool utilization critical"
+          action: "Check database connections immediately"
+
+# Recording Rules (optional - for pre-computed metrics)
+  - name: felix_recording_rules
+    interval: 15s
+    rules:
+      # Success rate: successful operations / total operations
+      - record: felix:success_rate
+        expr: (100 - felix_error_rate)
+
+      # Latency improvement rate (moving average)
+      - record: felix:latency:rate5m
+        expr: rate(felix_websocket_latency[5m])
+
+      # Request rate
+      - record: felix:requests:rate5m
+        expr: rate(felix_operation_duration_seconds_count[5m])

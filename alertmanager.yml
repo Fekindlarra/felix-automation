@@ -1,0 +1,218 @@
+# AlertManager Configuration for Felix Automation
+# FASE 14 Week 2: Track C - Alert Routing
+
+global:
+  resolve_timeout: 5m
+  slack_api_url: '${SLACK_WEBHOOK_URL}'
+  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+
+# Email configuration (via SendGrid)
+smtp_smarthost: 'smtp.sendgrid.net:587'
+smtp_auth_username: 'apikey'
+smtp_auth_password: '${SENDGRID_API_KEY}'
+smtp_from: '${ALERT_EMAIL_FROM}'
+smtp_require_tls: true
+
+# Alert template definitions
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Main route configuration
+route:
+  # Default receiver
+  receiver: 'default-receiver'
+
+  # Grouping configuration
+  group_by: ['alertname', 'severity', 'service']
+  group_wait: 10s          # Wait 10s for more alerts before sending
+  group_interval: 10s      # Resend grouped alerts every 10s if unchanged
+  repeat_interval: 12h     # Re-send alerts after 12h if not resolved
+
+  # Sub-routes by severity and component
+  routes:
+    # CRITICAL ALERTS - Immediate Slack + PagerDuty + Email
+    - match:
+        severity: critical
+      receiver: 'critical-team'
+      group_wait: 0s        # No wait for critical
+      group_interval: 5s
+      repeat_interval: 1h   # Re-send every 1h
+      continue: true        # Also match other routes
+
+    # WebSocket component - Slack + PagerDuty
+    - match:
+        component: websocket
+      receiver: 'websocket-team'
+      group_wait: 5s
+      group_interval: 10s
+
+    # API component - Slack + Email
+    - match:
+        component: api
+      receiver: 'api-team'
+      group_wait: 10s
+      group_interval: 15s
+
+    # Cache component - Slack
+    - match:
+        component: cache
+      receiver: 'cache-team'
+      group_wait: 15s
+
+    # System health - Slack + PagerDuty
+    - match:
+        component: system
+      receiver: 'system-team'
+      group_wait: 5s
+
+    # Monitoring component alerts
+    - match:
+        component: monitoring
+      receiver: 'monitoring-team'
+      group_wait: 10s
+
+    # WARNING level alerts - Slack only
+    - match:
+        severity: warning
+      receiver: 'warning-receiver'
+      group_wait: 30s
+      group_interval: 30s
+      repeat_interval: 24h
+
+# Receiver definitions
+receivers:
+  # Default receiver (fallback)
+  - name: 'default-receiver'
+    slack_configs:
+      - channel: '#felix-alerts-default'
+        title: 'Alert: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+    email_configs:
+      - to: 'alerts@enbuenamesa.com'
+        headers:
+          Subject: '[Felix] Alert: {{ .GroupLabels.alertname }}'
+
+  # Critical alerts team (immediate action)
+  - name: 'critical-team'
+    slack_configs:
+      - channel: '#felix-alerts-critical'
+        title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+        text: |
+          *Service:* {{ .GroupLabels.service }}
+          *Component:* {{ .GroupLabels.component }}
+          {{ range .Alerts }}
+          *Summary:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Impact:* {{ .Annotations.impact }}
+          *Action:* {{ .Annotations.action }}
+          {{ end }}
+        color: 'danger'
+        send_resolved: true
+        actions:
+          - type: button
+            text: 'View in Grafana'
+            url: 'http://localhost:3000/d/felix-overview'
+          - type: button
+            text: 'View in AlertManager'
+            url: 'http://localhost:9093'
+    pagerduty_configs:
+      - service_key: '${PAGERDUTY_SERVICE_KEY}'
+        description: '{{ .GroupLabels.alertname }} - {{ .Alerts.Firing | len }} firing'
+        details:
+          firing: '{{ template "pagerduty.default.instances" .Alerts.Firing }}'
+    email_configs:
+      - to: 'critical-alerts@enbuenamesa.com'
+        from: '{{ .ExternalURL }}'
+        smarthost: 'smtp.sendgrid.net:587'
+        auth_username: 'apikey'
+        auth_password: '${SENDGRID_API_KEY}'
+        headers:
+          Subject: '[CRITICAL] {{ .GroupLabels.alertname }}'
+          X-Alert-Severity: 'CRITICAL'
+
+  # WebSocket team alerts
+  - name: 'websocket-team'
+    slack_configs:
+      - channel: '#felix-alerts-websocket'
+        title: '⚡ WebSocket Alert: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Labels.alertname }}
+          *Value:* {{ .Labels.value }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+        color: 'warning'
+    pagerduty_configs:
+      - service_key: '${PAGERDUTY_WEBSOCKET_KEY}'
+        description: '{{ .GroupLabels.alertname }}'
+    webhook_configs:
+      - url: 'http://localhost:8000/webhooks/pagerduty'
+        send_resolved: true
+
+  # API team alerts
+  - name: 'api-team'
+    slack_configs:
+      - channel: '#felix-alerts-api'
+        title: '🔴 API Alert: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Summary:* {{ .Annotations.summary }}
+          *Value:* {{ .Labels.value }}
+          {{ end }}
+    email_configs:
+      - to: 'api-team@enbuenamesa.com'
+
+  # Cache team alerts
+  - name: 'cache-team'
+    slack_configs:
+      - channel: '#felix-alerts-cache'
+        title: '💾 Cache Alert: {{ .GroupLabels.alertname }}'
+
+  # System team alerts
+  - name: 'system-team'
+    slack_configs:
+      - channel: '#felix-alerts-system'
+        title: '🖥️ System Alert: {{ .GroupLabels.alertname }}'
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+    pagerduty_configs:
+      - service_key: '${PAGERDUTY_SYSTEM_KEY}'
+
+  # Monitoring team alerts
+  - name: 'monitoring-team'
+    slack_configs:
+      - channel: '#felix-alerts-monitoring'
+        title: '📊 Monitoring Alert: {{ .GroupLabels.alertname }}'
+
+  # Warning level alerts (low priority)
+  - name: 'warning-receiver'
+    slack_configs:
+      - channel: '#felix-alerts-warnings'
+        title: '⚠️ Warning: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        color: 'warning'
+
+# Inhibition rules - suppress alerts based on other alerts
+inhibit_rules:
+  # Suppress WARNING when CRITICAL is firing for same alert
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'service', 'component']
+    duration: 15m
+
+  # Suppress low-priority alerts during high-load period
+  - source_match:
+      severity: 'critical'
+      alertname: 'MultipleActiveAlerts'
+    target_match:
+      severity: 'warning'
+    duration: 30m
+
+  # Don't alert on degraded if system is already unhealthy
+  - source_match:
+      alertname: 'FelixSystemUnhealthy'
+    target_match:
+      alertname: 'FelixSystemDegraded'
+    duration: 5m

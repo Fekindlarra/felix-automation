@@ -1,165 +1,151 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-pytest configuration for FASE 14 testing
-Provides fixtures and setup for all test modules
+FASE 14 Track D: Pytest Configuration & Fixtures
+Common fixtures and configuration for E2E testing
 """
 
 import pytest
-import sys
-from pathlib import Path
+import os
+from datetime import datetime, timezone
+from typing import Generator
+from fastapi.testclient import TestClient
+from backend.app import app
 
-# Add project root to path
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+# ============================================================================
+# SESSION FIXTURES
+# ============================================================================
 
-# Pytest markers for test categorization
-def pytest_configure(config):
-    """Register custom pytest markers"""
-    config.addinivalue_line(
-        "markers", "unit: mark test as a unit test"
-    )
-    config.addinivalue_line(
-        "markers", "integration: mark test as an integration test"
-    )
-    config.addinivalue_line(
-        "markers", "e2e: mark test as an end-to-end test"
-    )
-    config.addinivalue_line(
-        "markers", "load: mark test as a load test"
-    )
-    config.addinivalue_line(
-        "markers", "asyncio: mark test as async"
-    )
-    config.addinivalue_line(
-        "markers", "slow: mark test as slow running"
-    )
+@pytest.fixture(scope="session")
+def test_client() -> TestClient:
+    """Provide FastAPI test client for entire session"""
+    return TestClient(app)
 
-
-# Fixtures
-
-@pytest.fixture
-def temp_dir(tmp_path):
-    """Provide temporary directory for test artifacts"""
-    return tmp_path
-
-
-@pytest.fixture
-def mock_user_agent():
-    """Provide common User-Agent strings for testing"""
+@pytest.fixture(scope="session")
+def test_config():
+    """Test configuration"""
     return {
-        'iphone': "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15",
-        'ipad': "Mozilla/5.0 (iPad; CPU OS 14_6 like Mac OS X) AppleWebKit/605.1.15",
-        'android': "Mozilla/5.0 (Linux; Android 11; SM-G991B) AppleWebKit/537.36",
-        'windows': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        'macos': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-        'linux': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
-        'webos': "Mozilla/5.0 (webOS/2.0; U; en-US) AppleWebKit/534.6",
-        'blackberry': "Mozilla/5.0 (BlackBerry; U; BlackBerry 9930) AppleWebKit/534.11",
+        "alertmanager_url": os.getenv("ALERTMANAGER_URL", "http://localhost:9093"),
+        "prometheus_url": os.getenv("PROMETHEUS_URL", "http://localhost:9090"),
+        "webhook_timeout": 30,
+        "performance_targets": {
+            "webhook_latency_ms": 100,
+            "query_latency_ms": 500,
+            "throughput_alerts_per_sec": 10
+        }
     }
 
+# ============================================================================
+# ALERT FIXTURES
+# ============================================================================
 
 @pytest.fixture
-def mock_prediction_event():
-    """Provide sample prediction event for testing"""
+def alert_timestamp():
+    """Current timestamp for alerts"""
+    return datetime.now(timezone.utc).isoformat()
+
+@pytest.fixture
+def base_alert_labels():
+    """Common alert labels"""
     return {
-        'type': 'prediction:generated',
-        'client_id': 42,
-        'probability': 78.456789,
-        'confidence': 85.123456,
-        '_internal_cache': 'should_be_removed',
-        'data': {
-            'company_name': 'TechVentures Chile',
-            'industry': 'Software',
-            'audit_type': 'deep',
-            'internal_field': 'remove_this',
-            'recommendation': 'Contacto inmediato'
+        "service": "felix",
+        "environment": "test",
+        "region": "us-west-2"
+    }
+
+@pytest.fixture
+def critical_alert(alert_timestamp, base_alert_labels):
+    """Critical alert template"""
+    return {
+        "status": "firing",
+        "labels": {
+            **base_alert_labels,
+            "alertname": "CriticalAlert",
+            "severity": "critical"
         },
-        'timestamp': '2026-10-05T10:00:00Z'
+        "annotations": {
+            "summary": "Critical system alert",
+            "description": "System health check failed",
+            "impact": "Service is down",
+            "action": "Immediately check system status"
+        },
+        "startsAt": alert_timestamp,
+        "endsAt": "0001-01-01T00:00:00Z",
+        "value": "-1"
     }
 
+# ============================================================================
+# WEBHOOK PAYLOAD FIXTURES
+# ============================================================================
 
 @pytest.fixture
-def mock_connection_info():
-    """Provide ConnectionInfo factory for testing"""
-    from backend.events import ConnectionInfo
+def webhook_payload_single_alert(critical_alert):
+    """Webhook payload with single alert"""
+    return {
+        "status": "firing",
+        "alerts": [critical_alert],
+        "groupLabels": {
+            "alertname": "CriticalAlert",
+            "severity": "critical"
+        },
+        "commonLabels": {
+            "service": "felix"
+        },
+        "commonAnnotations": {
+            "dashboard": "http://localhost:3000"
+        },
+        "externalURL": "http://prometheus:9090"
+    }
 
-    def create_connection(connection_id="test_1", is_mobile=False, user_agent="Desktop"):
-        return ConnectionInfo(
-            connection_id=connection_id,
-            user_id="user_1",
-            is_mobile=is_mobile,
-            user_agent=user_agent
-        )
+# ============================================================================
+# PYTEST HOOKS
+# ============================================================================
 
-    return create_connection
+def pytest_configure(config):
+    """Configure pytest"""
+    config.addinivalue_line(
+        "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
+    )
+    config.addinivalue_line(
+        "markers", "integration: marks tests as integration tests"
+    )
+    config.addinivalue_line(
+        "markers", "performance: marks tests as performance tests"
+    )
 
+# ============================================================================
+# UTILITY FIXTURES
+# ============================================================================
 
 @pytest.fixture
-def performance_tracker():
-    """Track performance metrics during tests"""
-    import time
+def alert_factory():
+    """Factory for creating alerts"""
+    class AlertFactory:
+        @staticmethod
+        def create_alert(
+            name: str = "TestAlert",
+            severity: str = "warning",
+            status: str = "firing",
+            component: str = "system",
+            value: str = "1"
+        ) -> dict:
+            """Create alert with given parameters"""
+            return {
+                "status": status,
+                "labels": {
+                    "alertname": name,
+                    "severity": severity,
+                    "component": component,
+                    "service": "felix"
+                },
+                "annotations": {
+                    "summary": f"{name} triggered",
+                    "description": f"Test alert: {name}"
+                },
+                "startsAt": datetime.now(timezone.utc).isoformat(),
+                "endsAt": "0001-01-01T00:00:00Z" if status == "firing" else datetime.now(timezone.utc).isoformat(),
+                "value": value
+            }
+    
+    return AlertFactory()
 
-    class PerformanceTracker:
-        def __init__(self):
-            self.timings = {}
-
-        def start(self, name):
-            self.timings[name] = {'start': time.time()}
-
-        def end(self, name):
-            if name in self.timings:
-                self.timings[name]['end'] = time.time()
-                self.timings[name]['duration'] = (
-                    self.timings[name]['end'] - self.timings[name]['start']
-                )
-
-        def get_duration(self, name):
-            if name in self.timings and 'duration' in self.timings[name]:
-                return self.timings[name]['duration']
-            return None
-
-        def print_report(self):
-            print("\n📊 Performance Report:")
-            for name, data in self.timings.items():
-                if 'duration' in data:
-                    print(f"  {name}: {data['duration']:.3f}s")
-
-    return PerformanceTracker()
-
-
-# Test collection hooks
-
-def pytest_collection_modifyitems(config, items):
-    """Automatically mark tests based on file location"""
-    for item in items:
-        # Mark tests by directory
-        if "test_mobile_detection" in item.nodeid:
-            item.add_marker(pytest.mark.unit)
-        elif "test_websocket_mobile_integration" in item.nodeid:
-            item.add_marker(pytest.mark.integration)
-        elif "test_e2e_mobile_scenarios" in item.nodeid:
-            item.add_marker(pytest.mark.e2e)
-        elif "load" in item.nodeid:
-            item.add_marker(pytest.mark.load)
-            item.add_marker(pytest.mark.slow)
-
-        # Mark async tests
-        if "asyncio" in item.keywords:
-            item.add_marker(pytest.mark.asyncio)
-
-
-# Report hooks
-
-def pytest_runtest_logreport(report):
-    """Custom logging for test results"""
-    if report.when == "call":
-        if report.outcome == "passed":
-            print(f"✅ {report.nodeid}")
-        elif report.outcome == "failed":
-            print(f"❌ {report.nodeid}")
-
-
-def pytest_terminal_summary(terminalreporter, exitstatus, config):
-    """Add custom summary to test report"""
-    terminalreporter.write_sep("=", "FASE 14 Testing Summary", bold=True)
-    terminalreporter.write_line("Testing Status: All checks completed")
-    terminalreporter.write_line("Ready for PASO 16: Documentation & Deployment")

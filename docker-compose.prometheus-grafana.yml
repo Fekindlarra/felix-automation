@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # Prometheus - Metrics storage and retrieval
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: felix-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    networks:
+      - felix-monitoring
+    restart: unless-stopped
+    environment:
+      - TZ=UTC
+    labels:
+      - "com.example.description=Felix Prometheus Metrics Server"
+
+  # Grafana - Dashboards and visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: felix-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana-provisioning:/etc/grafana/provisioning:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - TZ=UTC
+    networks:
+      - felix-monitoring
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    labels:
+      - "com.example.description=Felix Grafana Dashboard"
+
+  # AlertManager (optional) - Alert aggregation
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: felix-alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    networks:
+      - felix-monitoring
+    restart: unless-stopped
+    environment:
+      - TZ=UTC
+    labels:
+      - "com.example.description=Felix Alert Manager"
+
+volumes:
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  alertmanager_data:
+    driver: local
+
+networks:
+  felix-monitoring:
+    driver: bridge
