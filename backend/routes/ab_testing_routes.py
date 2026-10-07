@@ -458,7 +458,13 @@ async def mark_winner(test_id: int, winner: str = Query(..., description="Winner
 
 @router.post("/{test_id}/pause")
 async def pause_test(test_id: int):
-    """Pause an active A/B test"""
+    """Pause an active A/B test
+
+    ⚠️ Phase 3 Active: This endpoint requires Phase 3 to be active
+    """
+    # Check Phase 3 is active
+    require_phase3_active()
+
     if database is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -513,7 +519,13 @@ async def pause_test(test_id: int):
 
 @router.post("/{test_id}/resume")
 async def resume_test(test_id: int):
-    """Resume a paused A/B test"""
+    """Resume a paused A/B test
+
+    ⚠️ Phase 3 Active: This endpoint requires Phase 3 to be active
+    """
+    # Check Phase 3 is active
+    require_phase3_active()
+
     if database is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

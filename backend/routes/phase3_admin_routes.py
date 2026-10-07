@@ -16,6 +16,21 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Phase 3 Admin"])
 
+# Global state (will be initialized via init_phase3_admin_routes)
+_db_connection = None
+_ws_manager = None
+
+
+def init_phase3_admin_routes(db_connection=None, ws_manager=None):
+    """Initialize Phase 3 admin routes with dependencies"""
+    global _db_connection, _ws_manager
+    _db_connection = db_connection
+    _ws_manager = ws_manager
+    if db_connection:
+        logger.info("✅ Phase 3 admin routes initialized with database connection")
+    if ws_manager:
+        logger.info("✅ Phase 3 admin routes connected to WebSocket manager")
+
 # =============================================================================
 # Data Models
 # =============================================================================

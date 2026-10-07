@@ -2,11 +2,17 @@
 Authentication Router
 JWT token generation and validation
 """
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, EmailStr
+from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import jwt
-from config import get_settings
+import logging
+from backend.api.config import get_settings
+from backend.api.database import get_db
+from backend.api.models import Client
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 settings = get_settings()
