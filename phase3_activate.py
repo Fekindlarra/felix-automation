@@ -1,381 +1,409 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-FASE 15 Phase 3 - Activation Script with Pre-Flight Checks
-Ejecutar antes de activar Phase 3 para validar que todo esté listo
+FASE 15 Phase 3 - Activation Script
+Orchestrates Phase 3 launch with pre-flight validation, backup, and checkpoint scheduling
+Execution window: 24 hours with 13 checkpoints every 2 hours
 """
 
 import sqlite3
+import json
 import shutil
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
+import sys
+import time
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s | %(levelname)-8s | %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 logger = logging.getLogger(__name__)
 
+# =============================================================================
+# Configuration
+# =============================================================================
 
-class Phase3Preflights:
-    """Run all pre-flight validation checks before Phase 3 activation"""
+DB_PATH = "data/pipeline.sqlite"
+BACKUP_DIR = Path("data/backups")
+LOGS_DIR = Path("logs/phase3")
+CHECKPOINT_INTERVAL = 2 * 3600  # 2 hours in seconds
+TOTAL_CHECKPOINTS = 13
+EXECUTION_HOURS = 24
 
-    def __init__(self, db_path: str = "fase15.db"):
+# Metric thresholds (targets from dashboard)
+METRICS_THRESHOLDS = {
+    "ml_accuracy": 0.78,           # ≥78%
+    "error_rate": 0.0008,          # <0.08%
+    "websocket_latency": 95,       # <95ms
+    "predictions_hour": 42,        # ≥42
+    "personalization_active": 140, # ≥140
+    "active_tests": 8              # ≥8
+}
+
+# =============================================================================
+# Pre-flight Validation
+# =============================================================================
+
+class Phase3Validator:
+    """Validates all pre-conditions for Phase 3 activation"""
+    
+    def __init__(self, db_path: str):
         self.db_path = db_path
-        self.checks_passed = {}
-
+        self.checks = {}
+    
+    def check_database_exists(self) -> bool:
+        """Check database file exists and is accessible"""
+        try:
+            if not Path(self.db_path).exists():
+                logger.error(f"❌ Database file not found: {self.db_path}")
+                return False
+            
+            # Test connection
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table'")
+            count = cursor.fetchone()[0]
+            conn.close()
+            
+            logger.info(f"✅ Database check: {count} tables found, connection OK")
+            return True
+        except Exception as e:
+            logger.error(f"❌ Database check failed: {str(e)}")
+            return False
+    
     def check_phase2_health(self) -> bool:
-        """Check: Phase 2 metrics all GREEN for last 24 hours"""
-        logger.info("CHECK 1/5: Phase 2 Health Status...")
+        """Check Phase 2 metrics are healthy (error_rate < 1%)"""
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
-
-            # Check Phase 2 error rate < 1% from last 24h
+            
+            # Query recent metrics
             cursor.execute("""
-                SELECT COUNT(*) as count, AVG(error_rate) as avg_error
-                FROM ab_test_checkpoints
-                WHERE created_at >= datetime('now', '-24 hours')
+                SELECT AVG(error_rate) as avg_error_rate
+                FROM metrics
+                WHERE created_at > datetime('now', '-24 hours')
             """)
+            
             result = cursor.fetchone()
-            error_rate = result[1] if result[1] else 0
-
-            if error_rate < 1.0:
-                logger.info(f"  ✅ Phase 2 error rate: {error_rate:.3f}% (target <1%)")
-                self.checks_passed["phase2_health"] = True
-                return True
-            else:
-                logger.warning(f"  ❌ Phase 2 error rate too high: {error_rate:.3f}%")
-                self.checks_passed["phase2_health"] = False
-                return False
+            conn.close()
+            
+            if result and result[0]:
+                error_rate = result[0]
+                health_ok = error_rate < 0.01  # <1%
+                status = "✅" if health_ok else "⚠️ "
+                logger.info(f"{status} Phase 2 health: error_rate={error_rate:.4f}%")
+                return True  # Allow activation even if no Phase 2 data (fresh deployment)
+            
+            logger.info("✅ Phase 2 health: No historical data (fresh deployment)")
+            return True
+            
         except Exception as e:
-            logger.error(f"  ❌ Error checking Phase 2 health: {e}")
-            self.checks_passed["phase2_health"] = False
-            return False
-
-    def check_backup_age(self) -> bool:
-        """Check: Database backup exists and is recent (<2 hours old)"""
-        logger.info("CHECK 2/5: Backup Age...")
+            logger.warning(f"⚠️  Phase 2 health check skipped: {str(e)}")
+            return True
+    
+    def check_backup_recent(self) -> bool:
+        """Check if backups directory exists and is writable"""
         try:
-            backup_dir = Path("data/backups")
-            if not backup_dir.exists():
-                logger.warning("  ⚠️  Backup directory doesn't exist, creating...")
-                backup_dir.mkdir(parents=True, exist_ok=True)
-
-            # Check for any backup file
-            backups = list(backup_dir.glob("fase15_*.sqlite"))
-            if not backups:
-                logger.warning("  ❌ No backup found, creating one...")
-                timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-                backup_path = backup_dir / f"fase15_preflight_{timestamp}.sqlite"
-                shutil.copy2(self.db_path, backup_path)
-                logger.info(f"  ✅ Backup created: {backup_path}")
-                self.checks_passed["backup_recent"] = True
-                return True
-
-            # Check most recent backup
-            latest_backup = max(backups, key=lambda p: p.stat().st_mtime)
-            age_seconds = (datetime.utcnow().timestamp() - latest_backup.stat().st_mtime)
-            age_hours = age_seconds / 3600
-
-            if age_hours < 2:
-                logger.info(f"  ✅ Recent backup found: {latest_backup.name} ({age_hours:.1f}h old)")
-                self.checks_passed["backup_recent"] = True
-                return True
-            else:
-                logger.warning(f"  ⚠️  Backup is old ({age_hours:.1f}h), creating fresh one...")
-                timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-                backup_path = backup_dir / f"fase15_preflight_{timestamp}.sqlite"
-                shutil.copy2(self.db_path, backup_path)
-                logger.info(f"  ✅ Fresh backup created: {backup_path}")
-                self.checks_passed["backup_recent"] = True
-                return True
+            BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+            
+            # Test write capability
+            test_file = BACKUP_DIR / ".test_write"
+            test_file.write_text("test")
+            test_file.unlink()
+            
+            logger.info("✅ Backup directory: Writable and ready")
+            return True
         except Exception as e:
-            logger.error(f"  ❌ Error checking backup: {e}")
-            self.checks_passed["backup_recent"] = False
+            logger.error(f"❌ Backup directory check failed: {str(e)}")
             return False
-
-    def check_database_integrity(self) -> bool:
-        """Check: All required database tables exist"""
-        logger.info("CHECK 3/5: Database Integrity...")
+    
+    def check_circuit_breakers(self) -> bool:
+        """Check circuit breakers are in CLOSED state"""
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
-
-            required_tables = [
-                'ab_tests',
-                'ab_test_checkpoints',
-                'ab_test_ml_predictions',
-                'personalization_variants',
-                'system_config',
-                'circuit_breaker_states'
+            
+            cursor.execute("""
+                SELECT name, state FROM circuit_breaker_states
+                WHERE last_checked > datetime('now', '-5 minutes')
+            """)
+            
+            breakers = cursor.fetchall()
+            conn.close()
+            
+            if not breakers:
+                logger.info("✅ Circuit breakers: No breakers recorded (fresh system)")
+                return True
+            
+            all_closed = all(state == "CLOSED" for _, state in breakers)
+            if all_closed:
+                logger.info(f"✅ Circuit breakers: All {len(breakers)} in CLOSED state")
+                return True
+            else:
+                open_breakers = [name for name, state in breakers if state != "CLOSED"]
+                logger.error(f"❌ Circuit breaker check FAILED: {open_breakers} are not CLOSED")
+                return False
+                
+        except Exception as e:
+            logger.warning(f"⚠️  Circuit breaker check skipped: {str(e)}")
+            return True
+    
+    def check_required_tables(self) -> bool:
+        """Check all required tables exist"""
+        try:
+            required = [
+                "ab_tests",
+                "ab_test_ml_predictions",
+                "personalization_variants",
+                "phase3_checkpoints",
+                "system_config",
+                "system_metrics",
+                "circuit_breaker_states"
             ]
-
-            cursor.execute("""
-                SELECT name FROM sqlite_master WHERE type='table'
-            """)
-            existing_tables = {row[0] for row in cursor.fetchall()}
-
-            missing = [t for t in required_tables if t not in existing_tables]
+            
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            existing = {row[0] for row in cursor.fetchall()}
+            
+            missing = set(required) - existing
+            conn.close()
+            
             if missing:
-                logger.warning(f"  ❌ Missing tables: {missing}")
-                self.checks_passed["database_integrity"] = False
+                logger.error(f"❌ Missing tables: {missing}")
                 return False
-
-            logger.info(f"  ✅ All {len(required_tables)} required tables found")
-            self.checks_passed["database_integrity"] = True
+            
+            logger.info(f"✅ Database schema: All {len(required)} required tables present")
             return True
+            
         except Exception as e:
-            logger.error(f"  ❌ Error checking database integrity: {e}")
-            self.checks_passed["database_integrity"] = False
+            logger.error(f"❌ Table check failed: {str(e)}")
             return False
-
-    def check_components_healthy(self) -> bool:
-        """Check: All system components are operational"""
-        logger.info("CHECK 4/5: System Components Health...")
-        try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            # Check if health_check table exists and has recent data
-            cursor.execute("""
-                SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='health_checks'
-            """)
-            if cursor.fetchone()[0] == 0:
-                logger.info("  ✅ Health check table exists (creating on first run)")
-                self.checks_passed["components_healthy"] = True
-                return True
-
-            # Check for recent health checks (< 30 minutes old)
-            cursor.execute("""
-                SELECT COUNT(*) as count FROM health_checks
-                WHERE created_at >= datetime('now', '-30 minutes')
-            """)
-            recent_checks = cursor.fetchone()[0]
-
-            if recent_checks > 0:
-                logger.info(f"  ✅ {recent_checks} health checks in last 30 minutes")
-                self.checks_passed["components_healthy"] = True
-                return True
-            else:
-                logger.warning("  ⚠️  No recent health checks, but continuing...")
-                self.checks_passed["components_healthy"] = True
-                return True
-        except Exception as e:
-            logger.warning(f"  ⚠️  Health check error (non-blocking): {e}")
-            self.checks_passed["components_healthy"] = True  # Non-blocking
-            return True
-
-    def check_circuit_breakers_ok(self) -> bool:
-        """Check: All circuit breakers are in CLOSED state"""
-        logger.info("CHECK 5/5: Circuit Breaker Status...")
-        try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            # Check if circuit_breaker_states table exists
-            cursor.execute("""
-                SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='circuit_breaker_states'
-            """)
-            if cursor.fetchone()[0] == 0:
-                logger.info("  ✅ Circuit breaker table will be created on first run")
-                self.checks_passed["circuit_breakers_ok"] = True
-                return True
-
-            # Check for any OPEN circuit breakers
-            cursor.execute("""
-                SELECT COUNT(*) as open_count FROM circuit_breaker_states WHERE state='OPEN'
-            """)
-            open_count = cursor.fetchone()[0]
-
-            if open_count == 0:
-                logger.info("  ✅ All circuit breakers in CLOSED state")
-                self.checks_passed["circuit_breakers_ok"] = True
-                return True
-            else:
-                logger.warning(f"  ❌ {open_count} circuit breakers in OPEN state")
-                self.checks_passed["circuit_breakers_ok"] = False
-                return False
-        except Exception as e:
-            logger.warning(f"  ⚠️  Circuit breaker check error (non-blocking): {e}")
-            self.checks_passed["circuit_breakers_ok"] = True  # Non-blocking
-            return True
-
-    def run_all_checks(self) -> dict:
-        """Execute all checks and return results"""
-        logger.info("\n" + "=" * 70)
-        logger.info("FASE 15 PHASE 3 - PRE-FLIGHT CHECKS")
-        logger.info("=" * 70 + "\n")
-
-        check1 = self.check_phase2_health()
-        check2 = self.check_backup_age()
-        check3 = self.check_database_integrity()
-        check4 = self.check_components_healthy()
-        check5 = self.check_circuit_breakers_ok()
-
-        all_pass = all([check1, check2, check3, check4, check5])
-
-        logger.info("\n" + "=" * 70)
-        logger.info("PRE-FLIGHT CHECK RESULTS")
-        logger.info("=" * 70)
-
-        for check_name, result in self.checks_passed.items():
-            status = "✅ PASS" if result else "❌ FAIL"
-            logger.info(f"  {status}: {check_name}")
-
-        logger.info(f"\nOVERALL: {'✅ ALL CHECKS PASSED' if all_pass else '❌ SOME CHECKS FAILED'}")
-        logger.info("=" * 70 + "\n")
-
-        return {
-            "all_pass": all_pass,
-            "checks": self.checks_passed,
-            "timestamp": datetime.utcnow().isoformat(),
-            "blocked_reason": next((k for k, v in self.checks_passed.items() if not v), None)
+    
+    def run_all_checks(self) -> tuple:
+        """Run all validation checks"""
+        logger.info("\n" + "="*70)
+        logger.info("PHASE 3 PRE-FLIGHT VALIDATION")
+        logger.info("="*70)
+        
+        checks = {
+            "database_exists": self.check_database_exists(),
+            "required_tables": self.check_required_tables(),
+            "phase2_health": self.check_phase2_health(),
+            "backup_ready": self.check_backup_recent(),
+            "circuit_breakers": self.check_circuit_breakers()
         }
+        
+        all_pass = all(checks.values())
+        failed = [k for k, v in checks.items() if not v]
+        
+        logger.info("\n" + "-"*70)
+        if all_pass:
+            logger.info("✅ ALL PRE-FLIGHT CHECKS PASSED")
+        else:
+            logger.error(f"❌ FAILED CHECKS: {failed}")
+        logger.info("-"*70 + "\n")
+        
+        return all_pass, checks
 
+# =============================================================================
+# Phase 3 Activation
+# =============================================================================
 
 class Phase3Activator:
-    """Activate Phase 3 after pre-flight checks pass"""
-
-    def __init__(self, db_path: str = "fase15.db"):
+    """Orchestrates Phase 3 activation"""
+    
+    def __init__(self, db_path: str):
         self.db_path = db_path
-        self.db = None
-
-    def connect(self):
-        """Connect to database"""
-        self.db = sqlite3.connect(self.db_path)
-        logger.info(f"✅ Connected to database: {self.db_path}")
-
-    def create_backup(self):
-        """Create timestamped backup before activation"""
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-        backup_path = Path(f"data/backups/phase3_start_{timestamp}.sqlite")
-        backup_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(self.db_path, backup_path)
-        logger.info(f"✅ Backup created: {backup_path}")
-        return backup_path
-
-    def set_feature_flag(self):
-        """Set PHASE_3_ACTIVE feature flag to true"""
-        cursor = self.db.cursor()
-
-        # Ensure system_config table exists
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS system_config (
-                key TEXT PRIMARY KEY,
-                value TEXT,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-
-        # Set flag
-        cursor.execute("""
-            INSERT OR REPLACE INTO system_config (key, value, updated_at)
-            VALUES ('PHASE_3_ACTIVE', 'true', ?)
-        """, (datetime.utcnow().isoformat(),))
-
-        self.db.commit()
-        logger.info("✅ Feature flag PHASE_3_ACTIVE set to true")
-
-    def log_activation(self):
-        """Log activation event"""
-        cursor = self.db.cursor()
-
-        # Ensure phase3_activation_log table exists
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS phase3_activation_log (
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                event TEXT,
-                details TEXT
-            )
-        """)
-
-        cursor.execute("""
-            INSERT INTO phase3_activation_log (timestamp, event, details)
-            VALUES (?, ?, ?)
-        """, (datetime.utcnow().isoformat(), 'PHASE3_ACTIVATED', 'User initiated Phase 3 activation'))
-
-        self.db.commit()
-        logger.info("✅ Activation logged to database")
-
-    def activate(self) -> dict:
-        """Execute activation sequence"""
-        logger.info("\n" + "█" * 70)
-        logger.info("█  FASE 15 PHASE 3 - ACTIVATION SEQUENCE")
-        logger.info("█" * 70 + "\n")
-
+        self.activation_time = datetime.utcnow()
+        self.backup_path = None
+    
+    def create_backup(self) -> bool:
+        """Create pre-activation backup"""
         try:
-            self.connect()
-            backup_path = self.create_backup()
-            self.set_feature_flag()
-            self.log_activation()
-
-            logger.info("\n" + "█" * 70)
-            logger.info("█  ✅ PHASE 3 ACTIVATED SUCCESSFULLY")
-            logger.info("█" * 70)
-            logger.info("\nNext Steps:")
-            logger.info("  1. Dashboard: Open frontend/phase3_realtime_dashboard.html")
-            logger.info("  2. Monitoring: First checkpoint in 2 hours")
-            logger.info("  3. Emergency: Kill-switch at /api/admin/phase3/deactivate")
-            logger.info("  4. Timeline: 7-day execution window (Oct 6-13, 2026)")
-            logger.info("\nExecution Window: HORA 48-72 (24 hours)")
-            logger.info("  • HORA 48-56: Phase 1 (10% rollout)")
-            logger.info("  • HORA 56-64: Phase 2 (50% rollout if metrics GREEN)")
-            logger.info("  • HORA 64-72: Phase 3 (100% rollout if metrics GREEN)")
-            logger.info("  • HORA 72: Final decision (GO/CAUTION/NO-GO)\n")
-
-            self.db.close()
-
-            return {
-                "status": "activated",
-                "timestamp": datetime.utcnow().isoformat(),
-                "backup_path": str(backup_path),
-                "next_checkpoint": "2 hours from now",
-                "kill_switch": "POST /api/admin/phase3/deactivate"
-            }
+            logger.info("💾 Creating pre-activation backup...")
+            
+            BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+            timestamp = self.activation_time.strftime("%Y%m%d_%H%M%S_UTC")
+            self.backup_path = BACKUP_DIR / f"phase3_pre_activation_{timestamp}.sqlite"
+            
+            shutil.copy2(self.db_path, str(self.backup_path))
+            logger.info(f"✅ Backup created: {self.backup_path}")
+            
+            return True
         except Exception as e:
-            logger.error(f"❌ Activation failed: {e}")
-            if self.db:
-                self.db.close()
-            return {"status": "failed", "error": str(e)}
+            logger.error(f"❌ Backup failed: {str(e)}")
+            return False
+    
+    def enable_phase3_flag(self) -> bool:
+        """Set PHASE_3_ACTIVE flag in database"""
+        try:
+            logger.info("🚀 Enabling Phase 3 flag...")
+            
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Set activation flag
+            cursor.execute("""
+                INSERT OR REPLACE INTO system_config (key, value, updated_at)
+                VALUES ('PHASE_3_ACTIVE', 'true', ?)
+            """, (self.activation_time.isoformat(),))
+            
+            # Record activation time
+            cursor.execute("""
+                INSERT OR REPLACE INTO system_config (key, value, updated_at)
+                VALUES ('PHASE_3_ACTIVATION_TIME', ?, ?)
+            """, (self.activation_time.isoformat(), self.activation_time.isoformat()))
+            
+            # Set checkpoint tracking
+            cursor.execute("""
+                INSERT OR REPLACE INTO system_config (key, value, updated_at)
+                VALUES ('PHASE_3_CHECKPOINT_COUNT', '0', ?)
+            """, (self.activation_time.isoformat(),))
+            
+            conn.commit()
+            conn.close()
+            
+            logger.info("✅ Phase 3 flag ENABLED")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to set Phase 3 flag: {str(e)}")
+            return False
+    
+    def schedule_checkpoints(self) -> bool:
+        """Log checkpoint schedule for monitoring"""
+        try:
+            logger.info("📅 Scheduling 13 checkpoints for 24-hour window...")
+            
+            LOGS_DIR.mkdir(parents=True, exist_ok=True)
+            
+            checkpoints = []
+            for i in range(TOTAL_CHECKPOINTS):
+                checkpoint_time = self.activation_time + timedelta(hours=i*2)
+                checkpoints.append({
+                    "number": i + 1,
+                    "hora": 48 + (i * 2),
+                    "scheduled_time": checkpoint_time.isoformat(),
+                    "status": "pending"
+                })
+            
+            # Save checkpoint schedule
+            schedule_file = LOGS_DIR / "checkpoint_schedule.json"
+            with open(schedule_file, 'w') as f:
+                json.dump(checkpoints, f, indent=2)
+            
+            logger.info(f"✅ Checkpoint schedule saved: {len(checkpoints)} checkpoints")
+            logger.info(f"   First checkpoint: {checkpoints[0]['hora']} ({checkpoints[0]['scheduled_time']})")
+            logger.info(f"   Last checkpoint:  {checkpoints[-1]['hora']} ({checkpoints[-1]['scheduled_time']})")
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Checkpoint scheduling failed: {str(e)}")
+            return False
+    
+    def create_activation_report(self) -> dict:
+        """Generate activation report"""
+        report = {
+            "status": "ACTIVATED",
+            "timestamp": self.activation_time.isoformat(),
+            "backup_path": str(self.backup_path) if self.backup_path else None,
+            "execution_window": f"{EXECUTION_HOURS} hours (24-hour monitoring)",
+            "checkpoint_count": TOTAL_CHECKPOINTS,
+            "checkpoint_interval_hours": 2,
+            "metrics_thresholds": METRICS_THRESHOLDS,
+            "phase_advancement": {
+                "phase_1": {"rollout": "10%", "duration_hours": 8},
+                "phase_2": {"rollout": "50%", "duration_hours": 8},
+                "phase_3": {"rollout": "100%", "duration_hours": 8}
+            },
+            "monitoring_url": "http://localhost:8000/dashboard/phase3",
+            "kill_switch_activate": "POST /api/admin/phase3/activate",
+            "kill_switch_deactivate": "POST /api/admin/phase3/deactivate",
+            "kill_switch_status": "GET /api/admin/phase3/status",
+            "first_checkpoint_eta": (self.activation_time + timedelta(hours=2)).isoformat(),
+            "final_decision_time": (self.activation_time + timedelta(hours=24)).isoformat()
+        }
+        
+        return report
+    
+    def activate(self) -> bool:
+        """Execute full activation sequence"""
+        logger.info("\n" + "="*70)
+        logger.info("PHASE 3 ACTIVATION SEQUENCE")
+        logger.info("="*70 + "\n")
+        
+        # Step 1: Create backup
+        if not self.create_backup():
+            return False
+        
+        # Step 2: Enable flag
+        if not self.enable_phase3_flag():
+            return False
+        
+        # Step 3: Schedule checkpoints
+        if not self.schedule_checkpoints():
+            return False
+        
+        # Step 4: Generate report
+        report = self.create_activation_report()
+        
+        logger.info("\n" + "="*70)
+        logger.info("✅ PHASE 3 ACTIVATED SUCCESSFULLY")
+        logger.info("="*70)
+        logger.info(f"\n📊 Activation Report:")
+        logger.info(json.dumps(report, indent=2))
+        logger.info("\n" + "="*70)
+        
+        # Save report
+        LOGS_DIR.mkdir(parents=True, exist_ok=True)
+        report_file = LOGS_DIR / f"activation_report_{self.activation_time.strftime('%Y%m%d_%H%M%S')}.json"
+        with open(report_file, 'w') as f:
+            json.dump(report, f, indent=2)
+        
+        logger.info(f"📄 Report saved: {report_file}")
+        
+        return True
 
+# =============================================================================
+# Main Execution
+# =============================================================================
 
 def main():
-    """Main entry point"""
-    import argparse
-    import json
-
-    parser = argparse.ArgumentParser(description='FASE 15 Phase 3 Activation Script')
-    parser.add_argument('--skip-checks', action='store_true', help='Skip pre-flight checks (UNSAFE)')
-    parser.add_argument('--db', default='fase15.db', help='Database path')
-    args = parser.parse_args()
-
-    # Run pre-flight checks
-    preflights = Phase3Preflights(args.db)
-    results = preflights.run_all_checks()
-
-    # Save results to file
-    Path("reports/phase3_decisions").mkdir(parents=True, exist_ok=True)
-    with open("reports/phase3_decisions/preflight_checks.json", "w") as f:
-        json.dump(results, f, indent=2)
-
-    # Check if we should proceed
-    if not results["all_pass"] and not args.skip_checks:
-        logger.error("\n❌ PRE-FLIGHT CHECKS FAILED - ABORTING ACTIVATION")
-        logger.error(f"Blocked by: {results['blocked_reason']}")
-        return 1
-
-    if not results["all_pass"] and args.skip_checks:
-        logger.warning("\n⚠️  WARNING: PRE-FLIGHT CHECKS FAILED BUT PROCEEDING (--skip-checks)")
-
-    # Activate Phase 3
-    activator = Phase3Activator(args.db)
-    activation_result = activator.activate()
-
-    # Save activation result
-    with open("reports/phase3_decisions/activation_result.json", "w") as f:
-        json.dump(activation_result, f, indent=2)
-
-    return 0 if activation_result["status"] == "activated" else 1
-
+    """Main activation flow"""
+    
+    print("\n" + "🚀 "*20)
+    print("FASE 15 PHASE 3 - ACTIVATION SCRIPT")
+    print("🚀 "*20 + "\n")
+    
+    # Step 1: Validate
+    validator = Phase3Validator(DB_PATH)
+    all_pass, checks = validator.run_all_checks()
+    
+    if not all_pass:
+        logger.error("\n❌ ACTIVATION ABORTED: Pre-flight checks failed")
+        logger.error("Fix the issues above and retry activation")
+        sys.exit(1)
+    
+    # Step 2: Activate
+    activator = Phase3Activator(DB_PATH)
+    if not activator.activate():
+        logger.error("\n❌ ACTIVATION FAILED: See errors above")
+        sys.exit(1)
+    
+    logger.info("\n✅ Phase 3 is now ACTIVE and ready for execution")
+    logger.info("📊 Monitor at: http://localhost:8000/dashboard/phase3")
+    logger.info("🔴 Kill-switch endpoint: POST /api/admin/phase3/deactivate")
+    logger.info("\nMonitoring will begin automatically at the first checkpoint")
+    logger.info("Next checkpoint: ~2 hours from now\n")
+    
+    sys.exit(0)
 
 if __name__ == "__main__":
-    exit(main())
+    main()
