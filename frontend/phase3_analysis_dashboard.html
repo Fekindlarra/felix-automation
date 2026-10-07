@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Phase 3 Analysis Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        :root {
+            --bg: #f8f7f5;
+            --fg: #1a1a1a;
+            --accent: #2e7d32;
+            --accent-light: #4caf50;
+            --accent-dark: #1b5e20;
+            --error: #d32f2f;
+            --warning: #f57c00;
+            --info: #1976d2;
+            --border: #e0dcd6;
+            --card-bg: #ffffff;
+            --text-secondary: #666;
+            --success-light: #e8f5e9;
+            --warning-light: #fff3e0;
+            --error-light: #ffebee;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --bg: #0f0e0c;
+                --fg: #e8e6e1;
+                --accent: #66bb6a;
+                --accent-light: #81c784;
+                --accent-dark: #2e7d32;
+                --error: #ef5350;
+                --warning: #ffa726;
+                --info: #42a5f5;
+                --border: #2a2925;
+                --card-bg: #1a1815;
+                --text-secondary: #999;
+                --success-light: #1b5e20;
+                --warning-light: #e65100;
+                --error-light: #b71c1c;
+                color-scheme: dark;
+            }
+        }
+
+        :root[data-theme="dark"] {
+            --bg: #0f0e0c;
+            --fg: #e8e6e1;
+            --accent: #66bb6a;
+            --accent-light: #81c784;
+            --accent-dark: #2e7d32;
+            --error: #ef5350;
+            --warning: #ffa726;
+            --info: #42a5f5;
+            --border: #2a2925;
+            --card-bg: #1a1815;
+            --text-secondary: #999;
+            --success-light: #1b5e20;
+            --warning-light: #e65100;
+            --error-light: #b71c1c;
+            color-scheme: dark;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 16px;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .header {
+            margin-bottom: 32px;
+        }
+
+        h1 {
+            margin: 0 0 8px 0;
+            font-size: 28px;
+            font-weight: 600;
+            text-wrap: balance;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .status-banner {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            font-weight: 500;
+        }
+
+        .status-banner.success {
+            background: var(--success-light);
+            color: var(--accent-dark);
+            border-left: 4px solid var(--accent);
+        }
+
+        .status-banner.warning {
+            background: var(--warning-light);
+            color: #e65100;
+            border-left: 4px solid var(--warning);
+        }
+
+        .status-banner.error {
+            background: var(--error-light);
+            color: var(--error);
+            border-left: 4px solid var(--error);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 24px;
+            overflow-x: auto;
+        }
+
+        .tab-button {
+            padding: 12px 16px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .tab-button:hover {
+            color: var(--fg);
+        }
+
+        .tab-button.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .card h3 {
+            margin: 0 0 12px 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .metric-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-target {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 24px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .comparison-table th {
+            background: var(--border);
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .comparison-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .checkpoint-row {
+            display: grid;
+            grid-template-columns: 80px 1fr 80px 80px;
+            gap: 12px;
+            padding: 12px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .checkpoint-hora {
+            font-weight: 600;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .checkpoint-metrics {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .metric-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            background: var(--border);
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .metric-badge.success {
+            background: var(--success-light);
+            color: var(--accent-dark);
+        }
+
+        .metric-badge.warning {
+            background: var(--warning-light);
+            color: #e65100;
+        }
+
+        .decision-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .decision-badge.continue {
+            background: var(--success-light);
+            color: var(--accent-dark);
+        }
+
+        .decision-badge.caution {
+            background: var(--warning-light);
+            color: #e65100;
+        }
+
+        .decision-badge.rollback {
+            background: var(--error-light);
+            color: var(--error);
+        }
+
+        .alert-item {
+            padding: 12px;
+            background: var(--card-bg);
+            border-left: 4px solid var(--border);
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .alert-item.critical {
+            border-left-color: var(--error);
+            background: var(--error-light);
+        }
+
+        .alert-item.warning-alert {
+            border-left-color: var(--warning);
+            background: var(--warning-light);
+        }
+
+        .alert-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .alert-time {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .export-button {
+            padding: 8px 16px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .export-button:hover {
+            background: var(--accent-dark);
+        }
+
+        .phase-indicator {
+            display: inline-block;
+            padding: 4px 8px;
+            background: var(--accent-light);
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 12px;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .checkpoint-row {
+                grid-template-columns: 60px 1fr;
+                gap: 8px;
+            }
+
+            .comparison-table th,
+            .comparison-table td {
+                padding: 8px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Phase 3 Analysis Dashboard</h1>
+        <p class="subtitle">Real-time metrics analysis and checkpoint performance review</p>
+    </div>
+
+    <div id="statusBanner" class="status-banner success">
+        <span id="statusIcon">✅</span>
+        <span id="statusText">Phase 3 Execution: SUCCESS</span>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-button active" data-tab="timeline">Timeline & Trends</button>
+        <button class="tab-button" data-tab="comparison">Phase Comparison</button>
+        <button class="tab-button" data-tab="alerts">Alerts & Events</button>
+        <button class="tab-button" data-tab="checkpoints">Checkpoint Details</button>
+    </div>
+
+    <!-- Timeline & Trends Tab -->
+    <div id="timeline" class="tab-content active">
+        <div class="cards-grid">
+            <div class="card">
+                <h3>📊 Execution Summary</h3>
+                <div class="metric-value" id="totalCheckpoints">13</div>
+                <div class="metric-label">Total Checkpoints</div>
+                <div class="metric-target">24-hour window: HORA 48-72</div>
+            </div>
+            <div class="card">
+                <h3>✅ Checkpoints Passed</h3>
+                <div class="metric-value" id="passedCheckpoints">13</div>
+                <div class="metric-label">6/6 Metrics Met</div>
+                <div class="metric-target">Target: ≥13 (100%)</div>
+            </div>
+            <div class="card">
+                <h3>📈 Metrics Met Targets</h3>
+                <div class="metric-value" id="metricsMetCount">6/6</div>
+                <div class="metric-label">KPI Success Rate</div>
+                <div class="metric-target">Minimum: 5/6</div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="metricsTimelineChart"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="trendsChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Phase Comparison Tab -->
+    <div id="comparison" class="tab-content">
+        <div class="cards-grid">
+            <div class="card">
+                <h3>Phase 1 (10% Rollout)</h3>
+                <div class="metric-value">10%</div>
+                <div class="metric-label">HORA 48-56</div>
+                <div class="metric-target">Baseline performance validation</div>
+            </div>
+            <div class="card">
+                <h3>Phase 2 (50% Rollout)</h3>
+                <div class="metric-value">50%</div>
+                <div class="metric-label">HORA 56-64</div>
+                <div class="metric-target">Scaled deployment</div>
+            </div>
+            <div class="card">
+                <h3>Phase 3 (100% Rollout)</h3>
+                <div class="metric-value">100%</div>
+                <div class="metric-label">HORA 64-72</div>
+                <div class="metric-target">Full production</div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="phaseComparisonChart"></canvas>
+        </div>
+
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Phase 1 Avg</th>
+                    <th>Phase 2 Avg</th>
+                    <th>Phase 3 Avg</th>
+                    <th>Target</th>
+                </tr>
+            </thead>
+            <tbody id="phaseComparisonTable">
+                <tr>
+                    <td>ML Accuracy</td>
+                    <td>81.2%</td>
+                    <td>82.8%</td>
+                    <td>84.1%</td>
+                    <td>≥78%</td>
+                </tr>
+                <tr>
+                    <td>Error Rate</td>
+                    <td>0.025%</td>
+                    <td>0.019%</td>
+                    <td>0.015%</td>
+                    <td>&lt;0.08%</td>
+                </tr>
+                <tr>
+                    <td>WebSocket Latency</td>
+                    <td>12ms</td>
+                    <td>10ms</td>
+                    <td>8ms</td>
+                    <td>&lt;95ms</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Alerts & Events Tab -->
+    <div id="alerts" class="tab-content">
+        <div class="cards-grid">
+            <div class="card">
+                <h3>🚨 Critical Alerts</h3>
+                <div class="metric-value">0</div>
+                <div class="metric-label">During Execution</div>
+            </div>
+            <div class="card">
+                <h3>⚠️ Warnings</h3>
+                <div class="metric-value">2</div>
+                <div class="metric-label">Minor Issues (resolved)</div>
+            </div>
+            <div class="card">
+                <h3>ℹ️ Info Events</h3>
+                <div class="metric-value">47</div>
+                <div class="metric-label">Status Updates</div>
+            </div>
+        </div>
+
+        <div id="alertsList">
+            <div class="alert-item warning-alert">
+                <div class="alert-title">⚠️ Database Query Latency Spike</div>
+                <div>Comparison report generation took 3.2s (normally &lt;2s) during HORA 52 checkpoint. Query optimizer resolved by HORA 54.</div>
+                <div class="alert-time">HORA 52 - Resolved at HORA 54</div>
+            </div>
+            <div class="alert-item warning-alert">
+                <div class="alert-title">⚠️ WebSocket Connection Timeout</div>
+                <div>Single client reconnection required at HORA 58. Automatic reconnection succeeded within 2 seconds. No impact to dashboard.</div>
+                <div class="alert-time">HORA 58 - Duration: 2s</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Checkpoint Details Tab -->
+    <div id="checkpoints" class="tab-content">
+        <div id="checkpointsList"></div>
+    </div>
+
+    <script>
+        // Sample checkpoint data (would be loaded from server in production)
+        const checkpointData = [
+            { hora: 48, decision: 'CONTINUE', status: '6/6', metrics: { ml: 81.2, error: 0.025, latency: 12, pred: 45, person: 145, tests: 9 } },
+            { hora: 50, decision: 'CONTINUE', status: '6/6', metrics: { ml: 82.1, error: 0.022, latency: 11, pred: 46, person: 148, tests: 9 } },
+            { hora: 52, decision: 'CONTINUE', status: '6/6', metrics: { ml: 81.8, error: 0.024, latency: 13, pred: 44, person: 146, tests: 8 } },
+            { hora: 54, decision: 'CONTINUE', status: '6/6', metrics: { ml: 82.5, error: 0.021, latency: 10, pred: 47, person: 150, tests: 9 } },
+            { hora: 56, decision: 'CONTINUE', status: '6/6', metrics: { ml: 82.8, error: 0.019, latency: 9, pred: 48, person: 152, tests: 10 } },
+            { hora: 58, decision: 'CONTINUE', status: '6/6', metrics: { ml: 83.2, error: 0.018, latency: 10, pred: 49, person: 154, tests: 10 } },
+            { hora: 60, decision: 'CONTINUE', status: '6/6', metrics: { ml: 83.5, error: 0.017, latency: 9, pred: 50, person: 156, tests: 11 } },
+            { hora: 62, decision: 'CONTINUE', status: '6/6', metrics: { ml: 83.8, error: 0.016, latency: 8, pred: 51, person: 158, tests: 11 } },
+            { hora: 64, decision: 'CONTINUE', status: '6/6', metrics: { ml: 84.1, error: 0.015, latency: 8, pred: 52, person: 160, tests: 12 } },
+            { hora: 66, decision: 'CONTINUE', status: '6/6', metrics: { ml: 84.2, error: 0.014, latency: 8, pred: 51, person: 159, tests: 11 } },
+            { hora: 68, decision: 'CONTINUE', status: '6/6', metrics: { ml: 84.3, error: 0.015, latency: 9, pred: 50, person: 158, tests: 11 } },
+            { hora: 70, decision: 'CONTINUE', status: '6/6', metrics: { ml: 84.2, error: 0.016, latency: 9, pred: 49, person: 157, tests: 10 } },
+            { hora: 72, decision: 'SUCCESS', status: '6/6', metrics: { ml: 84.1, error: 0.015, latency: 8, pred: 48, person: 156, tests: 10 } }
+        ];
+
+        // Tab switching
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                e.target.classList.add('active');
+                const tabId = e.target.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+
+        // Populate checkpoint details
+        function populateCheckpointDetails() {
+            const list = document.getElementById('checkpointsList');
+            checkpointData.forEach(cp => {
+                const badges = Object.entries(cp.metrics).map(([k, v]) => {
+                    const labels = { ml: 'ML Acc', error: 'Error %', latency: 'Latency', pred: 'Pred/h', person: 'Person', tests: 'Tests' };
+                    return `<span class="metric-badge success">${labels[k]}: ${v}</span>`;
+                }).join('');
+
+                const decisionClass = cp.decision === 'CONTINUE' ? 'continue' : cp.decision === 'CAUTION' ? 'caution' : 'rollback';
+                const decisionText = cp.decision === 'SUCCESS' ? 'CONTINUE' : cp.decision;
+
+                const html = `
+                    <div class="checkpoint-row">
+                        <div class="checkpoint-hora">HORA ${cp.hora}</div>
+                        <div class="checkpoint-metrics">${badges}</div>
+                        <div>${cp.status}</div>
+                        <div><span class="decision-badge ${decisionClass}">${decisionText}</span></div>
+                    </div>
+                `;
+                list.innerHTML += html;
+            });
+        }
+
+        // Create charts
+        function createCharts() {
+            const horas = checkpointData.map(cp => `H${cp.hora}`);
+            const mlAccuracy = checkpointData.map(cp => cp.metrics.ml);
+            const errorRate = checkpointData.map(cp => cp.metrics.error);
+            const latency = checkpointData.map(cp => cp.metrics.latency);
+
+            // Timeline chart
+            const timelineCtx = document.getElementById('metricsTimelineChart').getContext('2d');
+            new Chart(timelineCtx, {
+                type: 'line',
+                data: {
+                    labels: horas,
+                    datasets: [
+                        {
+                            label: 'ML Accuracy (%)',
+                            data: mlAccuracy,
+                            borderColor: '#2e7d32',
+                            backgroundColor: 'rgba(46, 125, 50, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            fill: true,
+                            yAxisID: 'y'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: true, position: 'top' },
+                        title: { display: true, text: 'ML Accuracy Over 24-Hour Window' }
+                    },
+                    scales: {
+                        y: { beginAtZero: false, min: 78, max: 85 }
+                    }
+                }
+            });
+
+            // Trends chart
+            const trendsCtx = document.getElementById('trendsChart').getContext('2d');
+            new Chart(trendsCtx, {
+                type: 'line',
+                data: {
+                    labels: horas,
+                    datasets: [
+                        {
+                            label: 'Error Rate (%)',
+                            data: errorRate,
+                            borderColor: '#d32f2f',
+                            backgroundColor: 'rgba(211, 47, 47, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Latency (ms)',
+                            data: latency,
+                            borderColor: '#1976d2',
+                            backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: true, position: 'top' },
+                        title: { display: true, text: 'Error Rate & Latency Trends' }
+                    },
+                    scales: {
+                        y: { position: 'left', title: { display: true, text: 'Error Rate (%)' } },
+                        y1: { position: 'right', title: { display: true, text: 'Latency (ms)' }, grid: { drawOnChartArea: false } }
+                    }
+                }
+            });
+
+            // Phase comparison chart
+            const comparisonCtx = document.getElementById('phaseComparisonChart').getContext('2d');
+            new Chart(comparisonCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['ML Accuracy', 'Error Rate', 'Latency', 'Predictions/h', 'Personalization', 'Active Tests'],
+                    datasets: [
+                        {
+                            label: 'Phase 1 (10%)',
+                            data: [81.2, 0.025, 12, 45, 145, 9],
+                            backgroundColor: '#4caf50'
+                        },
+                        {
+                            label: 'Phase 2 (50%)',
+                            data: [82.8, 0.019, 9, 48, 152, 10],
+                            backgroundColor: '#66bb6a'
+                        },
+                        {
+                            label: 'Phase 3 (100%)',
+                            data: [84.1, 0.015, 8, 52, 160, 12],
+                            backgroundColor: '#2e7d32'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: 'top' },
+                        title: { display: true, text: 'Performance Across Rollout Phases' }
+                    }
+                }
+            });
+        }
+
+        // Initialize
+        populateCheckpointDetails();
+        createCharts();
+    </script>
+</body>
+</html>

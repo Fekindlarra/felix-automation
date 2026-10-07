@@ -70,6 +70,7 @@ class PrometheusExporter:
         all_lines.extend(self._export_system_metrics())
         all_lines.extend(self._export_performance_metrics())
         all_lines.extend(self._export_websocket_metrics())
+        all_lines.extend(self._export_phase3_metrics())
         all_lines.extend(self._export_uptime_metric())
 
         return "\n".join(all_lines)
@@ -195,6 +196,89 @@ class PrometheusExporter:
         if ws_errors:
             lines.append(f"felix_websocket_errors {ws_errors.value}")
         lines.append("")
+
+        return lines
+
+    def _export_phase3_metrics(self) -> List[str]:
+        """Export FASE 15 Phase 3 checkpoint metrics"""
+        lines = []
+
+        try:
+            from pathlib import Path
+            import json
+
+            checkpoints_dir = Path("logs/phase3")
+            if not checkpoints_dir.exists():
+                return lines
+
+            # Load latest checkpoint
+            checkpoint_files = sorted(
+                checkpoints_dir.glob("checkpoint_HORA_*.json"),
+                key=lambda p: int(p.stem.split("_")[-1]),
+                reverse=True
+            )
+
+            if not checkpoint_files:
+                return lines
+
+            # Read latest checkpoint
+            with open(checkpoint_files[0], 'r') as f:
+                latest_checkpoint = json.load(f)
+
+            metrics = latest_checkpoint.get('metrics', {})
+
+            # Export ML Accuracy
+            lines.append("# HELP fase15_phase3_ml_accuracy ML model accuracy percentage during Phase 3")
+            lines.append("# TYPE fase15_phase3_ml_accuracy gauge")
+            ml_acc = metrics.get('ml_accuracy', 0) * 100
+            lines.append(f"fase15_phase3_ml_accuracy {ml_acc:.2f}")
+            lines.append("")
+
+            # Export Error Rate
+            lines.append("# HELP fase15_phase3_error_rate System error rate percentage during Phase 3")
+            lines.append("# TYPE fase15_phase3_error_rate gauge")
+            error_rate = metrics.get('error_rate', 0) * 100
+            lines.append(f"fase15_phase3_error_rate {error_rate:.3f}")
+            lines.append("")
+
+            # Export WebSocket Latency
+            lines.append("# HELP fase15_phase3_websocket_latency WebSocket latency in milliseconds during Phase 3")
+            lines.append("# TYPE fase15_phase3_websocket_latency gauge")
+            latency = metrics.get('websocket_latency', 0)
+            lines.append(f"fase15_phase3_websocket_latency {latency:.1f}")
+            lines.append("")
+
+            # Export Predictions per Hour
+            lines.append("# HELP fase15_phase3_predictions_per_hour ML predictions per hour during Phase 3")
+            lines.append("# TYPE fase15_phase3_predictions_per_hour gauge")
+            predictions = metrics.get('predictions_hour', 0)
+            lines.append(f"fase15_phase3_predictions_per_hour {predictions:.0f}")
+            lines.append("")
+
+            # Export Personalization Active
+            lines.append("# HELP fase15_phase3_personalization_active Active personalization instances during Phase 3")
+            lines.append("# TYPE fase15_phase3_personalization_active gauge")
+            person_active = metrics.get('personalization_active', 0)
+            lines.append(f"fase15_phase3_personalization_active {person_active:.0f}")
+            lines.append("")
+
+            # Export Active Tests
+            lines.append("# HELP fase15_phase3_active_tests Number of active A/B tests during Phase 3")
+            lines.append("# TYPE fase15_phase3_active_tests gauge")
+            active_tests = metrics.get('active_tests', 0)
+            lines.append(f"fase15_phase3_active_tests {active_tests:.0f}")
+            lines.append("")
+
+            # Export Checkpoint Status
+            lines.append("# HELP fase15_phase3_checkpoint_status Latest checkpoint decision status (1=CONTINUE, 0=CAUTION, -1=ROLLBACK)")
+            lines.append("# TYPE fase15_phase3_checkpoint_status gauge")
+            decision = latest_checkpoint.get('decision', 'UNKNOWN')
+            decision_value = 1 if decision == 'CONTINUE' else (0 if decision == 'CAUTION' else -1)
+            lines.append(f"fase15_phase3_checkpoint_status{{{\"hora\": {latest_checkpoint.get('hora', 0)}, \"decision\": \"{decision}\"}}}} {decision_value}")
+            lines.append("")
+
+        except Exception as e:
+            logger.debug(f"Could not export Phase 3 metrics: {e}")
 
         return lines
 
