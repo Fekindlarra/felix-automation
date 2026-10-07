@@ -158,9 +158,9 @@ async def create_test(request: CreateABTestRequest):
             try:
                 from backend.events import EventFactory
                 event = EventFactory.test_created(
+                    client_id=0,  # System-level test (not tied to specific client)
                     test_id=test_id,
                     test_name=request.test_name,
-                    active=True,
                     email_type=request.email_type,
                     duration_days=request.duration_days
                 )
@@ -442,9 +442,9 @@ async def pause_test(test_id: int):
             try:
                 from backend.events import EventFactory
                 event = EventFactory.test_paused(
+                    client_id=0,  # System-level test
                     test_id=test_id,
-                    test_name=test_row[0],
-                    active=False
+                    test_name=test_row[0]
                 )
                 websocket_manager.broadcast(event, role='admin')
                 logger.info(f"📢 Broadcasted test:paused for test {test_id}")

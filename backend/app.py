@@ -172,11 +172,11 @@ async def startup_event():
         init_prediction(orchestrator=orch)
         logger.info("✅ Prediction system initialized at startup")
 
-        # Initialize A/B testing routes (FASE 14)
-        tester = get_statistical_tester()
-        assigner = get_variant_assigner()
-        init_ab_testing(db_conn, tester, assigner)
-        logger.info("✅ A/B Testing framework initialized at startup")
+        # Initialize A/B testing routes (FASE 14 + FASE 15 Phase 3)
+        from backend.websocket_manager import get_connection_manager
+        ws_manager = get_connection_manager()
+        init_ab_testing(db_conn, ws_manager)
+        logger.info("✅ A/B Testing framework initialized at startup with WebSocket broadcasting")
 
         # Initialize Shopify webhooks (FASE 14)
         init_webhooks(db_conn)
