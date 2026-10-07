@@ -3,7 +3,7 @@ Authentication Router Tests
 """
 import pytest
 from fastapi.testclient import TestClient
-from main import app
+from backend.api.main import app
 
 client = TestClient(app)
 

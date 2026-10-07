@@ -10,8 +10,8 @@ from fastapi import WebSocket, APIRouter, Query, WebSocketDisconnect, Depends
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
-from database import get_db
-from models import Event, Prediction, Client
+from backend.api.database import get_db
+from backend.api.models import Event, Prediction, Client
 
 logger = logging.getLogger(__name__)
 

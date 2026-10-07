@@ -7,10 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
 
-from config import get_settings
-from database import init_db, SessionLocal
-from routers import auth, predictions, events, websocket
-from routes.phase3_admin_routes import router as phase3_admin_router, init_phase3_admin_routes
+from backend.api.config import get_settings
+from backend.api.database import init_db, SessionLocal
+from backend.api.routers import auth, predictions, events, websocket
+from backend.routes.phase3_admin_routes import router as phase3_admin_router, init_phase3_admin_routes
 import sqlite3
 
 settings = get_settings()

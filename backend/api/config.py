@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "allow"  # Allow extra environment variables from .env file
 
 @lru_cache()
 def get_settings() -> Settings:
