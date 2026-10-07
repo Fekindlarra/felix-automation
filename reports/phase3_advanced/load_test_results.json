@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-10-07T02:11:42.760817",
+  "total_connections": 10000,
+  "concurrent_batches": 100,
+  "connections_per_batch": 100,
+  "successful_connections": 9994,
+  "failed_connections": 6,
+  "avg_latency_ms": 27.4,
+  "peak_latency_ms": 50.0,
+  "messages_per_second": 4166,
+  "bandwidth_usage_mb": 48.83,
+  "errors": [
+    "Connection failed in batch 0",
+    "Connection failed in batch 1",
+    "Connection failed in batch 8",
+    "Connection failed in batch 47",
+    "Connection failed in batch 50",
+    "Connection failed in batch 87"
+  ],
+  "success_rate_percent": 99.94
+}

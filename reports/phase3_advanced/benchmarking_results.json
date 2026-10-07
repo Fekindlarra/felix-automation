@@ -1,0 +1,40 @@
+{
+  "timestamp": "2026-10-07T02:11:42.961239",
+  "baseline": {
+    "cpu_usage_percent": 15.7,
+    "memory_usage_mb": 620.5,
+    "memory_available_mb": 1304.93,
+    "ml_inference_latency_ms": 59.34,
+    "database_query_latency_ms": 10.94,
+    "websocket_latency_ms": 13.2,
+    "cache_hit_rate_percent": 75.68
+  },
+  "peak_load": {
+    "predictions_per_second": 100000,
+    "concurrent_connections": 50000,
+    "cpu_usage_percent": 77.08,
+    "memory_usage_mb": 2136.94,
+    "ml_inference_latency_ms": 113.72,
+    "database_connections_active": 450,
+    "websocket_message_queue": 25000,
+    "circuit_breaker_state": "CLOSED",
+    "successful_requests_percent": 98.39
+  },
+  "after_optimization": {
+    "websocket_message_batches_per_second": 200,
+    "avg_batch_size": 50,
+    "compression_ratio_percent": 62,
+    "ml_model_cache_hit_rate": 98.5,
+    "ml_inference_latency_ms": 25.11,
+    "database_query_batching_enabled": true,
+    "connection_pool_size": 20,
+    "memory_overhead_mb": 189.88
+  },
+  "recommendations": [
+    "Increase ML model cache to 2GB (currently 1GB)",
+    "Enable connection pooling to 30 connections",
+    "Compress WebSocket messages (saves 60% bandwidth)",
+    "Monitor memory: alert at 80%, critical at 95%",
+    "Scale horizontally at 70% CPU utilization"
+  ]
+}
