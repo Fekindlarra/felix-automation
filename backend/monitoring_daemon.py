@@ -53,6 +53,8 @@ class MonitoringDaemon:
         self.error_flush_interval = self.config.get('error_flush_interval', 60)
         self.metrics_flush_interval = self.config.get('metrics_flush_interval', 300)
         self.alert_evaluation_interval = self.config.get('alert_evaluation_interval', 30)
+        self.memory_monitoring_interval = self.config.get('memory_monitoring_interval', 60)  # Sprint 4
+        self.memory_alert_threshold = self.config.get('memory_alert_threshold', 80)  # Alert at 80% usage
 
     def start(self):
         """Start monitoring daemon"""
@@ -68,6 +70,7 @@ class MonitoringDaemon:
         self._start_thread('metrics', self._metrics_collection_loop)
         self._start_thread('error_tracking', self._error_tracking_loop)
         self._start_thread('alert_evaluation', self._alert_evaluation_loop)
+        self._start_thread('memory_monitoring', self._memory_monitoring_loop)  # Sprint 4 optimization
 
         # Start Phase 3 checkpoint monitoring (FASE 15 Phase 3)
         self._start_thread('phase3_checkpoints', self._phase3_checkpoint_loop)
@@ -323,6 +326,71 @@ class MonitoringDaemon:
             except Exception as e:
                 logger.error(f"Error in alert evaluation loop: {e}", exc_info=True)
                 time.sleep(self.alert_evaluation_interval)
+
+    def _memory_monitoring_loop(self):
+        """Continuous memory monitoring loop (Sprint 4 optimization)"""
+        logger.info("💾 Memory monitoring loop started")
+
+        try:
+            import psutil
+        except ImportError:
+            logger.warning("psutil not available, skipping memory monitoring")
+            return
+
+        while self.running:
+            try:
+                start_time = time.time()
+
+                # Get memory stats
+                mem = psutil.virtual_memory()
+                mem_percent = mem.percent
+                mem_mb = mem.used / 1024 / 1024
+
+                # Record metric
+                if self.metrics_collector:
+                    self.metrics_collector.record_metric(
+                        metric_name="memory_usage_percent",
+                        value=mem_percent,
+                        metric_type="resource_usage",
+                        unit="%",
+                        component="system"
+                    )
+
+                # Alert if memory usage exceeds threshold
+                if mem_percent > self.memory_alert_threshold:
+                    alert_msg = f"💾 Memory usage CRITICAL: {mem_percent:.1f}% ({mem_mb:.0f}MB)"
+                    logger.warning(alert_msg)
+
+                    if self.alert_manager:
+                        try:
+                            self.alert_manager.send_alert(
+                                level="CRITICAL",
+                                title="Memory Usage High",
+                                message=f"Memory at {mem_percent:.1f}% (threshold: {self.memory_alert_threshold}%)",
+                                service="monitoring_daemon"
+                            )
+                        except:
+                            pass
+
+                    if self.error_tracker:
+                        self.error_tracker.record_error(
+                            category="system",
+                            severity="critical",
+                            message=alert_msg,
+                            error_type="MemoryUsageHigh",
+                            component="system",
+                            context={'memory_percent': mem_percent, 'memory_mb': mem_mb}
+                        )
+                elif mem_percent > (self.memory_alert_threshold - 20):
+                    # Warning level
+                    logger.warning(f"⚠️  Memory usage elevated: {mem_percent:.1f}% ({mem_mb:.0f}MB)")
+
+                elapsed = time.time() - start_time
+                time.sleep(max(0, self.memory_monitoring_interval - elapsed))
+
+            except Exception as e:
+                logger.error(f"Error in memory monitoring loop: {e}", exc_info=True)
+                time.sleep(self.memory_monitoring_interval)
 
     def _phase3_checkpoint_loop(self):
         """Phase 3 checkpoint monitoring loop - runs every 2 hours during 24h execution window"""

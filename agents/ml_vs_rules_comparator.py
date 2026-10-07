@@ -9,11 +9,17 @@ Generates comparison reports and broadcasts results via WebSocket
 import sqlite3
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Optional, Tuple
 from statistics import mean, stdev
+import time
 
 logger = logging.getLogger(__name__)
+
+
+# Simple report caching for 10 minutes
+_report_cache: Dict[int, tuple] = {}  # test_id -> (report, timestamp)
+CACHE_TTL_SECONDS = 600  # 10 minutes
 
 
 class MLvsRulesComparator:
@@ -28,10 +34,19 @@ class MLvsRulesComparator:
         self.db.row_factory = sqlite3.Row
         logger.info("✅ MLvsRulesComparator initialized")
 
+    def __init__(self, db_connection: sqlite3.Connection):
+        """Initialize comparator with database connection"""
+        self.db = db_connection
+        self.db.row_factory = sqlite3.Row
+        self.batch_insert_buffer = []  # Batch insert optimization
+        self.batch_size = 100
+        logger.info("✅ MLvsRulesComparator initialized with batch insert optimization")
+
     def record_prediction_pair(self, test_id: int, client_id: int,
                                ml_probability: float, rules_probability: float) -> int:
         """
         Record both ML and rule-based predictions for a client during A/B test.
+        Batches inserts for improved performance (>100 predictions auto-flushes).
 
         Args:
             test_id: A/B test identifier
@@ -40,25 +55,46 @@ class MLvsRulesComparator:
             rules_probability: Rule-based probability (0-1)
 
         Returns:
-            Prediction record ID
+            Prediction record ID (or -1 in batch mode for deferred commit)
         """
         try:
-            cursor = self.db.cursor()
-            cursor.execute("""
-                INSERT OR REPLACE INTO ab_test_ml_predictions
-                (test_id, client_id, ml_probability, rules_probability, created_at)
-                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-            """, (test_id, client_id, ml_probability, rules_probability))
+            # Add to batch buffer
+            self.batch_insert_buffer.append((test_id, client_id, ml_probability, rules_probability))
 
-            self.db.commit()
-            record_id = cursor.lastrowid
+            # Auto-flush when batch reaches size limit
+            if len(self.batch_insert_buffer) >= self.batch_size:
+                self.flush_prediction_batch()
+                return self.batch_insert_buffer[-1] if self.batch_insert_buffer else -1
 
-            logger.info(f"📊 Recorded prediction pair for test {test_id}, client {client_id}")
-            return record_id
+            logger.debug(f"📊 Buffered prediction pair for test {test_id}, client {client_id} (batch: {len(self.batch_insert_buffer)}/{self.batch_size})")
+            return -1  # In batch mode, ID not yet assigned
 
         except sqlite3.Error as e:
             logger.error(f"❌ Error recording prediction pair: {e}")
             return -1
+
+    def flush_prediction_batch(self):
+        """Flush accumulated prediction batch to database"""
+        if not self.batch_insert_buffer:
+            return
+
+        try:
+            cursor = self.db.cursor()
+            # Batch insert with single commit for performance
+            cursor.executemany("""
+                INSERT OR REPLACE INTO ab_test_ml_predictions
+                (test_id, client_id, ml_probability, rules_probability, created_at)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+            """, self.batch_insert_buffer)
+
+            self.db.commit()
+            flushed = len(self.batch_insert_buffer)
+            logger.info(f"✅ Flushed {flushed} prediction pairs in batch")
+            self.batch_insert_buffer = []
+
+        except sqlite3.Error as e:
+            logger.error(f"❌ Error flushing prediction batch: {e}")
+            self.batch_insert_buffer = []
 
     def record_outcome(self, test_id: int, client_id: int, actual_outcome: int) -> bool:
         """
@@ -93,6 +129,7 @@ class MLvsRulesComparator:
         """
         Calculate accuracy of ML vs rules based on actual conversion outcomes.
         Only considers predictions where actual_outcome has been recorded.
+        Uses index idx_predictions_accuracy for fast queries.
 
         Args:
             test_id: A/B test identifier
@@ -111,7 +148,7 @@ class MLvsRulesComparator:
         try:
             cursor = self.db.cursor()
 
-            # Get all predictions with recorded outcomes
+            # Get all predictions with recorded outcomes (uses idx_predictions_accuracy index)
             cursor.execute("""
                 SELECT ml_probability, rules_probability, actual_outcome
                 FROM ab_test_ml_predictions
@@ -224,17 +261,26 @@ class MLvsRulesComparator:
             'margin': round(margin, 4)
         }
 
-    def generate_comparison_report(self, test_id: int) -> Dict:
+    def generate_comparison_report(self, test_id: int, skip_cache: bool = False) -> Dict:
         """
         Generate summary comparison report and store in database.
+        Reports are cached for 10 minutes to reduce database load.
 
         Args:
             test_id: A/B test identifier
+            skip_cache: Force regenerate (bypass cache)
 
         Returns:
             Comparison report dictionary
         """
         try:
+            # Check cache
+            if not skip_cache and test_id in _report_cache:
+                cached_report, cache_time = _report_cache[test_id]
+                if time.time() - cache_time < CACHE_TTL_SECONDS:
+                    logger.debug(f"📊 Using cached comparison report for test {test_id} (cached {time.time() - cache_time:.0f}s ago)")
+                    return cached_report
+
             # Calculate accuracy metrics
             accuracy = self.calculate_accuracy(test_id)
 
@@ -287,12 +333,25 @@ class MLvsRulesComparator:
 
             self.db.commit()
 
-            logger.info(f"✅ Generated comparison report for test {test_id}")
+            # Cache the report for 10 minutes
+            _report_cache[test_id] = (report, time.time())
+
+            logger.info(f"✅ Generated comparison report for test {test_id} (cached for 10min)")
             return report
 
         except sqlite3.Error as e:
             logger.error(f"❌ Error generating report: {e}")
             return None
+
+    def clear_cache(self, test_id: Optional[int] = None):
+        """Clear comparison report cache"""
+        global _report_cache
+        if test_id:
+            _report_cache.pop(test_id, None)
+            logger.info(f"🧹 Cleared cache for test {test_id}")
+        else:
+            _report_cache.clear()
+            logger.info("🧹 Cleared all report cache")
 
     def get_report(self, test_id: int) -> Optional[Dict]:
         """Retrieve stored comparison report"""

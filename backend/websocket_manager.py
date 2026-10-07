@@ -50,10 +50,13 @@ class WebSocketConnectionManager:
         self.event_history: Dict[int, list] = defaultdict(list)
         self.max_history_size: int = 100
 
-        # Message batching for optimization (Phase 3)
+        # Message batching for optimization (Sprint 4 - Phase 3)
         self.message_batch: Dict[str, list] = defaultdict(list)  # connection_id -> [messages]
         self.batch_timeout: float = 0.5  # 500ms batching window
         self.batch_task: Optional[asyncio.Task] = None
+        self.max_batch_size: int = 10  # Flush after 10 messages
+        self.messages_sent_this_window: int = 0
+        self.rate_limit_per_second: int = 100  # Max 100 messages/sec per connection
 
     async def connect(self, websocket: any, user_id: int,
                      client_id: Optional[int] = None,
@@ -147,8 +150,12 @@ class WebSocketConnectionManager:
             # Add to batch if batching enabled (reduces websocket overhead)
             if batch:
                 self.message_batch[connection_id].append(message)
+
+                # Auto-flush if batch reaches size limit (Sprint 4 optimization)
+                if len(self.message_batch[connection_id]) >= self.max_batch_size:
+                    await self._flush_connection_batch(connection_id)
                 # Start batch flush task if not already running
-                if not self.batch_task or self.batch_task.done():
+                elif not self.batch_task or self.batch_task.done():
                     self.batch_task = asyncio.create_task(self._flush_batches())
             else:
                 # Send immediately (critical messages bypass batching)
@@ -156,6 +163,28 @@ class WebSocketConnectionManager:
                 await websocket.send_json(message)
         except Exception as e:
             logger.error(f"Error sending to {connection_id}: {e}")
+            await self.disconnect(connection_id)
+
+    async def _flush_connection_batch(self, connection_id: str):
+        """Flush batch for a single connection (Sprint 4 optimization)"""
+        try:
+            messages = self.message_batch.get(connection_id, [])
+            if not messages or connection_id not in self.active_connections:
+                return
+
+            websocket = self.active_connections[connection_id]
+            # Send all messages in batch as a single transmission
+            if len(messages) == 1:
+                await websocket.send_json(messages[0])
+            else:
+                # Multiple messages: send as batch array
+                await websocket.send_json({"batch": messages})
+
+            logger.debug(f"✅ Flushed {len(messages)} messages to {connection_id}")
+            self.message_batch[connection_id] = []
+
+        except Exception as e:
+            logger.error(f"Error flushing batch to {connection_id}: {e}")
             await self.disconnect(connection_id)
 
     async def _flush_batches(self):
