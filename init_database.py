@@ -382,6 +382,106 @@ class DatabaseManager:
         )
         """)
 
+        # ========== FASE 15 PHASE 3: Core Infrastructure Tables ==========
+
+        # ====== TABLA: SYSTEM_CONFIG (Feature Flags & Configuration) ======
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS system_config (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            key TEXT UNIQUE NOT NULL,
+            value TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        # ====== TABLA: CIRCUIT_BREAKER_STATES (Graceful Degradation) ======
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS circuit_breaker_states (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            state TEXT NOT NULL DEFAULT 'CLOSED',
+            failure_count INTEGER DEFAULT 0,
+            last_state_change TIMESTAMP,
+            service TEXT,
+            last_checked TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        # ====== TABLA: PHASE3_CHECKPOINTS (24h Monitoring & Metrics) ======
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS phase3_checkpoints (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            hora INTEGER NOT NULL,
+            timestamp TIMESTAMP NOT NULL,
+            ml_accuracy REAL NOT NULL,
+            error_rate REAL NOT NULL,
+            websocket_latency REAL NOT NULL,
+            predictions_hour REAL NOT NULL,
+            personalization_active INTEGER NOT NULL,
+            active_tests INTEGER NOT NULL,
+            health_score INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            decision TEXT NOT NULL,
+            reasoning TEXT,
+            circuit_breakers TEXT,
+            critical_alerts TEXT,
+            checkpoint_number INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        # ====== TABLA: PHASE3_ROLLOUT_LOG (Personalization Rollout Tracking) ======
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS phase3_rollout_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            phase INTEGER NOT NULL,
+            percentage INTEGER NOT NULL,
+            timestamp TIMESTAMP NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        # ====== TABLA: ERROR_LOG (Centralized Error Tracking) ======
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS error_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            error_category TEXT NOT NULL,
+            error_message TEXT,
+            severity TEXT DEFAULT 'medium',
+            context_json TEXT,
+            resolved BOOLEAN DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        # ====== TABLA: METRICS (Time-Series Metrics) ======
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS metrics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            metric_name TEXT NOT NULL,
+            metric_value REAL NOT NULL,
+            tags_json TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        # ====== TABLA: ALERTS (Alerting System) ======
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS alerts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            alert_name TEXT NOT NULL,
+            severity TEXT DEFAULT 'medium',
+            description TEXT,
+            triggered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            resolved BOOLEAN DEFAULT 0,
+            resolved_at TIMESTAMP,
+            escalation_level INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
         # ====== ÍNDICES ======
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_clients_email ON clients(email)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_audits_client ON audits(client_id)")
@@ -400,6 +500,12 @@ class DatabaseManager:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_personalization_variants_test ON personalization_variants(test_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_personalization_variants_client ON personalization_variants(client_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_comparison_reports_test ON comparison_reports(test_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_phase3_checkpoints_hora ON phase3_checkpoints(hora)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_phase3_checkpoints_status ON phase3_checkpoints(status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_circuit_breaker_states_name ON circuit_breaker_states(name)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_error_log_category ON error_log(error_category)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_metrics_name ON metrics(metric_name)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_alerts_severity ON alerts(severity)")
 
         self.connection.commit()
         print("✅ Schema de base de datos inicializado")
