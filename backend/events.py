@@ -59,6 +59,11 @@ class EventType(Enum):
     COMPARISON_STARTED = "comparison:started"
     COMPARISON_COMPLETED = "comparison:completed"
 
+    # Phase 3 Control Events (FASE 15 Phase 3)
+    PHASE3_ACTIVATED = "phase3:activated"
+    PHASE3_DEACTIVATED = "phase3:deactivated"
+    PHASE3_CHECKPOINT = "phase3:checkpoint"
+
     # Notification Events
     NOTIFICATION_CREATED = "notification:created"
     NOTIFICATION_DISMISSED = "notification:dismissed"
@@ -268,6 +273,28 @@ class NotificationEvent(EventPayload):
                 "title": self.title,
                 "message": self.message,
                 "notification_type": self.notification_type
+            }
+
+
+@dataclass
+class SystemEvent(EventPayload):
+    """System-level events (Phase 3 control, monitoring, etc.)"""
+    event_subtype: Optional[str] = None
+    status: Optional[str] = None
+    healthy_metrics: Optional[int] = None  # For checkpoints: X/6
+    phase: Optional[int] = None  # For rollout: 1, 2, or 3
+    rollout_percentage: Optional[int] = None
+    description: Optional[str] = None
+
+    def __post_init__(self):
+        if self.data is None:
+            self.data = {
+                "event_subtype": self.event_subtype,
+                "status": self.status,
+                "healthy_metrics": self.healthy_metrics,
+                "phase": self.phase,
+                "rollout_percentage": self.rollout_percentage,
+                "description": self.description
             }
 
 
@@ -519,6 +546,51 @@ class EventFactory:
             title=title,
             message=message,
             notification_type=notification_type
+        )
+
+    @staticmethod
+    def phase3_activated(client_id: int, timestamp: str,
+                        user_id: Optional[int] = None) -> SystemEvent:
+        """Create Phase 3 activation event (FASE 15 Phase 3)"""
+        return SystemEvent(
+            event_type=EventType.PHASE3_ACTIVATED,
+            timestamp=datetime.fromisoformat(timestamp) if isinstance(timestamp, str) else datetime.utcnow(),
+            client_id=client_id,
+            user_id=user_id,
+            event_subtype="activation",
+            status="active",
+            description="FASE 15 Phase 3 has been activated"
+        )
+
+    @staticmethod
+    def phase3_deactivated(client_id: int, timestamp: str,
+                          user_id: Optional[int] = None) -> SystemEvent:
+        """Create Phase 3 deactivation event (FASE 15 Phase 3)"""
+        return SystemEvent(
+            event_type=EventType.PHASE3_DEACTIVATED,
+            timestamp=datetime.fromisoformat(timestamp) if isinstance(timestamp, str) else datetime.utcnow(),
+            client_id=client_id,
+            user_id=user_id,
+            event_subtype="deactivation",
+            status="inactive",
+            description="FASE 15 Phase 3 has been deactivated (kill-switch)"
+        )
+
+    @staticmethod
+    def phase3_checkpoint(client_id: int, hora: int, healthy_metrics: int,
+                         phase: int, rollout_percentage: int,
+                         user_id: Optional[int] = None) -> SystemEvent:
+        """Create Phase 3 checkpoint event (FASE 15 Phase 3)"""
+        return SystemEvent(
+            event_type=EventType.PHASE3_CHECKPOINT,
+            timestamp=datetime.utcnow(),
+            client_id=client_id,
+            user_id=user_id,
+            event_subtype=f"checkpoint_hora_{hora:02d}",
+            healthy_metrics=healthy_metrics,
+            phase=phase,
+            rollout_percentage=rollout_percentage,
+            description=f"Phase 3 Checkpoint HORA {hora}: {healthy_metrics}/6 metrics healthy, Phase {phase} ({rollout_percentage}% rollout)"
         )
 
 

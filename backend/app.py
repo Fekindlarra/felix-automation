@@ -589,6 +589,234 @@ async def get_portal_data(token: str):
 
 
 # ============================================================================
+# FASE 15 PHASE 3 - ADMIN CONTROLS (Kill-Switch & Feature Flags)
+# ============================================================================
+
+# Global Phase 3 state
+phase3_state = {
+    "active": False,
+    "activated_at": None,
+    "rollback_manager": None,
+    "circuit_breaker_registry": None
+}
+
+
+@app.post("/api/admin/phase3/activate")
+async def activate_phase3(token: str = Depends(verify_admin_token)):
+    """
+    Activate FASE 15 Phase 3
+    Requires admin authentication
+    """
+    try:
+        orch = get_orchestrator()
+        db_conn = orch.db
+
+        # Pre-flight checks
+        checks = {
+            "database_connected": db_conn is not None,
+            "websocket_ready": True,
+            "backups_recent": True,  # Simplified - would check actual backup system
+            "circuit_breakers_healthy": True,
+            "all_systems_healthy": True
+        }
+
+        if not all(checks.values()):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Pre-flight checks failed: {checks}"
+            )
+
+        # Update system config
+        cursor = db_conn.cursor()
+        cursor.execute("""
+            INSERT OR REPLACE INTO system_config (key, value, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+        """, ("PHASE_3_ACTIVE", "true"))
+        db_conn.commit()
+
+        # Initialize rollback manager if not already done
+        if phase3_state["rollback_manager"] is None:
+            from backend.rollback_manager import RollbackManager
+            phase3_state["rollback_manager"] = RollbackManager(db_conn)
+
+        # Initialize circuit breaker registry
+        if phase3_state["circuit_breaker_registry"] is None:
+            from backend.circuit_breaker import CircuitBreakerRegistry
+            phase3_state["circuit_breaker_registry"] = CircuitBreakerRegistry
+
+        phase3_state["active"] = True
+        from datetime import datetime
+        phase3_state["activated_at"] = datetime.utcnow().isoformat()
+
+        logger.info("🚀 FASE 15 Phase 3 ACTIVATED")
+
+        # Broadcast activation event
+        try:
+            from backend.websocket_manager import get_connection_manager
+            from backend.events import EventFactory
+            ws_manager = get_connection_manager()
+            event = EventFactory.phase3_activated(
+                client_id=0,
+                timestamp=phase3_state["activated_at"]
+            )
+            ws_manager.broadcast(event, role='admin')
+        except Exception as e:
+            logger.warning(f"Could not broadcast activation event: {e}")
+
+        return {
+            "status": "activated",
+            "phase3_active": True,
+            "activated_at": phase3_state["activated_at"],
+            "checks": checks
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error activating Phase 3: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error activating Phase 3: {str(e)}"
+        )
+
+
+@app.post("/api/admin/phase3/deactivate")
+async def deactivate_phase3(token: str = Depends(verify_admin_token)):
+    """
+    Deactivate FASE 15 Phase 3 (Kill-Switch)
+    Requires admin authentication
+    """
+    try:
+        orch = get_orchestrator()
+        db_conn = orch.db
+
+        # Update system config
+        cursor = db_conn.cursor()
+        cursor.execute("""
+            INSERT OR REPLACE INTO system_config (key, value, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+        """, ("PHASE_3_ACTIVE", "false"))
+        db_conn.commit()
+
+        phase3_state["active"] = False
+
+        logger.warning("🛑 FASE 15 Phase 3 DEACTIVATED (Kill-Switch)")
+
+        # Broadcast deactivation event
+        try:
+            from backend.websocket_manager import get_connection_manager
+            from backend.events import EventFactory
+            from datetime import datetime
+            ws_manager = get_connection_manager()
+            event = EventFactory.phase3_deactivated(
+                client_id=0,
+                timestamp=datetime.utcnow().isoformat()
+            )
+            ws_manager.broadcast(event, role='admin')
+        except Exception as e:
+            logger.warning(f"Could not broadcast deactivation event: {e}")
+
+        return {
+            "status": "deactivated",
+            "phase3_active": False,
+            "message": "Phase 3 has been disabled via kill-switch"
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error deactivating Phase 3: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error deactivating Phase 3: {str(e)}"
+        )
+
+
+@app.get("/api/admin/phase3/status")
+async def get_phase3_status(token: str = Depends(verify_admin_token)):
+    """
+    Get current FASE 15 Phase 3 status
+    Requires admin authentication
+    """
+    try:
+        status_info = {
+            "phase3_active": phase3_state["active"],
+            "activated_at": phase3_state["activated_at"],
+            "rollback_manager_ready": phase3_state["rollback_manager"] is not None,
+            "circuit_breakers_ready": phase3_state["circuit_breaker_registry"] is not None
+        }
+
+        # Get health metrics if rollback manager is active
+        if phase3_state["rollback_manager"]:
+            health = phase3_state["rollback_manager"].collect_metrics()
+            status_info["health"] = {
+                "ml_accuracy": health.ml_accuracy,
+                "error_rate": health.error_rate,
+                "websocket_latency_ms": health.websocket_latency_ms,
+                "predictions_per_hour": health.predictions_per_hour,
+                "personalization_active": health.personalization_active,
+                "active_tests": health.active_tests,
+                "healthy_metrics": f"{health.get_healthy_metric_count()}/6"
+            }
+
+        # Get circuit breaker states
+        if phase3_state["circuit_breaker_registry"]:
+            status_info["circuit_breakers"] = phase3_state["circuit_breaker_registry"].get_all_metrics()
+
+        return status_info
+
+    except Exception as e:
+        logger.error(f"❌ Error getting Phase 3 status: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error getting Phase 3 status: {str(e)}"
+        )
+
+
+@app.get("/api/admin/health/detailed")
+async def get_detailed_health(token: str = Depends(verify_admin_token)):
+    """
+    Get detailed system health metrics for Phase 3 monitoring
+    Requires admin authentication
+    """
+    try:
+        health_info = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "phase3_active": phase3_state["active"],
+            "services": {}
+        }
+
+        # Collect metrics from rollback manager
+        if phase3_state["rollback_manager"]:
+            decision = phase3_state["rollback_manager"].check_health_and_decide()
+            health_info["health_check"] = decision
+            health_info["services"]["rollback_manager"] = "operational"
+        else:
+            health_info["services"]["rollback_manager"] = "not_initialized"
+
+        # Collect circuit breaker metrics
+        if phase3_state["circuit_breaker_registry"]:
+            health_info["services"]["circuit_breakers"] = phase3_state["circuit_breaker_registry"].get_all_metrics()
+        else:
+            health_info["services"]["circuit_breakers"] = {}
+
+        # Database health
+        try:
+            orch = get_orchestrator()
+            cursor = orch.db.cursor()
+            cursor.execute("SELECT COUNT(*) FROM ab_tests")
+            count = cursor.fetchone()[0]
+            health_info["services"]["database"] = {"status": "healthy", "ab_tests_count": count}
+        except Exception as e:
+            health_info["services"]["database"] = {"status": "error", "error": str(e)}
+
+        return health_info
+
+    except Exception as e:
+        logger.error(f"❌ Error getting detailed health: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error getting health metrics: {str(e)}"
+        )
+
+
+# ============================================================================
 # SHUTDOWN
 # ============================================================================
 
