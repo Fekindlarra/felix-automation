@@ -69,6 +69,9 @@ class MonitoringDaemon:
         self._start_thread('error_tracking', self._error_tracking_loop)
         self._start_thread('alert_evaluation', self._alert_evaluation_loop)
 
+        # Start Phase 3 checkpoint monitoring (FASE 15 Phase 3)
+        self._start_thread('phase3_checkpoints', self._phase3_checkpoint_loop)
+
         logger.info("Monitoring daemon started successfully")
 
         # Keep main thread alive
@@ -320,6 +323,185 @@ class MonitoringDaemon:
             except Exception as e:
                 logger.error(f"Error in alert evaluation loop: {e}", exc_info=True)
                 time.sleep(self.alert_evaluation_interval)
+
+    def _phase3_checkpoint_loop(self):
+        """Phase 3 checkpoint monitoring loop - runs every 2 hours during 24h execution window"""
+        try:
+            from backend.rollback_manager import RollbackManager, RollbackTrigger
+            from agents.personalization_engine import PersonalizationEngine
+        except ImportError as e:
+            logger.warning(f"Required modules not available for Phase 3 monitoring: {e}")
+            return
+
+        logger.info("Phase 3 checkpoint loop started")
+
+        # Try to import database connection for rollback manager
+        try:
+            import sqlite3
+            from backend.config import DATABASE_PATH
+            db = sqlite3.connect(DATABASE_PATH)
+            db.row_factory = sqlite3.Row
+            db.execute("PRAGMA foreign_keys = ON")
+        except Exception as e:
+            logger.error(f"Failed to connect to database for Phase 3 monitoring: {e}")
+            return
+
+        rollback_mgr = RollbackManager(db)
+        personalization_engine = PersonalizationEngine(db)
+
+        checkpoint_number = 48  # HORA 48 is first checkpoint
+        checkpoint_interval = 7200  # 2 hours in seconds
+        successful_checkpoints = 0  # Track consecutive healthy checkpoints
+
+        # Phase advancement thresholds
+        phase_advance_checkpoints = {
+            1: 2,  # Advance from Phase 1 to Phase 2 after 2 healthy checkpoints (~4 hours)
+            2: 2   # Advance from Phase 2 to Phase 3 after 2 healthy checkpoints (~4 hours)
+        }
+
+        while self.running:
+            try:
+                start_time = time.time()
+
+                # Check if Phase 3 is active
+                try:
+                    cursor = db.cursor()
+                    cursor.execute("""
+                        SELECT value FROM system_config WHERE key = 'PHASE_3_ACTIVE'
+                    """)
+                    result = cursor.fetchone()
+                    is_active = result[0] == 'true' if result else False
+
+                    if not is_active:
+                        logger.debug("Phase 3 not active, skipping checkpoint")
+                        time.sleep(checkpoint_interval)
+                        continue
+                except Exception as e:
+                    logger.error(f"Error checking Phase 3 status: {e}")
+                    time.sleep(checkpoint_interval)
+                    continue
+
+                # Collect health metrics and make decision
+                decision = rollback_mgr.check_health_and_decide()
+
+                # Save checkpoint
+                rollback_mgr.save_checkpoint(checkpoint_number)
+
+                # Log checkpoint decision
+                healthy_count = decision.get('healthy_metric_count', 0)
+                decision_status = decision.get('decision', 'UNKNOWN')
+
+                logger.info(
+                    f"✅ HORA {checkpoint_number}: {healthy_count}/6 GREEN - Decision: {decision_status}"
+                )
+
+                # Handle rollback if needed
+                if decision.get('rollback_needed', False):
+                    logger.error(f"🚨 ROLLBACK TRIGGERED at HORA {checkpoint_number}: {decision.get('reason', 'unknown')}")
+
+                    trigger_type = RollbackTrigger.CRITICAL_ALERT
+                    if decision.get('reason'):
+                        # Map reason to trigger type
+                        reason = decision['reason']
+                        if 'Error rate' in reason:
+                            trigger_type = RollbackTrigger.ERROR_RATE_HIGH
+                        elif 'latency' in reason.lower():
+                            trigger_type = RollbackTrigger.LATENCY_SPIKE
+                        elif 'accuracy' in reason.lower():
+                            trigger_type = RollbackTrigger.ML_ACCURACY_LOW
+                        elif 'circuit' in reason.lower():
+                            trigger_type = RollbackTrigger.CIRCUIT_BREAKER_OPEN
+
+                    # Execute async rollback
+                    import asyncio
+                    try:
+                        asyncio.run(rollback_mgr.execute_rollback(
+                            trigger_type,
+                            decision.get('reason', 'Automatic rollback triggered')
+                        ))
+                        # Stop checkpoint monitoring on rollback
+                        break
+                    except Exception as e:
+                        logger.error(f"Error executing rollback: {e}")
+
+                # Track successful checkpoints for phase advancement
+                elif decision_status == 'CONTINUE':
+                    successful_checkpoints += 1
+
+                    # Attempt phase advancement based on consecutive healthy checkpoints
+                    try:
+                        # Get current personalization status
+                        active_tests = []
+                        cursor.execute("""
+                            SELECT DISTINCT test_id FROM personalization_variants
+                            WHERE rollout_phase IS NOT NULL
+                        """)
+                        for row in cursor.fetchall():
+                            active_tests.append(row[0])
+
+                        # Advance phases if thresholds met
+                        for test_id in active_tests:
+                            stats = personalization_engine.get_rollout_stats(test_id)
+                            current_phase = stats.get('current_phase', 1)
+
+                            # Check if we should advance to next phase
+                            if current_phase < 3 and successful_checkpoints >= phase_advance_checkpoints[current_phase]:
+                                next_phase = current_phase + 1
+                                if personalization_engine.advance_rollout_phase(test_id, next_phase):
+                                    logger.info(f"🚀 Test {test_id} phase advanced to {next_phase} at HORA {checkpoint_number}")
+                                    successful_checkpoints = 0  # Reset counter
+
+                    except Exception as e:
+                        logger.warning(f"Error during phase advancement check: {e}")
+
+                else:
+                    # CAUTION status - reset successful checkpoint counter
+                    successful_checkpoints = 0
+
+                # Broadcast checkpoint event
+                if self.alert_manager:
+                    try:
+                        event_data = {
+                            'hora': checkpoint_number,
+                            'healthy_metrics': healthy_count,
+                            'decision': decision_status,
+                            'metrics': decision.get('metrics', {}),
+                            'timestamp': datetime.utcnow().isoformat()
+                        }
+                        self.alert_manager.send_alert(
+                            level="INFO",
+                            title=f"Phase 3 Checkpoint HORA {checkpoint_number}",
+                            message=f"{healthy_count}/6 metrics GREEN - {decision_status}",
+                            service="phase3_checkpoint",
+                            metadata=event_data
+                        )
+                    except Exception as e:
+                        logger.debug(f"Could not send checkpoint alert: {e}")
+
+                # Advance checkpoint number (every 2 hours)
+                checkpoint_number += 2
+                if checkpoint_number > 72:
+                    logger.info("✅ Phase 3 execution window completed (HORA 48-72)")
+                    # Final decision
+                    if healthy_count >= 5:
+                        logger.info("🎉 Phase 3 DECISION: SUCCESS - All checkpoints healthy")
+                    else:
+                        logger.warning("⚠️  Phase 3 DECISION: CAUTION - Continue monitoring")
+                    self.running = False  # End Phase 3 monitoring
+                    break
+
+                elapsed = time.time() - start_time
+                time.sleep(max(0, checkpoint_interval - elapsed))
+
+            except Exception as e:
+                logger.error(f"Error in Phase 3 checkpoint loop: {e}", exc_info=True)
+                time.sleep(checkpoint_interval)
+
+        try:
+            db.close()
+        except:
+            pass
+        logger.info("Phase 3 checkpoint loop ended")
 
     def get_status(self) -> Dict[str, Any]:
         """Get daemon status"""
