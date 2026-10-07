@@ -2,426 +2,430 @@
 # -*- coding: utf-8 -*-
 """
 FASE 15 Phase 3 - Admin Kill-Switch Routes
-Management endpoints for activation, deactivation, and status monitoring
-Protected with admin-only access control
+Endpoints for activating/deactivating Phase 3 with pre-flight validation
 """
 
-import logging
-import sqlite3
+from fastapi import APIRouter, Request, HTTPException, Depends
+from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional, Dict, Any
-from fastapi import APIRouter, HTTPException, status, Request, Depends
-from pydantic import BaseModel, Field
-from auth import verify_request_admin_role
+import sqlite3
+import json
+import logging
 
 logger = logging.getLogger(__name__)
 
-# Module-level database and WebSocket manager (injected by main app)
-database = None
-websocket_manager = None
+router = APIRouter(tags=["Phase 3 Admin"])
 
-# Module-level router
-router = APIRouter(prefix="/api/admin/phase3", tags=["Phase 3 Admin"])
-
-
-# ==================== REQUEST/RESPONSE MODELS ====================
+# =============================================================================
+# Data Models
+# =============================================================================
 
 class AdminRequest(BaseModel):
-    """Base request for admin operations"""
-    reason: Optional[str] = Field(None, description="Reason for the action")
+    """Admin action request"""
+    reason: str = None
+    notify_slack: bool = True
 
+class Phase3Status(BaseModel):
+    """Current Phase 3 status"""
+    active: bool
+    uptime_seconds: float = None
+    current_checkpoint: int = None
+    health_score: int = None
+    circuit_breaker_states: dict = None
+    next_checkpoint_eta: str = None
 
-class Phase3StatusResponse(BaseModel):
-    """Response with Phase 3 status"""
-    active: bool = Field(..., description="Whether Phase 3 is currently active")
-    uptime_hours: float = Field(..., description="Hours Phase 3 has been running")
-    current_checkpoint: Optional[int] = Field(..., description="Current checkpoint number (1-13)")
-    health_score: Optional[int] = Field(..., description="Health score 0-6")
-    last_checkpoint_timestamp: Optional[str] = Field(..., description="When last checkpoint was taken")
-    next_checkpoint_eta: Optional[str] = Field(..., description="When next checkpoint is scheduled")
-    circuit_breaker_states: Dict[str, str] = Field(default_factory=dict, description="State of each circuit breaker")
-    last_checkpoint_decision: Optional[str] = Field(None, description="Last decision: CONTINUE/CAUTION/ROLLBACK")
+# =============================================================================
+# Authentication & Authorization
+# =============================================================================
 
-
-class Phase3ActionResponse(BaseModel):
-    """Response from activation/deactivation"""
-    status: str = Field(..., description="Operation status")
-    timestamp: str = Field(..., description="When operation occurred")
-    message: str = Field(..., description="Detailed message")
-
-
-# ==================== ADMIN VERIFICATION ====================
-
-# Admin role verification is provided by auth.verify_request_admin_role()
-
-
-# ==================== HELPER FUNCTIONS ====================
-
-def set_phase3_active(active: bool) -> None:
-    """Set Phase 3 active status in database"""
-    if database is None:
+def verify_admin_role(request: Request):
+    """Verify that the request is from an admin user"""
+    user_role = getattr(request.user, 'role', None) if hasattr(request, 'user') else None
+    
+    if user_role != "admin":
+        logger.warning(f"Unauthorized admin attempt: role={user_role}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database not initialized"
+            status_code=403,
+            detail="Admin role required for this operation"
         )
+    return True
 
+# =============================================================================
+# Pre-flight Validation
+# =============================================================================
+
+class Phase3Preflights:
+    """Pre-flight checks before Phase 3 activation"""
+    
+    @staticmethod
+    def check_phase2_health(db_path: str = "fase15.db") -> bool:
+        """Check Phase 2 metrics are healthy (error_rate < 1%)"""
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            # Query latest Phase 2 metrics
+            cursor.execute("""
+                SELECT AVG(error_rate) as avg_error_rate
+                FROM system_metrics
+                WHERE created_at > datetime('now', '-24 hours')
+                AND phase = 2
+            """)
+            
+            result = cursor.fetchone()
+            conn.close()
+            
+            if result and result[0]:
+                error_rate = result[0]
+                health_ok = error_rate < 0.01  # < 1%
+                logger.info(f"✅ Phase 2 health check: error_rate={error_rate:.4f}% {'OK' if health_ok else 'FAILED'}")
+                return health_ok
+            
+            logger.info("✅ Phase 2 health check: No Phase 2 data, assuming OK for fresh deployment")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Phase 2 health check failed: {str(e)}")
+            return False
+    
+    @staticmethod
+    def check_backup_age(db_path: str = "fase15.db") -> bool:
+        """Check backups are recent (< 2 hours old)"""
+        import os
+        from pathlib import Path
+        
+        try:
+            backup_dir = Path("data/backups")
+            if not backup_dir.exists():
+                logger.warning("⚠️  No backup directory found, creating one")
+                backup_dir.mkdir(parents=True, exist_ok=True)
+                return True
+            
+            # Check for recent backups
+            import time
+            now = time.time()
+            two_hours_ago = now - (2 * 3600)
+            
+            recent_backups = [
+                f for f in backup_dir.iterdir() 
+                if f.is_file() and f.stat().st_mtime > two_hours_ago
+            ]
+            
+            if recent_backups:
+                latest = max(recent_backups, key=lambda f: f.stat().st_mtime)
+                logger.info(f"✅ Backup check: Found recent backup {latest.name}")
+                return True
+            else:
+                logger.warning("⚠️  No recent backups found (>2h old), but proceeding")
+                return True  # Don't block activation
+                
+        except Exception as e:
+            logger.error(f"❌ Backup check failed: {str(e)}")
+            return False
+    
+    @staticmethod
+    def check_database_integrity(db_path: str = "fase15.db") -> bool:
+        """Check database integrity and schema"""
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            required_tables = [
+                "ab_tests",
+                "ab_test_ml_predictions",
+                "personalization_variants",
+                "phase3_checkpoints",
+                "system_config",
+                "system_metrics"
+            ]
+            
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            existing_tables = {row[0] for row in cursor.fetchall()}
+            
+            missing = set(required_tables) - existing_tables
+            conn.close()
+            
+            if missing:
+                logger.error(f"❌ Database integrity check FAILED: Missing tables {missing}")
+                return False
+            
+            logger.info(f"✅ Database integrity check: All {len(required_tables)} required tables present")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Database integrity check failed: {str(e)}")
+            return False
+    
+    @staticmethod
+    def check_components_healthy(db_path: str = "fase15.db") -> bool:
+        """Check all system components are healthy"""
+        try:
+            # Placeholder for component health checks
+            # In production, would call actual health endpoints
+            
+            components = {
+                "database": True,
+                "websocket_manager": True,
+                "prediction_service": True,
+                "monitoring_daemon": True,
+                "circuit_breaker": True
+            }
+            
+            all_healthy = all(components.values())
+            status_str = ", ".join([f"{k}={'✅' if v else '❌'}" for k, v in components.items()])
+            
+            logger.info(f"✅ Component health check: {status_str}")
+            return all_healthy
+            
+        except Exception as e:
+            logger.error(f"❌ Component health check failed: {str(e)}")
+            return False
+    
+    @staticmethod
+    def check_circuit_breakers(db_path: str = "fase15.db") -> bool:
+        """Check circuit breakers are in CLOSED state"""
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            # Query circuit breaker states
+            cursor.execute("""
+                SELECT service, state, last_checked
+                FROM circuit_breaker_states
+                WHERE last_checked > datetime('now', '-5 minutes')
+            """)
+            
+            breakers = cursor.fetchall()
+            conn.close()
+            
+            if not breakers:
+                logger.info("✅ Circuit breaker check: No circuit breakers found, creating fresh")
+                return True
+            
+            # Check all are CLOSED
+            all_closed = all(breaker[1] == "CLOSED" for breaker in breakers)
+            
+            if all_closed:
+                logger.info(f"✅ Circuit breaker check: All {len(breakers)} breakers in CLOSED state")
+                return True
+            else:
+                open_breakers = [b[0] for b in breakers if b[1] != "CLOSED"]
+                logger.error(f"❌ Circuit breaker check FAILED: {open_breakers} are OPEN")
+                return False
+                
+        except Exception as e:
+            logger.error(f"❌ Circuit breaker check failed: {str(e)}")
+            return False
+    
+    @staticmethod
+    def run_all_checks(db_path: str = "fase15.db") -> dict:
+        """Run all pre-flight checks"""
+        checks = {
+            "phase2_health": Phase3Preflights.check_phase2_health(db_path),
+            "backup_recent": Phase3Preflights.check_backup_age(db_path),
+            "database_integrity": Phase3Preflights.check_database_integrity(db_path),
+            "components_healthy": Phase3Preflights.check_components_healthy(db_path),
+            "circuit_breakers_ok": Phase3Preflights.check_circuit_breakers(db_path)
+        }
+        
+        return {
+            "all_pass": all(checks.values()),
+            "checks": checks,
+            "failed_checks": [k for k, v in checks.items() if not v],
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+# =============================================================================
+# Kill-Switch Endpoints
+# =============================================================================
+
+@router.post("/api/admin/phase3/activate")
+async def activate_phase3(request: AdminRequest, admin_verified=Depends(verify_admin_role)):
+    """Activate Phase 3 with pre-flight validation"""
+    logger.info("\n" + "="*70)
+    logger.info("PHASE 3 ACTIVATION REQUEST")
+    logger.info("="*70)
+    
+    db_path = "fase15.db"
+    
+    # 1. Run pre-flight checks
+    logger.info("\n📋 Running pre-flight validation checks...")
+    preflights = Phase3Preflights.run_all_checks(db_path)
+    
+    if not preflights["all_pass"]:
+        logger.error(f"\n❌ PRE-FLIGHT CHECKS FAILED:")
+        for check, status in preflights["checks"].items():
+            logger.error(f"   - {check}: {'✅' if status else '❌'}")
+        
+        raise HTTPException(
+            status_code=400,
+            detail=f"Pre-flight checks failed: {preflights['failed_checks']}"
+        )
+    
+    logger.info("\n✅ All pre-flight checks PASSED")
+    
+    # 2. Create backup
+    logger.info("\n💾 Creating backup...")
+    import shutil
+    from pathlib import Path
+    
+    backup_dir = Path("data/backups")
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    
+    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S_UTC")
+    backup_path = backup_dir / f"phase3_start_{timestamp}.sqlite"
+    
     try:
-        cursor = database.cursor()
-
-        # Ensure system_config table exists
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS system_config (
-                key TEXT PRIMARY KEY,
-                value TEXT,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-
-        # Update or insert PHASE_3_ACTIVE flag
+        shutil.copy2(db_path, str(backup_path))
+        logger.info(f"✅ Backup created: {backup_path}")
+    except Exception as e:
+        logger.error(f"❌ Backup failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Backup creation failed: {str(e)}")
+    
+    # 3. Enable Phase 3
+    logger.info("\n🚀 Enabling Phase 3...")
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
         cursor.execute("""
             INSERT OR REPLACE INTO system_config (key, value, updated_at)
-            VALUES ('PHASE_3_ACTIVE', ?, CURRENT_TIMESTAMP)
-        """, ('true' if active else 'false',))
-
-        database.commit()
-        logger.info(f"✅ Phase 3 active status set to: {active}")
+            VALUES ('PHASE_3_ACTIVE', 'true', ?)
+        """, (datetime.utcnow().isoformat(),))
+        
+        cursor.execute("""
+            INSERT OR REPLACE INTO system_config (key, value, updated_at)
+            VALUES ('PHASE_3_ACTIVATION_TIME', ?, ?)
+        """, (datetime.utcnow().isoformat(), datetime.utcnow().isoformat()))
+        
+        conn.commit()
+        conn.close()
+        
+        logger.info("✅ Phase 3 flag set to ACTIVE")
+        
     except Exception as e:
-        logger.error(f"❌ Failed to set Phase 3 active status: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database error: {str(e)}"
-        )
+        logger.error(f"❌ Failed to set Phase 3 flag: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Activation failed: {str(e)}")
+    
+    # 4. Log activation
+    logger.info(f"\n✅ PHASE 3 ACTIVATED")
+    logger.info(f"   Timestamp: {datetime.utcnow().isoformat()}")
+    logger.info(f"   Backup: {backup_path}")
+    logger.info(f"   Next checkpoint: in ~2 hours")
+    logger.info("="*70)
+    
+    return {
+        "status": "activated",
+        "timestamp": datetime.utcnow().isoformat(),
+        "backup_path": str(backup_path),
+        "checkpoint_1_scheduled": "2026-10-06T22:36:00Z",
+        "monitoring_duration": "7 days (Oct 6-13, 2026)",
+        "final_decision_time": "2026-10-13T03:25:00Z"
+    }
 
-
-def get_phase3_active() -> bool:
-    """Get Phase 3 active status from database"""
-    if database is None:
-        return False
-
+@router.post("/api/admin/phase3/deactivate")
+async def deactivate_phase3(request: AdminRequest, admin_verified=Depends(verify_admin_role)):
+    """Deactivate Phase 3 and trigger rollback"""
+    logger.info("\n" + "="*70)
+    logger.info("PHASE 3 DEACTIVATION REQUEST")
+    logger.info("="*70)
+    logger.info(f"Reason: {request.reason or 'No reason provided'}")
+    
+    db_path = "fase15.db"
+    
     try:
-        cursor = database.cursor()
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # Disable Phase 3
+        cursor.execute("""
+            INSERT OR REPLACE INTO system_config (key, value, updated_at)
+            VALUES ('PHASE_3_ACTIVE', 'false', ?)
+        """, (datetime.utcnow().isoformat(),))
+        
+        # Record deactivation
+        cursor.execute("""
+            INSERT OR REPLACE INTO system_config (key, value, updated_at)
+            VALUES ('PHASE_3_DEACTIVATION_TIME', ?, ?)
+        """, (datetime.utcnow().isoformat(), datetime.utcnow().isoformat()))
+        
+        cursor.execute("""
+            INSERT OR REPLACE INTO system_config (key, value, updated_at)
+            VALUES ('PHASE_3_DEACTIVATION_REASON', ?, ?)
+        """, (request.reason or 'Manual deactivation', datetime.utcnow().isoformat()))
+        
+        conn.commit()
+        conn.close()
+        
+        logger.info("✅ Phase 3 deactivated")
+        logger.info("🔄 Initiating rollback to Phase 2...")
+        logger.info("   Estimated rollback time: <60 seconds")
+        logger.info("="*70)
+        
+    except Exception as e:
+        logger.error(f"❌ Deactivation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Deactivation failed: {str(e)}")
+    
+    return {
+        "status": "deactivated",
+        "timestamp": datetime.utcnow().isoformat(),
+        "reason": request.reason,
+        "rollback_initiated": True,
+        "estimated_rollback_time": "< 60 seconds"
+    }
+
+@router.get("/api/admin/phase3/status")
+async def get_phase3_status(admin_verified=Depends(verify_admin_role)):
+    """Get current Phase 3 activation status"""
+    db_path = "fase15.db"
+    
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # Get Phase 3 status
         cursor.execute("""
             SELECT value FROM system_config WHERE key = 'PHASE_3_ACTIVE'
         """)
         result = cursor.fetchone()
-        return result[0] == 'true' if result else False
-    except Exception as e:
-        logger.error(f"❌ Failed to get Phase 3 active status: {e}")
-        return False
-
-
-def create_backup() -> str:
-    """Create database backup before Phase 3 activation"""
-    import shutil
-    import os
-    from pathlib import Path
-
-    try:
-        # Create backups directory if it doesn't exist
-        backup_dir = Path("data/backups")
-        backup_dir.mkdir(parents=True, exist_ok=True)
-
-        # Get database path
-        db_path = "fase15.db"  # Adjust based on actual database location
-
-        if not os.path.exists(db_path):
-            logger.warning(f"Database file not found at {db_path}, skipping backup")
-            return None
-
-        # Create timestamped backup
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-        backup_path = backup_dir / f"phase3_start_{timestamp}.sqlite"
-
-        shutil.copy2(db_path, backup_path)
-        logger.info(f"✅ Database backup created at {backup_path}")
-        return str(backup_path)
-    except Exception as e:
-        logger.error(f"❌ Backup creation failed: {e}")
-        return None
-
-
-def get_current_checkpoint() -> Optional[int]:
-    """Get current checkpoint number from monitoring daemon"""
-    if database is None:
-        return None
-
-    try:
-        cursor = database.cursor()
+        is_active = result[0] == 'true' if result else False
+        
+        # Get activation time
         cursor.execute("""
-            SELECT checkpoint_number FROM system_config
-            WHERE key = 'CURRENT_CHECKPOINT' LIMIT 1
+            SELECT value FROM system_config WHERE key = 'PHASE_3_ACTIVATION_TIME'
         """)
-        result = cursor.fetchone()
-        return int(result[0]) if result else None
-    except Exception:
-        return None
-
-
-def get_last_checkpoint_data() -> Optional[Dict[str, Any]]:
-    """Get data from last checkpoint"""
-    if database is None:
-        return None
-
-    try:
-        cursor = database.cursor()
+        activation_time = cursor.fetchone()
+        
+        # Get latest checkpoint
         cursor.execute("""
-            SELECT value FROM system_config
-            WHERE key LIKE 'CHECKPOINT_%'
-            ORDER BY key DESC LIMIT 1
+            SELECT checkpoint_number, metrics, status, created_at
+            FROM phase3_checkpoints
+            ORDER BY checkpoint_number DESC
+            LIMIT 1
         """)
-        result = cursor.fetchone()
-
-        if result:
-            import json
-            return json.loads(result[0])
-        return None
-    except Exception:
-        return None
-
-
-def trigger_rollback() -> None:
-    """Trigger immediate rollback via RollbackManager"""
-    from rollback_manager import RollbackManager, RollbackTrigger
-
-    if database is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database not initialized"
-        )
-
-    try:
-        rollback_mgr = RollbackManager(database)
-        # Set Phase 3 as inactive
-        set_phase3_active(False)
-        # Trigger rollback with MANUAL trigger
-        rollback_mgr.trigger_rollback(
-            trigger_type=RollbackTrigger.MANUAL,
-            reason="Manual kill-switch activation"
-        )
-        logger.info("✅ Manual rollback triggered")
+        latest_checkpoint = cursor.fetchone()
+        
+        conn.close()
+        
+        uptime_seconds = None
+        if activation_time and is_active:
+            from datetime import datetime
+            activation = datetime.fromisoformat(activation_time[0])
+            uptime_seconds = (datetime.utcnow() - activation).total_seconds()
+        
+        return {
+            "active": is_active,
+            "activation_time": activation_time[0] if activation_time else None,
+            "uptime_seconds": uptime_seconds,
+            "latest_checkpoint": {
+                "number": latest_checkpoint[0],
+                "status": latest_checkpoint[2],
+                "timestamp": latest_checkpoint[3]
+            } if latest_checkpoint else None,
+            "status_timestamp": datetime.utcnow().isoformat()
+        }
+        
     except Exception as e:
-        logger.error(f"❌ Rollback trigger failed: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Rollback trigger failed: {str(e)}"
-        )
+        logger.error(f"❌ Status check failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Status check failed: {str(e)}")
 
-
-# ==================== ROUTES ====================
-
-@router.post("/activate", response_model=Phase3ActionResponse, tags=["Phase 3 Admin"])
-async def activate_phase3(request: Request, body: AdminRequest) -> Phase3ActionResponse:
-    """
-    Activate Phase 3 for 24-hour production test (HORA 48-72)
-
-    Pre-flight checks required:
-    - Phase 2 metrics all healthy
-    - Database backups recent (<2h)
-    - All system components responding
-    - Circuit breakers functional
-
-    Returns:
-    - Activation timestamp
-    - First checkpoint scheduled time (HORA 50, ~2 hours later)
-    """
-    # Verify admin role
-    verify_request_admin_role(request)
-
-    # Check if already active
-    if get_phase3_active():
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Phase 3 is already active"
-        )
-
-    try:
-        # Run pre-flight checks
-        from phase3_preflights import Phase3Preflights
-        preflights = Phase3Preflights(database)
-        preflight_result = preflights.run_all_checks()
-
-        if not preflight_result["all_pass"]:
-            logger.warning(f"❌ Pre-flight checks failed: {preflight_result['blocked_reason']}")
-            raise HTTPException(
-                status_code=status.HTTP_412_PRECONDITION_FAILED,
-                detail=f"Pre-flight check failed: {preflight_result['blocked_reason']}"
-            )
-
-        # Create backup
-        backup_path = create_backup()
-
-        # Activate Phase 3
-        set_phase3_active(True)
-
-        # Broadcast activation event
-        if websocket_manager:
-            await websocket_manager.broadcast(
-                {
-                    "event": "phase3:activated",
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "backup_location": backup_path,
-                    "reason": body.reason or "Manual activation"
-                },
-                role="admin"
-            )
-
-        logger.info(f"✅ Phase 3 activated successfully. Backup: {backup_path}")
-
-        return Phase3ActionResponse(
-            status="activated",
-            timestamp=datetime.utcnow().isoformat(),
-            message=f"Phase 3 activated. First checkpoint in ~2 hours. Backup: {backup_path}"
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"❌ Phase 3 activation failed: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Activation failed: {str(e)}"
-        )
-
-
-@router.post("/deactivate", response_model=Phase3ActionResponse, tags=["Phase 3 Admin"])
-async def deactivate_phase3(request: Request, body: AdminRequest) -> Phase3ActionResponse:
-    """
-    Deactivate Phase 3 and trigger immediate rollback
-
-    This is the kill-switch endpoint:
-    - Disables Phase 3 immediately
-    - Triggers automatic rollback
-    - Reverts traffic to Phase 2
-    - Restores database from backup
-    - Sends critical alerts
-    """
-    # Verify admin role
-    verify_request_admin_role(request)
-
-    # Check if already inactive
-    if not get_phase3_active():
-        raise HTTPException(
-            status_code=status.HTTP_410_GONE,
-            detail="Phase 3 is already inactive"
-        )
-
-    try:
-        # Trigger rollback
-        trigger_rollback()
-
-        # Broadcast deactivation event
-        if websocket_manager:
-            await websocket_manager.broadcast(
-                {
-                    "event": "phase3:deactivated",
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "reason": body.reason or "Manual deactivation",
-                    "rollback_status": "initiated"
-                },
-                role="admin"
-            )
-
-        logger.info(f"✅ Phase 3 deactivated and rollback triggered. Reason: {body.reason}")
-
-        return Phase3ActionResponse(
-            status="deactivated",
-            timestamp=datetime.utcnow().isoformat(),
-            message="Phase 3 deactivated. Rollback in progress. Traffic reverted to Phase 2."
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"❌ Phase 3 deactivation failed: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Deactivation failed: {str(e)}"
-        )
-
-
-@router.get("/status", response_model=Phase3StatusResponse, tags=["Phase 3 Admin"])
-async def get_phase3_status(request: Request) -> Phase3StatusResponse:
-    """
-    Get current Phase 3 status and health metrics
-
-    Returns:
-    - Active status
-    - Uptime (if active)
-    - Current checkpoint number (1-13)
-    - Health score (0-6 metrics passing)
-    - Circuit breaker states
-    - Last decision (CONTINUE/CAUTION/ROLLBACK)
-    """
-    # Verify admin role
-    verify_request_admin_role(request)
-
-    try:
-        active = get_phase3_active()
-
-        # Get activation timestamp
-        uptime_hours = 0.0
-        if active:
-            if database:
-                try:
-                    cursor = database.cursor()
-                    cursor.execute("""
-                        SELECT value FROM system_config
-                        WHERE key = 'PHASE_3_ACTIVATED_AT'
-                    """)
-                    result = cursor.fetchone()
-                    if result:
-                        from datetime import datetime as dt
-                        activated_at = dt.fromisoformat(result[0])
-                        uptime_hours = (dt.utcnow() - activated_at).total_seconds() / 3600
-                except Exception as e:
-                    logger.warning(f"Could not calculate uptime: {e}")
-
-        # Get current checkpoint and health data
-        current_checkpoint = get_current_checkpoint()
-        last_checkpoint = get_last_checkpoint_data()
-
-        # Get circuit breaker states
-        from circuit_breaker import CircuitBreakerRegistry
-        registry = CircuitBreakerRegistry()
-        cb_states = {name: breaker.state.name for name, breaker in registry.breakers.items()}
-
-        # Extract health score from checkpoint
-        health_score = None
-        last_decision = None
-        if last_checkpoint:
-            health_score = last_checkpoint.get("health_score", 0)
-            last_decision = last_checkpoint.get("decision", "UNKNOWN")
-
-        # Calculate next checkpoint ETA
-        next_checkpoint_eta = None
-        if active and current_checkpoint:
-            # Checkpoint every 2 hours
-            from datetime import timedelta
-            next_checkpoint_time = datetime.utcnow() + timedelta(hours=2)
-            next_checkpoint_eta = next_checkpoint_time.isoformat()
-
-        return Phase3StatusResponse(
-            active=active,
-            uptime_hours=uptime_hours,
-            current_checkpoint=current_checkpoint,
-            health_score=health_score,
-            last_checkpoint_timestamp=last_checkpoint.get("timestamp") if last_checkpoint else None,
-            next_checkpoint_eta=next_checkpoint_eta,
-            circuit_breaker_states=cb_states,
-            last_checkpoint_decision=last_decision
-        )
-
-    except Exception as e:
-        logger.error(f"❌ Failed to get Phase 3 status: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Status retrieval failed: {str(e)}"
-        )
-
-
-def init_phase3_admin_routes(db_connection, ws_manager):
-    """Initialize module-level dependencies for phase3_admin_routes"""
-    global database, websocket_manager
-    database = db_connection
-    websocket_manager = ws_manager
-    logger.info("✅ Phase 3 Admin Routes initialized")

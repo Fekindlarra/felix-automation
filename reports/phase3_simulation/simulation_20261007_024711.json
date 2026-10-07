@@ -1,0 +1,640 @@
+{
+  "timestamp": "2026-10-07T02:47:08.877370",
+  "simulation_start_hora": 48,
+  "total_checkpoints": 28,
+  "checkpoints": [
+    {
+      "hora": 48,
+      "day": 1,
+      "checkpoint_in_day": 1,
+      "timestamp": "2026-10-07T02:47:08.878088",
+      "metrics": {
+        "ml_accuracy": 0.822,
+        "error_rate": 0.1685,
+        "websocket_latency": 45.5,
+        "predictions_hour": 48.0,
+        "personalization_active": 142,
+        "active_tests": 8
+      },
+      "health_score": 4,
+      "status": "CAUTION",
+      "alerts": [
+        "\u26a0\ufe0f Error Rate above target"
+      ]
+    },
+    {
+      "hora": 50,
+      "day": 1,
+      "checkpoint_in_day": 3,
+      "timestamp": "2026-10-07T04:47:08.978886",
+      "metrics": {
+        "ml_accuracy": 0.83,
+        "error_rate": 0.1609,
+        "websocket_latency": 53.8,
+        "predictions_hour": 47.4,
+        "personalization_active": 148,
+        "active_tests": 8
+      },
+      "health_score": 4,
+      "status": "CAUTION",
+      "alerts": [
+        "\u26a0\ufe0f Error Rate above target"
+      ]
+    },
+    {
+      "hora": 52,
+      "day": 2,
+      "checkpoint_in_day": 1,
+      "timestamp": "2026-10-07T06:47:09.079220",
+      "metrics": {
+        "ml_accuracy": 0.826,
+        "error_rate": 0.154,
+        "websocket_latency": 58.1,
+        "predictions_hour": 49.7,
+        "personalization_active": 141,
+        "active_tests": 9
+      },
+      "health_score": 5,
+      "status": "GREEN",
+      "alerts": [
+        "\u26a0\ufe0f Error Rate above target"
+      ]
+    },
+    {
+      "hora": 54,
+      "day": 2,
+      "checkpoint_in_day": 3,
+      "timestamp": "2026-10-07T08:47:09.180577",
+      "metrics": {
+        "ml_accuracy": 0.832,
+        "error_rate": 0.1507,
+        "websocket_latency": 46.3,
+        "predictions_hour": 49.7,
+        "personalization_active": 144,
+        "active_tests": 8
+      },
+      "health_score": 4,
+      "status": "CAUTION",
+      "alerts": [
+        "\u26a0\ufe0f Error Rate above target"
+      ]
+    },
+    {
+      "hora": 56,
+      "day": 3,
+      "checkpoint_in_day": 1,
+      "timestamp": "2026-10-07T10:47:09.280939",
+      "metrics": {
+        "ml_accuracy": 0.827,
+        "error_rate": 0.1488,
+        "websocket_latency": 54.8,
+        "predictions_hour": 47.5,
+        "personalization_active": 160,
+        "active_tests": 8
+      },
+      "health_score": 4,
+      "status": "CAUTION",
+      "alerts": [
+        "\u26a0\ufe0f Error Rate above target"
+      ]
+    },
+    {
+      "hora": 58,
+      "day": 3,
+      "checkpoint_in_day": 3,
+      "timestamp": "2026-10-07T12:47:09.382281",
+      "metrics": {
+        "ml_accuracy": 0.827,
+        "error_rate": 0.1368,
+        "websocket_latency": 41.9,
+        "predictions_hour": 49.9,
+        "personalization_active": 155,
+        "active_tests": 9
+      },
+      "health_score": 5,
+      "status": "GREEN",
+      "alerts": [
+        "\u26a0\ufe0f Error Rate above target"
+      ]
+    },
+    {
+      "hora": 60,
+      "day": 4,
+      "checkpoint_in_day": 1,
+      "timestamp": "2026-10-07T14:47:09.482571",
+      "metrics": {
+        "ml_accuracy": 0.834,
+        "error_rate": 0.1349,
+        "websocket_latency": 35.2,
+        "predictions_hour": 46.2,
+        "personalization_active": 148,
+        "active_tests": 8
+      },
+      "health_score": 4,
+      "status": "CAUTION",
+      "alerts": [
+        "\u26a0\ufe0f Error Rate above target"
+      ]
+    },
+    {
+      "hora": 62,
+      "day": 4,
+      "checkpoint_in_day": 3,
+      "timestamp": "2026-10-07T16:47:09.583312",
+      "metrics": {
+        "ml_accuracy": 0.827,
+        "error_rate": 0.1256,
+        "websocket_latency": 52.4,
+        "predictions_hour": 47.7,
+        "personalization_active": 142,
+        "active_tests": 9
+      },
+      "health_score": 5,
+      "status": "GREEN",
+      "alerts": [
+        "\u26a0\ufe0f Error Rate above target"
+      ]
+    },
+    {
+      "hora": 64,
+      "day": 5,
+      "checkpoint_in_day": 1,
+      "timestamp": "2026-10-07T18:47:09.683934",
+      "metrics": {
+        "ml_accuracy": 0.836,
+        "error_rate": 0.1182,
+        "websocket_latency": 42.6,
+        "predictions_hour": 48.1,
+        "personalization_active": 141,
+        "active_tests": 8
+      },
+      "health_score": 4,
+      "status": "CAUTION",
+      "alerts": [
+        "\u26a0\ufe0f Error Rate above target"
+      ]
+    },
+    {
+      "hora": 66,
+      "day": 5,
+      "checkpoint_in_day": 3,
+      "timestamp": "2026-10-07T20:47:09.784753",
+      "metrics": {
+        "ml_accuracy": 0.83,
+        "error_rate": 0.1143,
+        "websocket_latency": 37.0,
+        "predictions_hour": 48.0,
+        "personalization_active": 143,
+        "active_tests": 8
+      },
+      "health_score": 4,
+      "status": "CAUTION",
+      "alerts": [
+        "\u26a0\ufe0f Error Rate above target"
+      ]
+    },
+    {
+      "hora": 68,
+      "day": 6,
+      "checkpoint_in_day": 1,
+      "timestamp": "2026-10-07T22:47:09.885071",
+      "metrics": {
+        "ml_accuracy": 0.835,
+        "error_rate": 0.107,
+        "websocket_latency": 35.7,
+        "predictions_hour": 46.8,
+        "personalization_active": 148,
+        "active_tests": 8
+      },
+      "health_score": 4,
+      "status": "CAUTION",
+      "alerts": [
+        "\u26a0\ufe0f Error Rate above target"
+      ]
+    },
+    {
+      "hora": 70,
+      "day": 6,
+      "checkpoint_in_day": 3,
+      "timestamp": "2026-10-08T00:47:09.985757",
+      "metrics": {
+        "ml_accuracy": 0.838,
+        "error_rate": 0.1086,
+        "websocket_latency": 42.9,
+        "predictions_hour": 47.3,
+        "personalization_active": 144,
+        "active_tests": 10
+      },
+      "health_score": 5,
+      "status": "GREEN",
+      "alerts": [
+        "\u26a0\ufe0f Error Rate above target"
+      ]
+    },
+    {
+      "hora": 72,
+      "day": 7,
+      "checkpoint_in_day": 1,
+      "timestamp": "2026-10-08T02:47:10.086110",
+      "metrics": {
+        "ml_accuracy": 0.832,
+        "error_rate": 0.1025,
+        "websocket_latency": 59.8,
+        "predictions_hour": 48.7,
+        "personalization_active": 149,
+        "active_tests": 10
+      },
+      "health_score": 5,
+      "status": "GREEN",
+      "alerts": [
+        "\u26a0\ufe0f Error Rate above target"
+      ]
+    },
+    {
+      "hora": 74,
+      "day": 7,
+      "checkpoint_in_day": 3,
+      "timestamp": "2026-10-08T04:47:10.186912",
+      "metrics": {
+        "ml_accuracy": 0.841,
+        "error_rate": 0.0935,
+        "websocket_latency": 46.0,
+        "predictions_hour": 48.1,
+        "personalization_active": 152,
+        "active_tests": 9
+      },
+      "health_score": 5,
+      "status": "GREEN",
+      "alerts": [
+        "\u26a0\ufe0f Error Rate above target"
+      ]
+    },
+    {
+      "hora": 76,
+      "day": 8,
+      "checkpoint_in_day": 1,
+      "timestamp": "2026-10-08T06:47:10.287269",
+      "metrics": {
+        "ml_accuracy": 0.833,
+        "error_rate": 0.0857,
+        "websocket_latency": 48.5,
+        "predictions_hour": 48.0,
+        "personalization_active": 163,
+        "active_tests": 9
+      },
+      "health_score": 5,
+      "status": "GREEN",
+      "alerts": [
+        "\u26a0\ufe0f Error Rate above target"
+      ]
+    },
+    {
+      "hora": 78,
+      "day": 8,
+      "checkpoint_in_day": 3,
+      "timestamp": "2026-10-08T08:47:10.388384",
+      "metrics": {
+        "ml_accuracy": 0.839,
+        "error_rate": 0.0859,
+        "websocket_latency": 51.3,
+        "predictions_hour": 48.4,
+        "personalization_active": 155,
+        "active_tests": 10
+      },
+      "health_score": 5,
+      "status": "GREEN",
+      "alerts": [
+        "\u26a0\ufe0f Error Rate above target"
+      ]
+    },
+    {
+      "hora": 80,
+      "day": 9,
+      "checkpoint_in_day": 1,
+      "timestamp": "2026-10-08T10:47:10.488767",
+      "metrics": {
+        "ml_accuracy": 0.843,
+        "error_rate": 0.0729,
+        "websocket_latency": 46.4,
+        "predictions_hour": 48.9,
+        "personalization_active": 157,
+        "active_tests": 10
+      },
+      "health_score": 6,
+      "status": "GREEN",
+      "alerts": []
+    },
+    {
+      "hora": 82,
+      "day": 9,
+      "checkpoint_in_day": 3,
+      "timestamp": "2026-10-08T12:47:10.589688",
+      "metrics": {
+        "ml_accuracy": 0.842,
+        "error_rate": 0.0687,
+        "websocket_latency": 41.4,
+        "predictions_hour": 47.7,
+        "personalization_active": 150,
+        "active_tests": 9
+      },
+      "health_score": 6,
+      "status": "GREEN",
+      "alerts": []
+    },
+    {
+      "hora": 84,
+      "day": 10,
+      "checkpoint_in_day": 1,
+      "timestamp": "2026-10-08T14:47:10.690073",
+      "metrics": {
+        "ml_accuracy": 0.842,
+        "error_rate": 0.0583,
+        "websocket_latency": 46.3,
+        "predictions_hour": 46.9,
+        "personalization_active": 141,
+        "active_tests": 9
+      },
+      "health_score": 6,
+      "status": "GREEN",
+      "alerts": []
+    },
+    {
+      "hora": 86,
+      "day": 10,
+      "checkpoint_in_day": 3,
+      "timestamp": "2026-10-08T16:47:10.790952",
+      "metrics": {
+        "ml_accuracy": 0.839,
+        "error_rate": 0.054,
+        "websocket_latency": 51.9,
+        "predictions_hour": 47.1,
+        "personalization_active": 164,
+        "active_tests": 8
+      },
+      "health_score": 5,
+      "status": "GREEN",
+      "alerts": []
+    },
+    {
+      "hora": 88,
+      "day": 11,
+      "checkpoint_in_day": 1,
+      "timestamp": "2026-10-08T18:47:10.891301",
+      "metrics": {
+        "ml_accuracy": 0.842,
+        "error_rate": 0.0549,
+        "websocket_latency": 39.5,
+        "predictions_hour": 49.7,
+        "personalization_active": 145,
+        "active_tests": 9
+      },
+      "health_score": 6,
+      "status": "GREEN",
+      "alerts": []
+    },
+    {
+      "hora": 90,
+      "day": 11,
+      "checkpoint_in_day": 3,
+      "timestamp": "2026-10-08T20:47:10.992229",
+      "metrics": {
+        "ml_accuracy": 0.842,
+        "error_rate": 0.0457,
+        "websocket_latency": 45.0,
+        "predictions_hour": 50.4,
+        "personalization_active": 161,
+        "active_tests": 8
+      },
+      "health_score": 5,
+      "status": "GREEN",
+      "alerts": []
+    },
+    {
+      "hora": 92,
+      "day": 12,
+      "checkpoint_in_day": 1,
+      "timestamp": "2026-10-08T22:47:11.092580",
+      "metrics": {
+        "ml_accuracy": 0.841,
+        "error_rate": 0.0405,
+        "websocket_latency": 37.8,
+        "predictions_hour": 47.3,
+        "personalization_active": 148,
+        "active_tests": 8
+      },
+      "health_score": 5,
+      "status": "GREEN",
+      "alerts": []
+    },
+    {
+      "hora": 94,
+      "day": 12,
+      "checkpoint_in_day": 3,
+      "timestamp": "2026-10-09T00:47:11.193299",
+      "metrics": {
+        "ml_accuracy": 0.848,
+        "error_rate": 0.0357,
+        "websocket_latency": 51.0,
+        "predictions_hour": 48.2,
+        "personalization_active": 162,
+        "active_tests": 9
+      },
+      "health_score": 6,
+      "status": "GREEN",
+      "alerts": []
+    },
+    {
+      "hora": 96,
+      "day": 13,
+      "checkpoint_in_day": 1,
+      "timestamp": "2026-10-09T02:47:11.293739",
+      "metrics": {
+        "ml_accuracy": 0.841,
+        "error_rate": 0.0319,
+        "websocket_latency": 40.5,
+        "predictions_hour": 46.0,
+        "personalization_active": 142,
+        "active_tests": 10
+      },
+      "health_score": 6,
+      "status": "GREEN",
+      "alerts": []
+    },
+    {
+      "hora": 98,
+      "day": 13,
+      "checkpoint_in_day": 3,
+      "timestamp": "2026-10-09T04:47:11.394638",
+      "metrics": {
+        "ml_accuracy": 0.847,
+        "error_rate": 0.0211,
+        "websocket_latency": 36.2,
+        "predictions_hour": 48.5,
+        "personalization_active": 153,
+        "active_tests": 10
+      },
+      "health_score": 6,
+      "status": "GREEN",
+      "alerts": []
+    },
+    {
+      "hora": 100,
+      "day": 14,
+      "checkpoint_in_day": 1,
+      "timestamp": "2026-10-09T06:47:11.496701",
+      "metrics": {
+        "ml_accuracy": 0.847,
+        "error_rate": 0.0135,
+        "websocket_latency": 53.2,
+        "predictions_hour": 47.2,
+        "personalization_active": 149,
+        "active_tests": 8
+      },
+      "health_score": 5,
+      "status": "GREEN",
+      "alerts": []
+    },
+    {
+      "hora": 102,
+      "day": 14,
+      "checkpoint_in_day": 3,
+      "timestamp": "2026-10-09T08:47:11.599316",
+      "metrics": {
+        "ml_accuracy": 0.848,
+        "error_rate": 0.0075,
+        "websocket_latency": 47.4,
+        "predictions_hour": 46.4,
+        "personalization_active": 160,
+        "active_tests": 8
+      },
+      "health_score": 5,
+      "status": "GREEN",
+      "alerts": []
+    }
+  ],
+  "decisions": [
+    {
+      "hora": 48,
+      "decision": "NO-GO",
+      "confidence": 47,
+      "avg_health_score": 0.67,
+      "timestamp": "2026-10-07T02:47:08.878282",
+      "rollout_phase": "Phase 1 (10%)"
+    },
+    {
+      "hora": 52,
+      "decision": "CAUTION",
+      "confidence": 66,
+      "avg_health_score": 0.75,
+      "timestamp": "2026-10-07T02:47:09.079287",
+      "rollout_phase": "Phase 1 (10%)"
+    },
+    {
+      "hora": 56,
+      "decision": "NO-GO",
+      "confidence": 47,
+      "avg_health_score": 0.67,
+      "timestamp": "2026-10-07T02:47:09.280999",
+      "rollout_phase": "Phase 1 (10%)"
+    },
+    {
+      "hora": 60,
+      "decision": "CAUTION",
+      "confidence": 74,
+      "avg_health_score": 0.75,
+      "timestamp": "2026-10-07T02:47:09.482688",
+      "rollout_phase": "Phase 1 (10%)"
+    },
+    {
+      "hora": 64,
+      "decision": "CAUTION",
+      "confidence": 76,
+      "avg_health_score": 0.75,
+      "timestamp": "2026-10-07T02:47:09.684015",
+      "rollout_phase": "Phase 2 (50%)"
+    },
+    {
+      "hora": 68,
+      "decision": "NO-GO",
+      "confidence": 60,
+      "avg_health_score": 0.67,
+      "timestamp": "2026-10-07T02:47:09.885128",
+      "rollout_phase": "Phase 2 (50%)"
+    },
+    {
+      "hora": 72,
+      "decision": "GO",
+      "confidence": 87,
+      "avg_health_score": 0.83,
+      "timestamp": "2026-10-07T02:47:10.086183",
+      "rollout_phase": "Phase 2 (50%)"
+    },
+    {
+      "hora": 76,
+      "decision": "GO",
+      "confidence": 89,
+      "avg_health_score": 0.83,
+      "timestamp": "2026-10-07T02:47:10.287361",
+      "rollout_phase": "Phase 2 (50%)"
+    },
+    {
+      "hora": 80,
+      "decision": "GO",
+      "confidence": 83,
+      "avg_health_score": 0.92,
+      "timestamp": "2026-10-07T02:47:10.488837",
+      "rollout_phase": "Phase 2 (50%)"
+    },
+    {
+      "hora": 84,
+      "decision": "GO",
+      "confidence": 90,
+      "avg_health_score": 1.0,
+      "timestamp": "2026-10-07T02:47:10.690144",
+      "rollout_phase": "Phase 2 (50%)"
+    },
+    {
+      "hora": 88,
+      "decision": "GO",
+      "confidence": 89,
+      "avg_health_score": 0.92,
+      "timestamp": "2026-10-07T02:47:10.891363",
+      "rollout_phase": "Phase 3 (100%)"
+    },
+    {
+      "hora": 92,
+      "decision": "GO",
+      "confidence": 80,
+      "avg_health_score": 0.83,
+      "timestamp": "2026-10-07T02:47:11.092659",
+      "rollout_phase": "Phase 3 (100%)"
+    },
+    {
+      "hora": 96,
+      "decision": "GO",
+      "confidence": 83,
+      "avg_health_score": 1.0,
+      "timestamp": "2026-10-07T02:47:11.293818",
+      "rollout_phase": "Phase 3 (100%)"
+    },
+    {
+      "hora": 100,
+      "decision": "GO",
+      "confidence": 83,
+      "avg_health_score": 0.92,
+      "timestamp": "2026-10-07T02:47:11.498614",
+      "rollout_phase": "Phase 3 (100%)"
+    }
+  ],
+  "final_status": "GO",
+  "business_impact": {
+    "ml_accuracy": 0.84575,
+    "error_rate": 0.0185,
+    "conversion_lift": 0.4,
+    "current_users": "2.75M",
+    "projected_users": "5.5M",
+    "projected_annual_revenue": "$1.9B",
+    "roi_percent": 38400,
+    "payback_period_days": 1
+  }
+}
