@@ -52,6 +52,9 @@ dist/
 logs/
 *.log
 
+# Runtime data
+data/backups/
+
 # OS
 .DS_Store
 Thumbs.db
