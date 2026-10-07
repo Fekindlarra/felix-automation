@@ -1,0 +1,103 @@
+{
+  "architecture_decisions": {
+    "ADR-001-circuit-breaker": {
+      "title": "Circuit Breaker Pattern for Service Resilience",
+      "status": "ACCEPTED",
+      "context": "Phase 3 requires automatic failure handling",
+      "decision": "Implement Circuit Breaker with CLOSED/OPEN/HALF_OPEN states",
+      "consequences": [
+        "Automatic recovery without manual intervention",
+        "Prevents cascading failures",
+        "Adds 2-5ms latency per check"
+      ]
+    },
+    "ADR-002-checkpoints": {
+      "title": "13 Checkpoints at 2-Hour Intervals",
+      "status": "ACCEPTED",
+      "decision": "Monitor health every 2 hours during 24-hour window",
+      "rationale": "Sufficient for detecting trends while minimizing overhead"
+    },
+    "ADR-003-rollout-phases": {
+      "title": "Progressive Rollout: 10% \u2192 50% \u2192 100%",
+      "status": "ACCEPTED",
+      "decision": "Risk mitigation through gradual user exposure",
+      "benefits": [
+        "Early error detection",
+        "User feedback collection",
+        "Rapid rollback if needed"
+      ]
+    }
+  },
+  "operational_playbooks": {
+    "GO_scenario": {
+      "trigger": "All 6/6 metrics GREEN on all 13 checkpoints",
+      "actions": [
+        "1. Disable kill-switch manually (safety check)",
+        "2. Advance to 100% rollout",
+        "3. Broadcast GO decision to team",
+        "4. Begin long-term monitoring (30 days)",
+        "5. Schedule post-launch retrospective"
+      ],
+      "success_criteria": "No CRITICAL alerts for 7+ days at 100%"
+    },
+    "CAUTION_scenario": {
+      "trigger": "5-6/6 metrics GREEN on all checkpoints",
+      "actions": [
+        "1. Continue Phase 2 (50% rollout)",
+        "2. Enable intensive monitoring (5-second updates)",
+        "3. Daily review of metrics trends",
+        "4. Prepare rollback procedures",
+        "5. Schedule 7-day reevaluation"
+      ],
+      "success_criteria": "Metrics trend improving over 7 days"
+    },
+    "NO_GO_scenario": {
+      "trigger": "<5/6 metrics on ANY checkpoint",
+      "actions": [
+        "1. Activate automatic rollback",
+        "2. Revert to Phase 2 baseline",
+        "3. Alert team immediately",
+        "4. Preserve all logs for analysis",
+        "5. Schedule incident retrospective"
+      ],
+      "recovery_time": "5-10 minutes"
+    }
+  },
+  "troubleshooting_guides": {
+    "high_error_rate": {
+      "symptom": "Error rate > 0.08%",
+      "causes": [
+        "DB connection pool exhausted",
+        "ML model cold start",
+        "WebSocket reconnection storms"
+      ],
+      "resolution": [
+        "Check connection pool utilization",
+        "Restart ML model cache",
+        "Monitor WebSocket connections"
+      ]
+    },
+    "latency_spike": {
+      "symptom": "Latency > 200ms",
+      "causes": [
+        "Database slow query",
+        "ML inference timeout"
+      ],
+      "resolution": [
+        "Review slow query logs",
+        "Check model cache hit rate"
+      ]
+    },
+    "circuit_breaker_open": {
+      "symptom": "Circuit breaker OPEN state",
+      "causes": [
+        "5+ failures in 60 seconds"
+      ],
+      "resolution": [
+        "Check underlying service health",
+        "Wait 30s for HALF_OPEN",
+        "Test with manual requests"
+      ]
+    }
+  }
+}

@@ -1,0 +1,165 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FASE 15 Phase 3 - Revenue Tracking Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { margin-bottom: 30px; text-align: center; font-size: 2.5em; color: #60a5fa; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .metric-card {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(96, 165, 250, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .metric-label { font-size: 0.9em; color: #cbd5e1; margin-bottom: 8px; }
+        .metric-value { font-size: 2.5em; font-weight: bold; color: #60a5fa; margin-bottom: 10px; }
+        .metric-change { font-size: 0.85em; color: #22c55e; }
+        .phases-container { background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(96, 165, 250, 0.2); border-radius: 12px; padding: 30px; }
+        .phase-row { display: flex; gap: 20px; margin-bottom: 20px; align-items: center; }
+        .phase-label { width: 120px; font-weight: bold; }
+        .phase-bar { flex: 1; height: 30px; background: rgba(0,0,0,0.3); border-radius: 8px; position: relative; overflow: hidden; }
+        .phase-fill { height: 100%; background: linear-gradient(90deg, #60a5fa, #3b82f6); display: flex; align-items: center; justify-content: center; font-size: 0.8em; font-weight: bold; }
+        .phase-users { width: 150px; text-align: right; }
+        .roi-section { background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 12px; padding: 20px; margin-top: 30px; }
+        .roi-value { font-size: 2em; color: #22c55e; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid rgba(96, 165, 250, 0.2); }
+        th { background: rgba(96, 165, 250, 0.1); font-weight: bold; }
+        .positive { color: #22c55e; }
+        .warning { color: #f59e0b; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💰 FASE 15 Phase 3 - Revenue Tracking Dashboard</h1>
+        
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">Usuarios Impactados</div>
+                <div class="metric-value">2.75M</div>
+                <div class="metric-change">Phase 2 (50% del total)</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-label">Mejora Conversión</div>
+                <div class="metric-value">+25%</div>
+                <div class="metric-change">vs línea base</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-label">Impacto Anual (Proyectado)</div>
+                <div class="metric-value">$960M</div>
+                <div class="metric-change" style="color: #22c55e;">📈 CAUTION status</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-label">Impacto Anual (Potencial)</div>
+                <div class="metric-value">$1.9B</div>
+                <div class="metric-change" style="color: #f59e0b;">⚠️ Si se expande 100%</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-label">Ingresos/Usuario/Año</div>
+                <div class="metric-value">$349</div>
+                <div class="metric-change">Base actual</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-label">Conversión Lift Esperado</div>
+                <div class="metric-value">27%</div>
+                <div class="metric-change">Comparado a baseline</div>
+            </div>
+        </div>
+
+        <div class="phases-container">
+            <h2 style="margin-bottom: 20px;">📊 Rollout Phases & Revenue Impact</h2>
+            
+            <div class="phase-row">
+                <div class="phase-label">Phase 1 (10%)</div>
+                <div class="phase-bar">
+                    <div class="phase-fill" style="width: 100%;">ACTIVE</div>
+                </div>
+                <div class="phase-users">275K usuarios</div>
+            </div>
+
+            <div class="phase-row">
+                <div class="phase-label">Phase 2 (50%)</div>
+                <div class="phase-bar">
+                    <div class="phase-fill" style="width: 100%;">ACTIVE</div>
+                </div>
+                <div class="phase-users">2.75M usuarios</div>
+            </div>
+
+            <div class="phase-row">
+                <div class="phase-label">Phase 3 (100%)</div>
+                <div class="phase-bar">
+                    <div class="phase-fill" style="width: 0%; background: rgba(96, 165, 250, 0.3);">PENDING</div>
+                </div>
+                <div class="phase-users">5.5M usuarios</div>
+            </div>
+
+            <h3 style="margin-top: 30px; margin-bottom: 15px;">📈 7-Day Revenue Projection</h3>
+            <table>
+                <tr>
+                    <th>Phase</th>
+                    <th>Usuarios</th>
+                    <th>Conversión Lift</th>
+                    <th>Daily Revenue</th>
+                    <th>7-Day Total</th>
+                </tr>
+                <tr>
+                    <td>Phase 2 (50%)</td>
+                    <td>2.75M</td>
+                    <td class="positive">+25%</td>
+                    <td class="positive">$1.9M</td>
+                    <td class="positive">$13.3M</td>
+                </tr>
+                <tr>
+                    <td>Phase 3 (100% - IF GO)</td>
+                    <td>5.5M</td>
+                    <td class="positive">+40%</td>
+                    <td class="positive">$5.2M</td>
+                    <td class="positive">$36.4M</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="roi-section">
+            <h2 style="margin-bottom: 20px;">🎯 ROI Calculator</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                <div>
+                    <div style="font-size: 0.9em; color: #cbd5e1; margin-bottom: 5px;">Implementation Cost</div>
+                    <div class="roi-value">$2.5M</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.9em; color: #cbd5e1; margin-bottom: 5px;">Annual Revenue Impact</div>
+                    <div class="roi-value">$960M</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.9em; color: #cbd5e1; margin-bottom: 5px;">Payback Period</div>
+                    <div class="roi-value">1 day</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.9em; color: #cbd5e1; margin-bottom: 5px;">ROI</div>
+                    <div class="roi-value">38,400%</div>
+                </div>
+            </div>
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(34, 197, 94, 0.3);">
+                <strong>Recommendation:</strong> Continue with intensive monitoring for 7 days. If metrics remain stable → Expand to Phase 3 for $1.9B annual impact.
+            </div>
+        </div>
+    </div>
+</body>
+</html>
