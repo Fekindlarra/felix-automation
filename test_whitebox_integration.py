@@ -14,7 +14,7 @@ from datetime import datetime
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from orchestrator import FelixAutomationOrchestrator
+from felix.orchestration.orchestrator import FelixAutomationOrchestrator
 from agents.multi_platform_auditor_agent import MultiPlatformAuditorAgent
 from whitebox.credentials_manager import CredentialsManager
 from whitebox.shopify_auditor import ShopifyAuditor

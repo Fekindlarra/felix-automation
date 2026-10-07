@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from backend.events import EventFactory, EventType
 from backend.websocket_manager import WebSocketConnectionManager, EventBroadcaster
-from orchestrator import FelixAutomationOrchestrator
+from felix.orchestration.orchestrator import FelixAutomationOrchestrator
 
 # Logging
 logging.basicConfig(level=logging.INFO)

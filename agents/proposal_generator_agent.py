@@ -14,7 +14,7 @@ from datetime import datetime
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from orchestrator import FelixAutomationOrchestrator, Proposal
+from felix.orchestration.orchestrator import FelixAutomationOrchestrator, Proposal
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

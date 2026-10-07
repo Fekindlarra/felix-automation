@@ -14,7 +14,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from orchestrator import FelixAutomationOrchestrator
+from felix.orchestration.orchestrator import FelixAutomationOrchestrator
 from agents.report_generator_agent import ReportGeneratorAgent
 
 logging.basicConfig(level=logging.INFO)

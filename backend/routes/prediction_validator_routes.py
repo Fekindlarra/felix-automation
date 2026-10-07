@@ -10,7 +10,7 @@ import logging
 from fastapi import APIRouter, HTTPException, status
 from typing import Optional
 
-from orchestrator import FelixAutomationOrchestrator
+from felix.orchestration.orchestrator import FelixAutomationOrchestrator
 from analytics.prediction_validator import PredictionValidator
 
 logger = logging.getLogger(__name__)
@@ -65,7 +65,7 @@ async def record_prediction(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     try:
-        from orchestrator import FelixAutomationOrchestrator
+        from felix.orchestration.orchestrator import FelixAutomationOrchestrator
         orch = FelixAutomationOrchestrator()
         orch.connect_database()
 
@@ -125,7 +125,7 @@ async def record_outcome(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     try:
-        from orchestrator import FelixAutomationOrchestrator
+        from felix.orchestration.orchestrator import FelixAutomationOrchestrator
         orch = FelixAutomationOrchestrator()
         orch.connect_database()
 
@@ -187,7 +187,7 @@ async def get_accuracy_metrics(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     try:
-        from orchestrator import FelixAutomationOrchestrator
+        from felix.orchestration.orchestrator import FelixAutomationOrchestrator
         orch = FelixAutomationOrchestrator()
         orch.connect_database()
 
@@ -229,7 +229,7 @@ async def get_model_comparison(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     try:
-        from orchestrator import FelixAutomationOrchestrator
+        from felix.orchestration.orchestrator import FelixAutomationOrchestrator
         orch = FelixAutomationOrchestrator()
         orch.connect_database()
 
@@ -274,7 +274,7 @@ async def adjust_confidence_scores(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     try:
-        from orchestrator import FelixAutomationOrchestrator
+        from felix.orchestration.orchestrator import FelixAutomationOrchestrator
         orch = FelixAutomationOrchestrator()
         orch.connect_database()
 
@@ -322,7 +322,7 @@ async def get_retraining_recommendations(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     try:
-        from orchestrator import FelixAutomationOrchestrator
+        from felix.orchestration.orchestrator import FelixAutomationOrchestrator
         orch = FelixAutomationOrchestrator()
         orch.connect_database()
 
@@ -370,7 +370,7 @@ async def get_prediction_history(
     try:
         limit = min(limit, 500)  # Cap at 500
 
-        from orchestrator import FelixAutomationOrchestrator
+        from felix.orchestration.orchestrator import FelixAutomationOrchestrator
         orch = FelixAutomationOrchestrator()
         orch.connect_database()
 
@@ -412,7 +412,7 @@ async def get_prediction_details(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     try:
-        from orchestrator import FelixAutomationOrchestrator
+        from felix.orchestration.orchestrator import FelixAutomationOrchestrator
         orch = FelixAutomationOrchestrator()
         orch.connect_database()
 
@@ -474,7 +474,7 @@ async def get_predictions_overview(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     try:
-        from orchestrator import FelixAutomationOrchestrator
+        from felix.orchestration.orchestrator import FelixAutomationOrchestrator
         from datetime import datetime, timedelta
 
         orch = FelixAutomationOrchestrator()

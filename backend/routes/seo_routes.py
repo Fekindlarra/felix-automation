@@ -15,7 +15,7 @@ from fastapi import APIRouter, HTTPException, status, BackgroundTasks
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from orchestrator import FelixAutomationOrchestrator, Audit
+from felix.orchestration.orchestrator import FelixAutomationOrchestrator, Audit
 from agents.multi_platform_auditor_agent import MultiPlatformAuditorAgent
 from auditors.seo_auditor import SEOAuditor
 

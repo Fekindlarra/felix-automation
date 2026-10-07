@@ -19,7 +19,7 @@ from analytics.predictor import ConversionPredictor, ConversionPrediction
 from analytics.anomaly_detector import AnomalyDetector, Anomaly
 from analytics.recommender import RecommendationEngine, RecommendationType, RecommendationPriority
 from agents.analytics_agent import AnalyticsAgent
-from orchestrator import FelixAutomationOrchestrator
+from felix.orchestration.orchestrator import FelixAutomationOrchestrator
 
 # Logging
 logging.basicConfig(level=logging.INFO)

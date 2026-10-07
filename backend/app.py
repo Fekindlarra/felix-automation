@@ -32,7 +32,7 @@ from backend.auth import (
     verify_client_token,
     ADMIN_USER
 )
-from orchestrator import FelixAutomationOrchestrator
+from felix.orchestration.orchestrator import FelixAutomationOrchestrator
 from backend.routes.websocket_routes import router as websocket_router
 from backend.routes.analytics_routes import router as analytics_router
 from backend.routes.scheduler_routes import router as scheduler_router

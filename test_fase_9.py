@@ -14,7 +14,7 @@ from datetime import datetime
 # Agregar paths
 sys.path.insert(0, str(Path(__file__).parent))
 
-from orchestrator import FelixAutomationOrchestrator
+from felix.orchestration.orchestrator import FelixAutomationOrchestrator
 from agents.multi_platform_auditor_agent import MultiPlatformAuditorAgent
 from whitebox.credentials_manager import CredentialsManager
 from whitebox.shopify_auditor import ShopifyAuditor
@@ -338,7 +338,7 @@ class FaseNineTestSuite:
             logger.info(f"  [6a] Auditorías en BD (cliente_id=1): {audits_before}")
 
             # Crear auditoría de prueba
-            from orchestrator import Audit
+            from felix.orchestration.orchestrator import Audit
             audit = Audit(
                 client_id=1,
                 audit_type="whitebox",

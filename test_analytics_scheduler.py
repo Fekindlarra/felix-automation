@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 sys.path.insert(0, str(Path(__file__).parent))
 
 from analytics.analytics_scheduler import AnalyticsScheduler
-from orchestrator import FelixAutomationOrchestrator
+from felix.orchestration.orchestrator import FelixAutomationOrchestrator
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -12,7 +12,7 @@ from datetime import datetime
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from orchestrator import FelixAutomationOrchestrator
+from felix.orchestration.orchestrator import FelixAutomationOrchestrator
 from agents.funnel_management_agent import FunnelManagementAgent
 
 

@@ -13,7 +13,7 @@ from datetime import datetime
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from orchestrator import FelixAutomationOrchestrator
+from felix.orchestration.orchestrator import FelixAutomationOrchestrator
 from analytics.predictor import ConversionPredictor
 from analytics.anomaly_detector import AnomalyDetector
 from analytics.recommender import RecommendationEngine

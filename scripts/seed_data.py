@@ -11,7 +11,7 @@ from pathlib import Path
 # Agregar path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from orchestrator import FelixAutomationOrchestrator, Client, Audit, Proposal
+from felix.orchestration.orchestrator import FelixAutomationOrchestrator, Client, Audit, Proposal
 from agents.lead_scorer_agent import LeadScorerAgent
 
 def seed_clients():

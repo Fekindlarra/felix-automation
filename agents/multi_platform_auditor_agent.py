@@ -17,7 +17,7 @@ from datetime import datetime
 # Agregar paths
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from orchestrator import FelixAutomationOrchestrator, Audit
+from felix.orchestration.orchestrator import FelixAutomationOrchestrator, Audit
 from auditors.facebook_ads_auditor import FacebookAdsAuditor, create_sample_facebook_audit
 from auditors.google_ads_auditor import GoogleAdsAuditor, create_sample_google_audit
 from auditors.seo_auditor import SEOAuditor

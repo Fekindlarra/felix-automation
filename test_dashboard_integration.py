@@ -15,7 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from analytics.dashboard_integration import DashboardIntegration
-from orchestrator import FelixAutomationOrchestrator
+from felix.orchestration.orchestrator import FelixAutomationOrchestrator
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

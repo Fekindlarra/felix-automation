@@ -21,7 +21,7 @@ load_dotenv()
 # Agregar paths
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from orchestrator import FelixAutomationOrchestrator
+from felix.orchestration.orchestrator import FelixAutomationOrchestrator
 
 # Import de Email Queue (para respaldo local)
 try:

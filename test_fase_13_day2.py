@@ -20,7 +20,7 @@ from datetime import datetime
 # Agregar paths
 sys.path.insert(0, str(Path(__file__).parent))
 
-from orchestrator import FelixAutomationOrchestrator, Audit, Client
+from felix.orchestration.orchestrator import FelixAutomationOrchestrator, Audit, Client
 from agents.email_sender_agent import EmailSenderAgent
 from agents.report_generator_agent import ReportGeneratorAgent
 from agents.multi_platform_auditor_agent import MultiPlatformAuditorAgent

@@ -11,7 +11,7 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from typing import Optional, Dict
 from pydantic import BaseModel
 
-from orchestrator import FelixAutomationOrchestrator
+from felix.orchestration.orchestrator import FelixAutomationOrchestrator
 from agents.multi_platform_auditor_agent import MultiPlatformAuditorAgent
 from whitebox.credentials_manager import CredentialsManager
 
@@ -202,7 +202,7 @@ async def audit_shopify_whitebox(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     try:
-        from orchestrator import FelixAutomationOrchestrator
+        from felix.orchestration.orchestrator import FelixAutomationOrchestrator
         orch = FelixAutomationOrchestrator()
         orch.connect_database()
 
@@ -264,7 +264,7 @@ async def audit_jumpseller_whitebox(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     try:
-        from orchestrator import FelixAutomationOrchestrator
+        from felix.orchestration.orchestrator import FelixAutomationOrchestrator
         orch = FelixAutomationOrchestrator()
         orch.connect_database()
 
@@ -326,7 +326,7 @@ async def audit_code_whitebox(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     try:
-        from orchestrator import FelixAutomationOrchestrator
+        from felix.orchestration.orchestrator import FelixAutomationOrchestrator
         orch = FelixAutomationOrchestrator()
         orch.connect_database()
 
@@ -390,7 +390,7 @@ async def audit_complete_whitebox(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     try:
-        from orchestrator import FelixAutomationOrchestrator
+        from felix.orchestration.orchestrator import FelixAutomationOrchestrator
         orch = FelixAutomationOrchestrator()
         orch.connect_database()
 
@@ -478,7 +478,7 @@ async def get_whitebox_history(
     try:
         limit = min(limit, 500)  # Cap at 500
 
-        from orchestrator import FelixAutomationOrchestrator
+        from felix.orchestration.orchestrator import FelixAutomationOrchestrator
         orch = FelixAutomationOrchestrator()
         orch.connect_database()
 
@@ -549,7 +549,7 @@ async def get_whitebox_audit_details(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     try:
-        from orchestrator import FelixAutomationOrchestrator
+        from felix.orchestration.orchestrator import FelixAutomationOrchestrator
         orch = FelixAutomationOrchestrator()
         orch.connect_database()
 

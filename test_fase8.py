@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from main_orchestrator import MainOrchestratorFase8
+from felix.orchestration.main_orchestrator import MainOrchestratorFase8
 
 
 def main():

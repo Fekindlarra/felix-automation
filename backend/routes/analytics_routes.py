@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from analytics.dashboard_integration import DashboardIntegration
 from analytics.prediction_broadcaster import PredictionBroadcaster
 from analytics.predictor import ConversionPredictor
-from orchestrator import FelixAutomationOrchestrator
+from felix.orchestration.orchestrator import FelixAutomationOrchestrator
 
 # Logging
 logger = logging.getLogger(__name__)

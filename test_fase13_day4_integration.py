@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from backend.notifications import NotificationService, NotificationType, NotificationPriority
 from agents.report_generator_agent import ReportGeneratorAgent
-from orchestrator import FelixAutomationOrchestrator
+from felix.orchestration.orchestrator import FelixAutomationOrchestrator
 
 # Logging
 logging.basicConfig(level=logging.INFO)
