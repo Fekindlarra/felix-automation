@@ -1,0 +1,524 @@
+---
+# Prometheus alert rules for FASE 15 Phase 3
+# Rules cover all 6 KPIs with thresholds, anomaly detection, and escalation levels
+
+groups:
+  - name: fase15_phase3_kpis
+    interval: 30s
+    rules:
+
+      # ============================================================================
+      # 1. ML ACCURACY ALERTS (Target: ≥78%)
+      # ============================================================================
+
+      - alert: Phase3MLAccuracyBelowTarget
+        expr: |
+          fase15_phase3_ml_accuracy{phase="3"} < 0.78
+        for: 4m
+        labels:
+          severity: warning
+          component: ml_model
+          phase: 3
+        annotations:
+          summary: "Phase 3 ML Accuracy below target ({{ $value | humanizePercentage }})"
+          description: |
+            ML model accuracy has dropped below 78% target threshold.
+            Current value: {{ $value | humanizePercentage }}
+            Metric: fase15_phase3_ml_accuracy
+            Instance: {{ $labels.instance }}
+            Action: Review model performance, check for data distribution shift
+
+      - alert: Phase3MLAccuracyCritical
+        expr: |
+          fase15_phase3_ml_accuracy{phase="3"} < 0.70
+        for: 2m
+        labels:
+          severity: critical
+          component: ml_model
+          phase: 3
+        annotations:
+          summary: "Phase 3 ML Accuracy CRITICAL ({{ $value | humanizePercentage }})"
+          description: |
+            ML model accuracy has dropped to critical level below 70%.
+            Current value: {{ $value | humanizePercentage }}
+            IMMEDIATE ACTION REQUIRED: Prepare rollback procedures
+            Instance: {{ $labels.instance }}
+
+      - alert: Phase3MLAccuracyAnomaly
+        expr: |
+          (fase15_phase3_ml_accuracy{phase="3"} - avg_over_time(fase15_phase3_ml_accuracy{phase="3"}[1h]))
+          < -0.05
+        for: 3m
+        labels:
+          severity: warning
+          component: ml_model
+          phase: 3
+          anomaly: "true"
+        annotations:
+          summary: "Phase 3 ML Accuracy anomaly detected"
+          description: |
+            ML accuracy has degraded more than 5% from 1-hour average.
+            Current: {{ $value | humanizePercentage }}
+            1h Average: {{ with query "avg_over_time(fase15_phase3_ml_accuracy{phase=\"3\"}[1h])" }}{{ . | humanizePercentage }}{{ end }}
+            Action: Investigate model health, check for feature pipeline issues
+
+      # ============================================================================
+      # 2. ERROR RATE ALERTS (Target: <0.08%)
+      # ============================================================================
+
+      - alert: Phase3ErrorRateElevated
+        expr: |
+          (fase15_phase3_error_rate{phase="3"} * 100) > 0.08
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+          phase: 3
+        annotations:
+          summary: "Phase 3 Error rate elevated ({{ $value | humanizePercentage }})"
+          description: |
+            System error rate has exceeded 0.08% target threshold.
+            Current value: {{ $value | humanizePercentage }}
+            Sustained for: 5 minutes
+            Action: Check application logs, verify database connectivity
+
+      - alert: Phase3ErrorRateSpike
+        expr: |
+          (fase15_phase3_error_rate{phase="3"} * 100) > 0.5
+        for: 2m
+        labels:
+          severity: critical
+          component: system
+          phase: 3
+        annotations:
+          summary: "Phase 3 Error rate SPIKE ({{ $value | humanizePercentage }})"
+          description: |
+            System error rate has spiked above 0.5% - automatic rollback trigger.
+            Current value: {{ $value | humanizePercentage }}
+            AUTOMATIC ROLLBACK may be triggered
+            Action: Check for service outages, database issues, resource exhaustion
+
+      - alert: Phase3ErrorRateTrendDegradation
+        expr: |
+          (rate(fase15_phase3_error_count{phase="3"}[5m]) - rate(fase15_phase3_error_count{phase="3"}[5m] offset 15m))
+          / rate(fase15_phase3_error_count{phase="3"}[5m] offset 15m) > 0.5
+        for: 3m
+        labels:
+          severity: warning
+          component: system
+          phase: 3
+          anomaly: "true"
+        annotations:
+          summary: "Phase 3 Error rate trending up significantly"
+          description: |
+            Error rate has increased 50%+ compared to 15 minutes ago.
+            Current rate: {{ $value | humanize }} errors/sec
+            Action: Monitor trend, check for gradual degradation pattern
+
+      # ============================================================================
+      # 3. WEBSOCKET LATENCY ALERTS (Target: <95ms)
+      # ============================================================================
+
+      - alert: Phase3WebSocketLatencyElevated
+        expr: |
+          fase15_phase3_websocket_latency{phase="3"} > 95
+        for: 4m
+        labels:
+          severity: warning
+          component: websocket
+          phase: 3
+        annotations:
+          summary: "Phase 3 WebSocket latency elevated ({{ $value }}ms)"
+          description: |
+            WebSocket latency has exceeded 95ms target threshold.
+            Current value: {{ $value }}ms
+            Sustained for: 4 minutes
+            Action: Check network connectivity, verify WebSocket server load
+
+      - alert: Phase3WebSocketLatencySpike
+        expr: |
+          fase15_phase3_websocket_latency{phase="3"} > 200
+        for: 2m
+        labels:
+          severity: critical
+          component: websocket
+          phase: 3
+        annotations:
+          summary: "Phase 3 WebSocket latency SPIKE ({{ $value }}ms)"
+          description: |
+            WebSocket latency has spiked above 200ms - automatic rollback trigger.
+            Current value: {{ $value }}ms
+            Sustained for: 2 minutes
+            AUTOMATIC ROLLBACK may be triggered if sustained for 2 consecutive checks
+            Action: Check WebSocket server, network latency, client-side issues
+
+      - alert: Phase3WebSocketLatencyAnomaly
+        expr: |
+          (fase15_phase3_websocket_latency{phase="3"} - avg_over_time(fase15_phase3_websocket_latency{phase="3"}[30m]))
+          > (stddev_over_time(fase15_phase3_websocket_latency{phase="3"}[30m]) * 3)
+        for: 3m
+        labels:
+          severity: warning
+          component: websocket
+          phase: 3
+          anomaly: "true"
+        annotations:
+          summary: "Phase 3 WebSocket latency anomaly (3-sigma outlier)"
+          description: |
+            WebSocket latency is 3 standard deviations above 30-minute average.
+            Current: {{ $value }}ms
+            Expected: ~{{ with query "avg_over_time(fase15_phase3_websocket_latency{phase=\"3\"}[30m])" }}{{ . }}ms{{ end }}
+            Action: Investigate outlier cause, check for network issues
+
+      # ============================================================================
+      # 4. PREDICTIONS/HOUR ALERTS (Target: ≥42)
+      # ============================================================================
+
+      - alert: Phase3PredictionsThroughputBelowTarget
+        expr: |
+          fase15_phase3_predictions_per_hour{phase="3"} < 42
+        for: 4m
+        labels:
+          severity: warning
+          component: prediction_service
+          phase: 3
+        annotations:
+          summary: "Phase 3 Predictions/hour below target ({{ $value }})"
+          description: |
+            Prediction throughput has fallen below 42/hour target.
+            Current value: {{ $value }} predictions/hour
+            Expected: ≥42 predictions/hour
+            Action: Check prediction service, verify model inference latency
+
+      - alert: Phase3PredictionsThroughputCritical
+        expr: |
+          fase15_phase3_predictions_per_hour{phase="3"} < 20
+        for: 2m
+        labels:
+          severity: critical
+          component: prediction_service
+          phase: 3
+        annotations:
+          summary: "Phase 3 Predictions throughput CRITICAL ({{ $value }})"
+          description: |
+            Prediction throughput has dropped to critical level ({{ $value }}/hour).
+            This may indicate prediction service failure or severe degradation.
+            IMMEDIATE ACTION REQUIRED: Check prediction service health
+            Action: Verify ML model availability, check resource limits
+
+      - alert: Phase3PredictionsServiceUnavailable
+        expr: |
+          up{job="phase3_predictions"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: prediction_service
+          phase: 3
+        annotations:
+          summary: "Phase 3 Prediction service is DOWN"
+          description: |
+            Prediction service is not responding to health checks.
+            Service: {{ $labels.job }}
+            Instance: {{ $labels.instance }}
+            AUTOMATIC ROLLBACK will trigger if down for >60 seconds
+            Action: Restart prediction service, check logs
+
+      # ============================================================================
+      # 5. PERSONALIZATION ACTIVE ALERTS (Target: ≥140)
+      # ============================================================================
+
+      - alert: Phase3PersonalizationAdoptionBelowTarget
+        expr: |
+          fase15_phase3_personalization_active{phase="3"} < 140
+        for: 4m
+        labels:
+          severity: warning
+          component: personalization
+          phase: 3
+        annotations:
+          summary: "Phase 3 Active personalization below target ({{ $value }})"
+          description: |
+            Active personalization instances have dropped below 140 target.
+            Current value: {{ $value }} active instances
+            Expected: ≥140 active instances
+            Action: Verify personalization engine, check client implementations
+
+      - alert: Phase3PersonalizationAdoptionCritical
+        expr: |
+          fase15_phase3_personalization_active{phase="3"} < 70
+        for: 2m
+        labels:
+          severity: critical
+          component: personalization
+          phase: 3
+        annotations:
+          summary: "Phase 3 Personalization adoption CRITICAL ({{ $value }})"
+          description: |
+            Active personalization has collapsed to critical level ({{ $value }}).
+            This may indicate clients are not receiving personalized variants.
+            IMMEDIATE ACTION REQUIRED
+            Action: Check personalization service, verify client variant assignment
+
+      # ============================================================================
+      # 6. ACTIVE TESTS ALERTS (Target: ≥8)
+      # ============================================================================
+
+      - alert: Phase3ActiveTestsBelowTarget
+        expr: |
+          fase15_phase3_active_tests{phase="3"} < 8
+        for: 4m
+        labels:
+          severity: warning
+          component: ab_testing
+          phase: 3
+        annotations:
+          summary: "Phase 3 Active tests below target ({{ $value }})"
+          description: |
+            Number of active A/B tests has dropped below 8 target.
+            Current value: {{ $value }} active tests
+            Expected: ≥8 active tests
+            Action: Verify A/B testing engine, check test scheduling
+
+      - alert: Phase3ActiveTestsCritical
+        expr: |
+          fase15_phase3_active_tests{phase="3"} < 4
+        for: 2m
+        labels:
+          severity: critical
+          component: ab_testing
+          phase: 3
+        annotations:
+          summary: "Phase 3 Active tests CRITICAL ({{ $value }})"
+          description: |
+            Active test count has dropped to critical level ({{ $value }}).
+            This may indicate A/B testing system failure.
+            IMMEDIATE ACTION REQUIRED
+            Action: Check A/B testing service, verify test execution
+
+      # ============================================================================
+      # COMBINED HEALTH ALERTS
+      # ============================================================================
+
+      - alert: Phase3HealthMetricsInsufficient
+        expr: |
+          (
+            (fase15_phase3_ml_accuracy{phase="3"} >= 0.78) +
+            ((fase15_phase3_error_rate{phase="3"} * 100) <= 0.08) +
+            (fase15_phase3_websocket_latency{phase="3"} <= 95) +
+            (fase15_phase3_predictions_per_hour{phase="3"} >= 42) +
+            (fase15_phase3_personalization_active{phase="3"} >= 140) +
+            (fase15_phase3_active_tests{phase="3"} >= 8)
+          ) < 5
+        for: 2m
+        labels:
+          severity: critical
+          component: phase3_health
+          phase: 3
+        annotations:
+          summary: "Phase 3 Health check FAILED - Less than 5/6 metrics healthy"
+          description: |
+            Phase 3 health metrics: {{ $value }}/6 are within target thresholds.
+            This triggers AUTOMATIC NO-GO decision and rollback.
+            Current status: {{ with query "fase15_phase3_checkpoint_status" }}{{ . }}{{ end }}
+            ACTION: Rollback in progress or triggered
+
+      - alert: Phase3CheckpointDecisionCaution
+        expr: |
+          fase15_phase3_checkpoint_status{decision="caution"} == 1
+        for: 1m
+        labels:
+          severity: warning
+          component: phase3_checkpoints
+          phase: 3
+        annotations:
+          summary: "Phase 3 Checkpoint decision: CAUTION"
+          description: |
+            Latest checkpoint returned CAUTION (5/6 metrics healthy).
+            Checkpoint: HORA {{ $labels.hora }}
+            Timestamp: {{ $labels.timestamp }}
+            Next checkpoint is critical - close monitoring required.
+            Action: Verify all metrics, prepare for possible rollback at next checkpoint
+
+      - alert: Phase3CheckpointDecisionNoGo
+        expr: |
+          fase15_phase3_checkpoint_status{decision="nogo"} == 1
+        for: 10s
+        labels:
+          severity: critical
+          component: phase3_checkpoints
+          phase: 3
+        annotations:
+          summary: "Phase 3 Checkpoint decision: NO-GO - ROLLBACK TRIGGERED"
+          description: |
+            Checkpoint returned NO-GO decision.
+            Less than 5/6 metrics are healthy.
+            AUTOMATIC ROLLBACK IN PROGRESS
+            Checkpoint: HORA {{ $labels.hora }}
+            Timestamp: {{ $labels.timestamp }}
+            Action: Monitor rollback completion, prepare post-mortem
+
+      # ============================================================================
+      # CIRCUIT BREAKER ALERTS
+      # ============================================================================
+
+      - alert: Phase3CircuitBreakerDatabaseOpen
+        expr: |
+          fase15_phase3_circuit_breaker_state{breaker="database", phase="3"} == 1
+        for: 30s
+        labels:
+          severity: critical
+          component: circuit_breaker
+          phase: 3
+        annotations:
+          summary: "Phase 3 Database circuit breaker is OPEN"
+          description: |
+            Database circuit breaker has opened due to repeated failures.
+            Breaker: {{ $labels.breaker }}
+            Phase: {{ $labels.phase }}
+            If open >60 seconds: AUTOMATIC ROLLBACK will trigger
+            Action: Check database connectivity, restart if needed
+
+      - alert: Phase3CircuitBreakerWebSocketOpen
+        expr: |
+          fase15_phase3_circuit_breaker_state{breaker="websocket", phase="3"} == 1
+        for: 30s
+        labels:
+          severity: warning
+          component: circuit_breaker
+          phase: 3
+        annotations:
+          summary: "Phase 3 WebSocket circuit breaker is OPEN"
+          description: |
+            WebSocket circuit breaker has opened due to repeated failures.
+            Breaker: {{ $labels.breaker }}
+            Real-time events may be delayed or unavailable.
+            Action: Check WebSocket server health, network connectivity
+
+      - alert: Phase3CircuitBreakerPredictionOpen
+        expr: |
+          fase15_phase3_circuit_breaker_state{breaker="prediction", phase="3"} == 1
+        for: 30s
+        labels:
+          severity: warning
+          component: circuit_breaker
+          phase: 3
+        annotations:
+          summary: "Phase 3 Prediction circuit breaker is OPEN"
+          description: |
+            Prediction circuit breaker has opened due to repeated failures.
+            Breaker: {{ $labels.breaker }}
+            If open >60 seconds: AUTOMATIC ROLLBACK will trigger
+            Fallback: Using rules-based prediction
+            Action: Check prediction service health, model availability
+
+      # ============================================================================
+      # ROLLBACK TRIGGER ALERTS
+      # ============================================================================
+
+      - alert: Phase3RollbackTriggered
+        expr: |
+          rate(fase15_phase3_rollback_count{phase="3"}[1m]) > 0
+        labels:
+          severity: critical
+          component: phase3_rollback
+          phase: 3
+        annotations:
+          summary: "Phase 3 ROLLBACK TRIGGERED"
+          description: |
+            Phase 3 rollback has been executed.
+            Reason: {{ $labels.reason }}
+            Timestamp: {{ $labels.timestamp }}
+            This indicates Phase 3 has been disabled and traffic reverted to Phase 2.
+            Action: Post-mortem analysis, prepare Phase 4 improvements
+
+      # ============================================================================
+      # MONITORING INFRASTRUCTURE ALERTS
+      # ============================================================================
+
+      - alert: Phase3MetricsCollectorDown
+        expr: |
+          up{job="phase3_metrics"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          component: monitoring
+          phase: 3
+        annotations:
+          summary: "Phase 3 metrics collector is DOWN"
+          description: |
+            Metrics collector for Phase 3 is not responding.
+            Job: {{ $labels.job }}
+            Instance: {{ $labels.instance }}
+            Dashboard will be missing real-time data.
+            Action: Restart metrics collector, check configuration
+
+      - alert: Phase3CheckpointExecutionDelayed
+        expr: |
+          (time() - fase15_phase3_last_checkpoint_timestamp{phase="3"}) > 300
+        for: 2m
+        labels:
+          severity: warning
+          component: phase3_monitoring
+          phase: 3
+        annotations:
+          summary: "Phase 3 checkpoint execution delayed (>5 minutes)"
+          description: |
+            No checkpoint has been executed in the last 5 minutes.
+            Last checkpoint: {{ $labels.last_checkpoint_hora }}
+            Time since last: {{ $value }}s
+            Action: Check monitoring daemon, verify phase3 status
+
+  # ============================================================================
+  # GROUP 2: RECORDING RULES FOR DASHBOARD PERFORMANCE
+  # ============================================================================
+
+  - name: fase15_phase3_recording_rules
+    interval: 30s
+    rules:
+
+      - record: fase15:phase3:ml_accuracy:5m
+        expr: avg_over_time(fase15_phase3_ml_accuracy{phase="3"}[5m])
+
+      - record: fase15:phase3:error_rate:5m
+        expr: avg_over_time((fase15_phase3_error_rate{phase="3"} * 100)[5m])
+
+      - record: fase15:phase3:websocket_latency:5m
+        expr: avg_over_time(fase15_phase3_websocket_latency{phase="3"}[5m])
+
+      - record: fase15:phase3:predictions_hour:5m
+        expr: avg_over_time(fase15_phase3_predictions_per_hour{phase="3"}[5m])
+
+      - record: fase15:phase3:personalization_active:5m
+        expr: avg_over_time(fase15_phase3_personalization_active{phase="3"}[5m])
+
+      - record: fase15:phase3:active_tests:5m
+        expr: avg_over_time(fase15_phase3_active_tests{phase="3"}[5m])
+
+      # Health status recording (1 = metric is healthy, 0 = unhealthy)
+      - record: fase15:phase3:metric_health:ml_accuracy
+        expr: (fase15_phase3_ml_accuracy{phase="3"} >= 0.78) or on() vector(0)
+
+      - record: fase15:phase3:metric_health:error_rate
+        expr: ((fase15_phase3_error_rate{phase="3"} * 100) <= 0.08) or on() vector(0)
+
+      - record: fase15:phase3:metric_health:websocket_latency
+        expr: (fase15_phase3_websocket_latency{phase="3"} <= 95) or on() vector(0)
+
+      - record: fase15:phase3:metric_health:predictions
+        expr: (fase15_phase3_predictions_per_hour{phase="3"} >= 42) or on() vector(0)
+
+      - record: fase15:phase3:metric_health:personalization
+        expr: (fase15_phase3_personalization_active{phase="3"} >= 140) or on() vector(0)
+
+      - record: fase15:phase3:metric_health:active_tests
+        expr: (fase15_phase3_active_tests{phase="3"} >= 8) or on() vector(0)
+
+      # Overall health score (0-6 healthy metrics)
+      - record: fase15:phase3:health_score
+        expr: |
+          (fase15:phase3:metric_health:ml_accuracy or on() vector(0)) +
+          (fase15:phase3:metric_health:error_rate or on() vector(0)) +
+          (fase15:phase3:metric_health:websocket_latency or on() vector(0)) +
+          (fase15:phase3:metric_health:predictions or on() vector(0)) +
+          (fase15:phase3:metric_health:personalization or on() vector(0)) +
+          (fase15:phase3:metric_health:active_tests or on() vector(0))

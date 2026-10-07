@@ -1,0 +1,359 @@
+---
+# Alertmanager configuration for Phase 3
+# Routes alerts based on severity and component, with escalation and grouping logic
+
+global:
+  resolve_timeout: 5m
+  slack_api_url: '${SLACK_WEBHOOK_URL}'
+  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+
+# Alert templates
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Routing tree - determines how alerts are handled and grouped
+route:
+  # Main grouping parameters
+  group_by: ['alertname', 'cluster', 'service', 'phase']
+  group_wait: 10s        # Wait 10s for grouping similar alerts
+  group_interval: 10s    # Re-send grouped alerts every 10s
+  repeat_interval: 12h   # Repeat unresolved alerts every 12 hours
+
+  receiver: 'default'
+  continue: false
+
+  # Critical Phase 3 alerts - immediate routing to on-call
+  routes:
+    - match:
+        severity: critical
+        phase: '3'
+      receiver: 'critical-phase3'
+      group_wait: 0s
+      group_interval: 5s
+      repeat_interval: 5m
+      continue: false
+
+    # Rollback triggered - immediate pagerduty + slack
+    - match:
+        alertname: 'Phase3RollbackTriggered'
+      receiver: 'rollback-emergency'
+      group_wait: 0s
+      group_interval: 5s
+      repeat_interval: 2m
+      continue: false
+
+    # Health score failures - critical but slightly delayed for grouping
+    - match:
+        alertname: 'Phase3HealthMetricsInsufficient'
+      receiver: 'critical-phase3'
+      group_wait: 0s
+      group_interval: 5s
+      repeat_interval: 5m
+      continue: false
+
+    # Checkpoint decisions - warning level
+    - match:
+        alertname: 'Phase3CheckpointDecisionCaution'
+      receiver: 'phase3-warnings'
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 15m
+      continue: false
+
+    - match:
+        alertname: 'Phase3CheckpointDecisionNoGo'
+      receiver: 'critical-phase3'
+      group_wait: 0s
+      group_interval: 5s
+      repeat_interval: 5m
+      continue: false
+
+    # Warning level alerts - batched notification
+    - match:
+        severity: warning
+        phase: '3'
+      receiver: 'phase3-warnings'
+      group_wait: 30s
+      group_interval: 10m
+      repeat_interval: 1h
+      continue: false
+
+    # Monitoring infrastructure issues
+    - match:
+        component: 'monitoring'
+      receiver: 'monitoring-alerts'
+      group_wait: 5m
+      group_interval: 15m
+      repeat_interval: 2h
+      continue: false
+
+# Inhibition rules - suppress certain alerts when others are firing
+inhibit_rules:
+  # Suppress non-critical alerts when rollback is triggered
+  - source_match:
+      alertname: 'Phase3RollbackTriggered'
+    target_match_re:
+      alertname: 'Phase3.*'
+      severity: 'warning'
+    equal: ['phase']
+
+  # Suppress individual metric warnings when overall health fails
+  - source_match:
+      alertname: 'Phase3HealthMetricsInsufficient'
+    target_match_re:
+      alertname: 'Phase3(MLAccuracy|ErrorRate|WebSocket|Predictions|Personalization|ActiveTests).*'
+    equal: ['phase']
+
+  # Suppress checkpoint evaluation when rollback triggered
+  - source_match:
+      alertname: 'Phase3CheckpointDecisionNoGo'
+    target_match_re:
+      alertname: 'Phase3(Circuit|Service).*'
+    equal: ['phase']
+
+  # Suppress warning alerts when critical alert firing for same metric
+  - source_match:
+      severity: critical
+    target_match:
+      severity: warning
+    equal: ['alertname', 'component', 'phase']
+
+# Notification receivers - endpoints for alert delivery
+receivers:
+  - name: 'default'
+    slack_configs:
+      - channel: '#phase3-alerts'
+        title: 'Alert: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+        color: '{{ if eq .Status "firing" }}warning{{ else }}good{{ end }}'
+
+  - name: 'critical-phase3'
+    slack_configs:
+      - channel: '#phase3-critical'
+        title: '🚨 CRITICAL Phase 3 Alert: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts -}}
+          *Alert:* {{ .Labels.alertname }}
+          *Severity:* {{ .Labels.severity }}
+          *Component:* {{ .Labels.component }}
+          *Description:* {{ .Annotations.description }}
+          *Value:* {{ .Annotations.summary }}
+          {{ end }}
+        send_resolved: true
+        actions:
+          - type: button
+            text: 'View Dashboard'
+            url: 'http://grafana.internal:3000/d/fase15-phase3-monitoring'
+          - type: button
+            text: 'Kill Switch'
+            url: 'http://localhost:8000/api/admin/phase3/deactivate'
+          - type: button
+            text: 'Acknowledge'
+            url: 'http://alertmanager.internal:9093/#/alerts'
+    pagerduty_configs:
+      - service_key: '${PAGERDUTY_SERVICE_KEY}'
+        description: 'Critical Phase 3: {{ .GroupLabels.alertname }}'
+        details:
+          firing: '{{ range .Alerts.Firing }}{{ .Labels.alertname }} @ {{ .Labels.instance }}\n{{ end }}'
+          resolved: '{{ range .Alerts.Resolved }}{{ .Labels.alertname }} @ {{ .Labels.instance }}\n{{ end }}'
+    email_configs:
+      - to: 'felipe@enbuenamesa.com'
+        from: 'alertmanager@fase15.internal'
+        smarthost: '${SMTP_SERVER}:587'
+        auth_username: '${SMTP_USER}'
+        auth_password: '${SMTP_PASSWORD}'
+        headers:
+          Subject: 'CRITICAL Phase 3 Alert: {{ .GroupLabels.alertname }}'
+        html: |
+          <h2>🚨 CRITICAL Phase 3 Alert</h2>
+          <p><strong>Alert:</strong> {{ .GroupLabels.alertname }}</p>
+          <p><strong>Severity:</strong> {{ .GroupLabels.severity }}</p>
+          {{ range .Alerts }}
+          <p>{{ .Annotations.description }}</p>
+          {{ end }}
+          <p><a href="http://grafana.internal:3000/d/fase15-phase3-monitoring">View Dashboard</a></p>
+
+  - name: 'rollback-emergency'
+    slack_configs:
+      - channel: '#phase3-emergencies'
+        title: '🔴 EMERGENCY: Phase 3 Rollback Triggered'
+        text: |
+          {{ range .Alerts -}}
+          *AUTOMATIC ROLLBACK IN PROGRESS*
+          *Reason:* {{ .Labels.reason }}
+          *Timestamp:* {{ .Labels.timestamp }}
+          *Description:* {{ .Annotations.description }}
+
+          Phase 3 has been automatically disabled.
+          Traffic reverted to Phase 2.
+          Database restored from backup.
+
+          ACTION REQUIRED: Post-mortem analysis needed
+          {{ end }}
+        send_resolved: false
+        actions:
+          - type: button
+            text: '🔍 Investigate'
+            url: 'http://grafana.internal:3000/d/fase15-phase3-monitoring'
+          - type: button
+            text: '📋 Runbook'
+            url: 'http://docs.internal/runbook_phase3_rollback'
+    pagerduty_configs:
+      - service_key: '${PAGERDUTY_EMERGENCY_KEY}'
+        description: 'EMERGENCY: Phase 3 Rollback - {{ .GroupLabels.reason }}'
+        urgency: critical
+        details:
+          reason: '{{ range .Alerts }}{{ .Labels.reason }}{{ end }}'
+          timestamp: '{{ range .Alerts }}{{ .Labels.timestamp }}{{ end }}'
+    email_configs:
+      - to: 'felipe@enbuenamesa.com,oncall@enbuenamesa.com'
+        from: 'alertmanager@fase15.internal'
+        smarthost: '${SMTP_SERVER}:587'
+        auth_username: '${SMTP_USER}'
+        auth_password: '${SMTP_PASSWORD}'
+        headers:
+          Subject: '🔴 EMERGENCY: Phase 3 Rollback Triggered'
+          Priority: 'Urgent'
+        html: |
+          <h1 style="color: red;">🔴 EMERGENCY: Phase 3 Rollback Triggered</h1>
+          {{ range .Alerts }}
+          <p><strong>Reason:</strong> {{ .Labels.reason }}</p>
+          <p><strong>Timestamp:</strong> {{ .Labels.timestamp }}</p>
+          <p>{{ .Annotations.description }}</p>
+          {{ end }}
+          <p style="color: red; font-weight: bold;">IMMEDIATE ACTION REQUIRED: Post-mortem analysis</p>
+
+  - name: 'phase3-warnings'
+    slack_configs:
+      - channel: '#phase3-warnings'
+        title: '⚠️  Phase 3 Warning: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts -}}
+          *Alert:* {{ .Labels.alertname }}
+          *Component:* {{ .Labels.component }}
+          *Summary:* {{ .Annotations.summary }}
+          {{ end }}
+        send_resolved: true
+        color: 'warning'
+    email_configs:
+      - to: 'felipe@enbuenamesa.com'
+        from: 'alertmanager@fase15.internal'
+        smarthost: '${SMTP_SERVER}:587'
+        auth_username: '${SMTP_USER}'
+        auth_password: '${SMTP_PASSWORD}'
+        headers:
+          Subject: 'Phase 3 Warning: {{ .GroupLabels.alertname }}'
+
+  - name: 'monitoring-alerts'
+    slack_configs:
+      - channel: '#monitoring'
+        title: 'Monitoring Alert: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+
+  - name: 'null'
+    # Silent receiver - used for alerts that should not be notified
+
+# Settings for when alerts are considered resolved
+mute_time_intervals:
+  - name: 'maintenance-window'
+    time_intervals:
+      - weekdays: ['sunday']
+        times:
+          - start_time: '02:00'
+            end_time: '06:00'
+
+  - name: 'office-hours'
+    time_intervals:
+      - weekdays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
+        times:
+          - start_time: '00:00'
+            end_time: '06:00'
+        location: 'America/Los_Angeles'
+
+---
+# Alertmanager notification templates
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-templates
+  namespace: monitoring
+data:
+  phase3_alerts.tmpl: |
+    {{- define "phase3.slack.default.title" -}}
+    {{ if eq .Status "firing" }}🚨{{ else }}✅{{ end }}
+    {{ .GroupLabels.phase | toUpper }}
+    {{ .GroupLabels.alertname }}
+    {{- end }}
+
+    {{- define "phase3.slack.default.text" -}}
+    {{ range .Alerts.Firing -}}
+    *Alert:* {{ .Labels.alertname }}
+    *Severity:* {{ .Labels.severity }}
+    *Component:* {{ .Labels.component }}
+    *Started:* {{ .StartsAt.Format "2006-01-02 15:04:05" }} UTC
+    *Description:* {{ .Annotations.description }}
+    ---
+    {{ end }}
+    {{ range .Alerts.Resolved -}}
+    ✅ *RESOLVED:* {{ .Labels.alertname }}
+    *Ended:* {{ .EndsAt.Format "2006-01-02 15:04:05" }} UTC
+    ---
+    {{ end }}
+    {{- end }}
+
+    {{- define "phase3.pagerduty.description" -}}
+    {{ .GroupLabels.phase | toUpper }}: {{ .GroupLabels.alertname }} ({{ .GroupLabels.severity | toUpper }})
+    {{- end }}
+
+    {{- define "phase3.pagerduty.details" -}}
+    {{ range .Alerts.Firing -}}
+    Alert: {{ .Labels.alertname }}
+    Severity: {{ .Labels.severity }}
+    Component: {{ .Labels.component }}
+    Instance: {{ .Labels.instance }}
+    Summary: {{ .Annotations.summary }}
+    Description: {{ .Annotations.description }}
+
+    {{ end }}
+    {{- end }}
+
+    {{- define "phase3.email.html" -}}
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; }
+        .alert { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .critical { background-color: #ffcccc; border-left: 4px solid #cc0000; }
+        .warning { background-color: #ffffcc; border-left: 4px solid #ffcc00; }
+        .resolved { background-color: #ccffcc; border-left: 4px solid #00cc00; }
+        .metric { font-family: monospace; background-color: #f0f0f0; padding: 5px; }
+      </style>
+    </head>
+    <body>
+      <h2>FASE 15 Phase 3 Alerts</h2>
+
+      {{ range .Alerts.Firing -}}
+      <div class="alert {{ .Labels.severity }}">
+        <h3>{{ .Labels.alertname }}</h3>
+        <p><strong>Severity:</strong> {{ .Labels.severity }}</p>
+        <p><strong>Component:</strong> {{ .Labels.component }}</p>
+        <p><strong>Started:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05" }} UTC</p>
+        <p>{{ .Annotations.description }}</p>
+      </div>
+      {{ end }}
+
+      {{ range .Alerts.Resolved -}}
+      <div class="alert resolved">
+        <h3>✅ RESOLVED: {{ .Labels.alertname }}</h3>
+        <p><strong>Ended:</strong> {{ .EndsAt.Format "2006-01-02 15:04:05" }} UTC</p>
+      </div>
+      {{ end }}
+
+      <hr>
+      <p><a href="http://grafana.internal:3000/d/fase15-phase3-monitoring">View Dashboard</a></p>
+    </body>
+    </html>
+    {{- end }}

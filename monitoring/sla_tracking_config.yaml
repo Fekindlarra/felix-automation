@@ -1,0 +1,476 @@
+---
+# SLA Tracking Configuration for Phase 3
+# Tracks Service Level Agreement compliance for production Phase 3
+
+sla_configuration:
+
+  # ============================================================================
+  # AVAILABILITY SLA (Phase 3 is available and responding)
+  # ============================================================================
+
+  availability:
+    name: "Phase 3 Availability SLA"
+    enabled: true
+
+    # SLA Target: 99.5% uptime during 24-hour window (HORA 48-72)
+    targets:
+      - window: "24h"
+        target_pct: 99.5
+        downtime_allowed_minutes: 7.2  # Max 7.2 minutes downtime
+
+      - window: "12h"
+        target_pct: 99.5
+        downtime_allowed_minutes: 3.6
+
+      - window: "1h"
+        target_pct: 99.0
+        downtime_allowed_minutes: 0.6
+
+    # Definition: Phase 3 is "down" if any critical component unavailable
+    metrics:
+      - metric: "up{job='phase3_api'}"
+        weight: 0.4
+        description: "Phase 3 API service available"
+      - metric: "up{job='phase3_database'}"
+        weight: 0.3
+        description: "Database connectivity"
+      - metric: "up{job='phase3_websocket'}"
+        weight: 0.2
+        description: "WebSocket service"
+      - metric: "up{job='phase3_predictions'}"
+        weight: 0.1
+        description: "ML prediction service"
+
+    # Calculation: Service down if any weighted metric <1 for >30 seconds
+    downtime_threshold: 30s
+
+    # Reporting
+    report_intervals:
+      - "1h"  # Hourly during execution
+      - "6h"  # 6-hourly summaries
+      - "24h" # Final report at HORA 72
+
+    alert_on_sla_breach:
+      enabled: true
+      threshold_pct: 1  # Alert if SLA usage >99% (1% margin left)
+      severity: critical
+
+  # ============================================================================
+  # PERFORMANCE SLA (Response times and latency targets)
+  # ============================================================================
+
+  performance:
+    name: "Phase 3 Performance SLA"
+    enabled: true
+
+    targets:
+      - metric: "WebSocket Latency"
+        threshold: 95ms
+        percentile: 95  # 95th percentile of latency
+        window: "5m"
+        target_pct: 99.0  # 99% of requests must be <95ms
+        sla_duration: "24h"
+
+      - metric: "API Response Time"
+        threshold: 200ms
+        percentile: 95
+        window: "5m"
+        target_pct: 99.0
+        sla_duration: "24h"
+
+      - metric: "ML Inference Latency"
+        threshold: 100ms
+        percentile: 95
+        window: "5m"
+        target_pct: 95.0  # Slightly relaxed (95%) for ML
+        sla_duration: "24h"
+
+      - metric: "Database Query Latency"
+        threshold: 50ms
+        percentile: 90
+        window: "5m"
+        target_pct: 99.5  # Strict target for DB
+        sla_duration: "24h"
+
+    # Reporting
+    report_intervals:
+      - "1h"
+      - "24h"
+
+    alert_on_sla_breach:
+      enabled: true
+      threshold: "3_sigma"  # Alert if 3+ std devs above baseline
+      severity: warning
+
+  # ============================================================================
+  # RELIABILITY SLA (Error rates and fault tolerance)
+  # ============================================================================
+
+  reliability:
+    name: "Phase 3 Reliability SLA"
+    enabled: true
+
+    targets:
+      - metric: "Error Rate"
+        threshold: 0.08  # <0.08%
+        window: "1m"
+        target_pct: 99.9  # 99.9% of requests must succeed
+        sla_duration: "24h"
+
+      - metric: "Circuit Breaker Trips"
+        threshold: 5  # Max 5 circuit breaker trips
+        window: "24h"
+        target_pct: 99.0  # Should trip <1% of the time
+        sla_duration: "24h"
+
+      - metric: "Rollback Occurrences"
+        threshold: 0  # Zero rollbacks
+        window: "24h"
+        sla_duration: "24h"
+
+      - metric: "Data Corruption Events"
+        threshold: 0  # Zero data corruption
+        window: "24h"
+        sla_duration: "24h"
+
+    # Reporting
+    report_intervals:
+      - "6h"
+      - "24h"
+
+    alert_on_sla_breach:
+      enabled: true
+      severity: critical
+
+  # ============================================================================
+  # FUNCTIONALITY SLA (Feature availability and metric targets)
+  # ============================================================================
+
+  functionality:
+    name: "Phase 3 Functionality SLA"
+    enabled: true
+
+    kpi_targets:
+      - kpi: "ML Accuracy"
+        target: 0.78  # ≥78%
+        percentile: "all"
+        window: "2h"
+        target_checkpoints: 13
+        min_healthy_checkpoints: 11  # At least 11/13 checkpoints must meet target
+        sla_duration: "24h"
+
+      - kpi: "Predictions/Hour"
+        target: 42
+        percentile: "all"
+        window: "1h"
+        target_pct: 90  # 90% of hours must meet target
+        sla_duration: "24h"
+
+      - kpi: "Personalization Active"
+        target: 140
+        percentile: "all"
+        window: "30m"
+        target_pct: 90
+        sla_duration: "24h"
+
+      - kpi: "Active Tests"
+        target: 8
+        percentile: "all"
+        window: "30m"
+        target_pct: 90
+        sla_duration: "24h"
+
+    # Reporting
+    report_intervals:
+      - "2h"  # After each checkpoint
+      - "24h"
+
+    alert_on_sla_breach:
+      enabled: true
+      severity: warning
+
+  # ============================================================================
+  # BUSINESS SLA (Business metrics and conversions)
+  # ============================================================================
+
+  business:
+    name: "Phase 3 Business SLA"
+    enabled: true
+
+    targets:
+      - metric: "Conversion Rate Lift"
+        baseline: "Phase 2 conversion rate"
+        target_lift: "30%"  # Expect ≥30% lift
+        window: "24h"
+        confidence_interval: "95%"
+
+      - metric: "Revenue Impact"
+        baseline: "$0"
+        target: "+$1.9M annually"
+        window: "24h"
+        calculation: "(new_conversions - baseline_conversions) * avg_order_value"
+
+      - metric: "User Engagement"
+        baseline: "Phase 2 engagement"
+        target_improvement: "15%"
+        window: "24h"
+
+    # Reporting
+    report_intervals:
+      - "24h"  # Final report only
+
+    alert_on_sla_breach:
+      enabled: false  # Business metrics may vary, don't alert
+
+  # ============================================================================
+  # INCIDENT SLA (Response and resolution times)
+  # ============================================================================
+
+  incident_response:
+    name: "Incident Response SLA"
+    enabled: true
+
+    targets:
+      - severity: "critical"
+        detection_target: "5m"  # Detect critical issues within 5 minutes
+        notification_target: "1m"  # Notify on-call within 1 minute
+        response_target: "5m"  # First responder acknowledges within 5 minutes
+        mitigation_target: "15m"  # Mitigation in place within 15 minutes
+
+      - severity: "warning"
+        detection_target: "10m"
+        notification_target: "5m"
+        response_target: "15m"
+        mitigation_target: "30m"
+
+    # Reporting
+    report_intervals:
+      - "24h"  # Final incident summary
+
+---
+# SLA Tracking Prometheus Queries
+
+sla_queries:
+
+  # Availability - percentage of time Phase 3 was up
+  - name: "phase3_availability_pct"
+    description: "Phase 3 availability percentage"
+    query: |
+      (
+        count_over_time(up{job="phase3_api",phase="3"}[24h]) -
+        count_over_time((up{job="phase3_api",phase="3"} == 0)[24h])
+      ) / count_over_time(up{job="phase3_api",phase="3"}[24h]) * 100
+    expected_value: ">99.5%"
+
+  # Downtime calculation
+  - name: "phase3_downtime_minutes"
+    description: "Total downtime during Phase 3 execution"
+    query: |
+      (
+        count_over_time((up{job="phase3_api",phase="3"} == 0)[24h]) * 1  # 1 minute per absence
+      ) / 60  # Convert to decimal minutes
+    expected_value: "<7.2 minutes"
+
+  # Performance SLA - latency compliance
+  - name: "phase3_latency_sla_compliance"
+    description: "Percentage of requests meeting latency SLA"
+    query: |
+      (
+        count_over_time((histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{phase="3"}[5m])) < 0.095)[24h]) /
+        count_over_time(rate(http_request_duration_seconds_bucket{phase="3"}[5m])[24h])
+      ) * 100
+    expected_value: ">99%"
+
+  # Reliability SLA - error rate compliance
+  - name: "phase3_reliability_sla_compliance"
+    description: "Percentage of successful requests (error rate SLA)"
+    query: |
+      (
+        count_over_time((rate(fase15_phase3_error_rate{phase="3"}[1m]) < 0.0008)[24h]) /
+        count_over_time(rate(fase15_phase3_error_rate{phase="3"}[1m])[24h])
+      ) * 100
+    expected_value: ">99.9%"
+
+  # ML Accuracy SLA compliance
+  - name: "phase3_ml_accuracy_sla_compliance"
+    description: "Checkpoints where ML accuracy met SLA target"
+    query: |
+      count(fase15_phase3_checkpoint_status{phase="3", ml_accuracy_healthy="1"} == 1)
+      / 13 * 100  # 13 total checkpoints
+    expected_value: ">84.6%"  # 11/13 = 84.6%
+
+  # Circuit breaker trip count
+  - name: "phase3_circuit_breaker_trips"
+    description: "Total circuit breaker trips during Phase 3"
+    query: |
+      increase(fase15_phase3_circuit_breaker_trips{phase="3"}[24h])
+    expected_value: "<5"
+
+  # Rollback count
+  - name: "phase3_rollback_count"
+    description: "Number of rollbacks triggered"
+    query: |
+      increase(fase15_phase3_rollback_count{phase="3"}[24h])
+    expected_value: "0"
+
+  # Incident detection time
+  - name: "phase3_incident_detection_time_minutes"
+    description: "Time from incident start to detection"
+    query: |
+      histogram_quantile(0.95,
+        rate(fase15_phase3_incident_detection_duration_seconds{phase="3"}[24h])
+      ) / 60
+    expected_value: "<5 minutes"
+
+  # Incident response time
+  - name: "phase3_incident_response_time_minutes"
+    description: "Time from alert to first responder"
+    query: |
+      histogram_quantile(0.95,
+        rate(fase15_phase3_incident_response_duration_seconds{phase="3"}[24h])
+      ) / 60
+    expected_value: "<5 minutes"
+
+---
+# SLA Compliance Dashboard Panels
+
+dashboard_panels:
+
+  - name: "SLA Overview"
+    type: "gauge"
+    queries:
+      - "phase3_availability_pct"
+    thresholds:
+      - "0%"
+      - "99.5%"  # SLA target
+      - "99.9%"  # Exceptional
+
+  - name: "Downtime Tracker"
+    type: "stat"
+    queries:
+      - "phase3_downtime_minutes"
+    unit: "minutes"
+    format: "decimal"
+
+  - name: "Latency SLA Compliance"
+    type: "gauge"
+    queries:
+      - "phase3_latency_sla_compliance"
+    thresholds:
+      - "0%"
+      - "99%"
+      - "99.5%"
+
+  - name: "Error Rate SLA Compliance"
+    type: "gauge"
+    queries:
+      - "phase3_reliability_sla_compliance"
+    thresholds:
+      - "0%"
+      - "99.9%"
+      - "100%"
+
+  - name: "Health Score vs SLA"
+    type: "timeseries"
+    queries:
+      - "fase15:phase3:health_score"
+    thresholds:
+      - label: "SLA Target"
+        value: 5  # 5/6 metrics minimum
+      - label: "Healthy"
+        value: 6  # All 6 metrics
+
+  - name: "Incident Response SLA"
+    type: "table"
+    columns:
+      - "Incident ID"
+      - "Detection Time (min)"
+      - "Response Time (min)"
+      - "SLA Target (min)"
+      - "Compliance"
+    queries:
+      - "phase3_incident_detection_time_minutes"
+      - "phase3_incident_response_time_minutes"
+
+---
+# SLA Report Template
+
+sla_report_template: |
+  # FASE 15 Phase 3 - SLA Compliance Report
+
+  ## Executive Summary
+
+  **Report Period:** HORA 48-72 (24-hour execution window)
+  **Report Date:** {{ report_date }}
+  **Overall SLA Status:** {{ overall_status }}
+
+  ### Key Metrics
+
+  | Metric | Target | Achieved | Status |
+  |--------|--------|----------|--------|
+  | Availability | 99.5% | {{ availability_pct }}% | {{ availability_status }} |
+  | Downtime | <7.2 min | {{ downtime_minutes }} min | {{ downtime_status }} |
+  | Latency SLA (95th %ile) | <95ms | {{ latency_p95 }}ms | {{ latency_status }} |
+  | Error Rate SLA | <0.08% | {{ error_rate_pct }}% | {{ error_rate_status }} |
+  | ML Accuracy Compliance | 11/13 checkpoints | {{ ml_checkpoints }}/13 | {{ ml_status }} |
+  | Circuit Breaker Trips | <5 | {{ cb_trips }} | {{ cb_status }} |
+  | Rollbacks | 0 | {{ rollback_count }} | {{ rollback_status }} |
+
+  ## Detailed Breakdown
+
+  ### Availability SLA
+  - **Target:** 99.5% uptime
+  - **Achieved:** {{ availability_pct }}%
+  - **Downtime:** {{ downtime_minutes }} minutes
+  - **SLA Status:** {{ availability_verdict }}
+
+  ### Performance SLA
+  - **WebSocket Latency (p95):** {{ latency_p95 }}ms / 95ms target
+  - **API Response Time (p95):** {{ api_latency_p95 }}ms / 200ms target
+  - **SLA Status:** {{ performance_verdict }}
+
+  ### Reliability SLA
+  - **Error Rate (avg):** {{ error_rate_avg }}% / 0.08% target
+  - **Success Rate:** {{ success_rate_pct }}% / 99.9% target
+  - **Circuit Breaker Trips:** {{ cb_trips }} / <5 target
+  - **SLA Status:** {{ reliability_verdict }}
+
+  ### Functionality SLA
+  - **ML Accuracy Checkpoints:** {{ ml_checkpoints }}/13 met target
+  - **Predictions/Hour Compliance:** {{ predictions_compliance }}%
+  - **Personalization Adoption:** {{ personalization_compliance }}%
+  - **Active Tests:** {{ tests_compliance }}%
+  - **SLA Status:** {{ functionality_verdict }}
+
+  ### Business Metrics
+  - **Conversion Rate Lift:** {{ conversion_lift }}%
+  - **Revenue Impact:** {{ revenue_impact }}
+  - **Business SLA Status:** {{ business_verdict }}
+
+  ### Incident Response
+  - **Mean Detection Time:** {{ detection_time_avg }} minutes
+  - **Mean Response Time:** {{ response_time_avg }} minutes
+  - **Incident SLA Status:** {{ incident_verdict }}
+
+  ## Compliance Assessment
+
+  **Overall SLA Compliance:** {{ compliance_pct }}%
+
+  {{ if compliance_pct >= 99.5 }}
+  ✅ **PASS** - Phase 3 met all SLA targets
+  {{ else if compliance_pct >= 95 }}
+  ⚠️  **CAUTION** - Phase 3 met most SLA targets with minor misses
+  {{ else }}
+  ❌ **FAIL** - Phase 3 did not meet critical SLA targets
+  {{ end }}
+
+  ## Recommended Actions
+
+  {{ range recommendations }}
+  - {{ . }}
+  {{ end }}
+
+  ---
+
+  **Generated:** {{ generation_timestamp }}
+  **Report By:** {{ reporter }}

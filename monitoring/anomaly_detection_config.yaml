@@ -1,0 +1,398 @@
+---
+# Anomaly Detection Configuration for Phase 3
+# Uses statistical methods to detect unusual patterns in metrics
+
+anomaly_detection:
+
+  # Global anomaly detection settings
+  enabled: true
+  check_interval: 60s  # Re-evaluate anomalies every 60 seconds
+  lookback_window: 24h # Use 24 hours of historical data
+  min_data_points: 30  # Require at least 30 data points for statistical analysis
+
+  # ============================================================================
+  # 1. ML ACCURACY ANOMALY DETECTION
+  # ============================================================================
+
+  ml_accuracy:
+    name: "ML Model Accuracy Anomaly Detection"
+    enabled: true
+    metric: "fase15_phase3_ml_accuracy"
+
+    # Statistical baselines
+    baseline:
+      method: "exponential_weighted_moving_average"  # EWMA smoothing
+      alpha: 0.2  # Smoothing factor (0-1)
+      min_history: 1h
+
+    # Outlier detection methods (run in parallel)
+    detectors:
+
+      # Method 1: Z-score (standard deviation based)
+      - name: "zscore"
+        enabled: true
+        threshold: 3  # 3-sigma = 99.7% confidence
+        window: 1h
+        description: "Detect values >3 standard deviations from mean"
+
+      # Method 2: Interquartile Range (IQR) - robust to outliers
+      - name: "iqr"
+        enabled: true
+        k: 1.5  # Multiplier for IQR (1.5 = outlier if >Q3+1.5*IQR)
+        window: 2h
+        description: "Detect values outside 1.5x IQR range"
+
+      # Method 3: Isolation Forest - anomaly detection algorithm
+      - name: "isolation_forest"
+        enabled: true
+        contamination: 0.05  # Expected percentage of anomalies (5%)
+        sample_size: 256
+        trees: 100
+        window: 3h
+        description: "ML-based anomaly detection"
+
+    # Thresholds for alerting
+    alert_on_anomaly: true
+    alert_severity: "warning"
+    min_consecutive_anomalies: 2  # Alert if 2+ consecutive anomalies detected
+    lookback_for_trend: 5m  # Evaluate trend over last 5 minutes
+
+  # ============================================================================
+  # 2. ERROR RATE ANOMALY DETECTION
+  # ============================================================================
+
+  error_rate:
+    name: "Error Rate Anomaly Detection"
+    enabled: true
+    metric: "fase15_phase3_error_rate"
+
+    baseline:
+      method: "exponential_weighted_moving_average"
+      alpha: 0.15  # Slightly slower response for error rate
+      min_history: 30m
+
+    detectors:
+
+      # Method 1: Percentage change from baseline
+      - name: "pct_change"
+        enabled: true
+        threshold_pct: 50  # Alert if error rate increases >50%
+        window: 10m
+        description: "Detect >50% increase from baseline"
+
+      # Method 2: Z-score with lower threshold (errors are sensitive)
+      - name: "zscore"
+        enabled: true
+        threshold: 2.5  # 2.5-sigma = 98% confidence
+        window: 30m
+        description: "Detect values >2.5 standard deviations from mean"
+
+      # Method 3: Absolute threshold
+      - name: "absolute"
+        enabled: true
+        max_error_rate: 0.5  # Alert if error rate >0.5%
+        min_duration: 2m  # Must sustain for 2 minutes
+        description: "Spike detection for error rates"
+
+    alert_on_anomaly: true
+    alert_severity: "critical"
+    min_consecutive_anomalies: 1  # Alert immediately on single spike
+
+  # ============================================================================
+  # 3. WEBSOCKET LATENCY ANOMALY DETECTION
+  # ============================================================================
+
+  websocket_latency:
+    name: "WebSocket Latency Anomaly Detection"
+    enabled: true
+    metric: "fase15_phase3_websocket_latency"
+
+    baseline:
+      method: "percentile"  # Use 95th percentile as baseline
+      percentile: 95
+      window: 2h
+      min_history: 1h
+
+    detectors:
+
+      # Method 1: Latency spike detection
+      - name: "spike_detection"
+        enabled: true
+        spike_threshold_ms: 200  # Alert if latency >200ms
+        window: 5m
+        consecutive_spikes: 2  # Sustained spike (2+ consecutive points)
+        description: "Detect latency spikes >200ms"
+
+      # Method 2: Rate of change
+      - name: "rate_of_change"
+        enabled: true
+        max_increase_per_min: 20  # Alert if latency increases >20ms per minute
+        window: 3m
+        description: "Detect rapid latency degradation"
+
+      # Method 3: EWMA (exponential weighted moving average)
+      - name: "ewma"
+        enabled: true
+        alpha: 0.1  # Responsive to changes
+        deviation_threshold: 2.5  # 2.5-sigma
+        window: 30m
+        description: "Detect deviation from EWMA trend"
+
+    alert_on_anomaly: true
+    alert_severity: "warning"
+    auto_escalate: true
+    escalate_if_sustained: "5m"  # Escalate to critical if sustained 5m
+    escalate_to_severity: "critical"
+
+  # ============================================================================
+  # 4. PREDICTIONS/HOUR ANOMALY DETECTION
+  # ============================================================================
+
+  predictions_per_hour:
+    name: "Predictions Per Hour Anomaly Detection"
+    enabled: true
+    metric: "fase15_phase3_predictions_per_hour"
+
+    baseline:
+      method: "rolling_average"
+      window: 4h
+      min_history: 2h
+
+    detectors:
+
+      # Method 1: Throughput drop detection
+      - name: "throughput_drop"
+        enabled: true
+        threshold_pct: 30  # Alert if throughput drops >30%
+        window: 10m
+        description: "Detect throughput reduction"
+
+      # Method 2: Z-score
+      - name: "zscore"
+        enabled: true
+        threshold: 2.5
+        window: 2h
+        description: "Detect unusual throughput"
+
+    alert_on_anomaly: true
+    alert_severity: "warning"
+
+  # ============================================================================
+  # 5. PERSONALIZATION ACTIVE ANOMALY DETECTION
+  # ============================================================================
+
+  personalization_active:
+    name: "Personalization Adoption Anomaly Detection"
+    enabled: true
+    metric: "fase15_phase3_personalization_active"
+
+    baseline:
+      method: "rolling_average"
+      window: 2h
+      min_history: 1h
+
+    detectors:
+
+      # Method 1: Adoption drop detection
+      - name: "adoption_drop"
+        enabled: true
+        threshold_pct: 25  # Alert if adoption drops >25%
+        window: 15m
+        description: "Detect unexpected adoption reduction"
+
+      # Method 2: Rate of change
+      - name: "rate_of_change"
+        enabled: true
+        max_drop_per_min: 5  # Alert if dropping >5 instances/min
+        window: 10m
+        description: "Detect rapid adoption decline"
+
+    alert_on_anomaly: true
+    alert_severity: "warning"
+
+  # ============================================================================
+  # 6. ACTIVE TESTS ANOMALY DETECTION
+  # ============================================================================
+
+  active_tests:
+    name: "Active Tests Anomaly Detection"
+    enabled: true
+    metric: "fase15_phase3_active_tests"
+
+    baseline:
+      method: "rolling_average"
+      window: 2h
+      min_history: 1h
+
+    detectors:
+
+      # Method 1: Test count drop
+      - name: "test_drop"
+        enabled: true
+        threshold_pct: 20  # Alert if tests drop >20%
+        window: 10m
+        description: "Detect test portfolio reduction"
+
+    alert_on_anomaly: true
+    alert_severity: "warning"
+
+  # ============================================================================
+  # COMBINED ANOMALY RULES
+  # ============================================================================
+
+  multi_metric_anomalies:
+
+    # Pattern 1: Cascading failure (multiple metrics degrading)
+    - name: "cascading_failure"
+      enabled: true
+      metrics:
+        - "fase15_phase3_error_rate"
+        - "fase15_phase3_websocket_latency"
+        - "fase15_phase3_ml_accuracy"
+      condition: "all_anomalous"  # All 3 must be anomalous
+      min_duration: 3m
+      alert_severity: "critical"
+      description: "Multiple metrics showing anomalies simultaneously"
+
+    # Pattern 2: Partial degradation (half metrics anomalous)
+    - name: "partial_degradation"
+      enabled: true
+      metrics:
+        - "fase15_phase3_error_rate"
+        - "fase15_phase3_websocket_latency"
+        - "fase15_phase3_ml_accuracy"
+        - "fase15_phase3_predictions_per_hour"
+        - "fase15_phase3_personalization_active"
+        - "fase15_phase3_active_tests"
+      condition: "3_of_6_anomalous"  # At least 3 of 6 are anomalous
+      min_duration: 2m
+      alert_severity: "warning"
+      description: "Multiple system components degrading"
+
+    # Pattern 3: Latency-driven errors (latency spike + error rate spike)
+    - name: "latency_driven_errors"
+      enabled: true
+      metrics:
+        - "fase15_phase3_websocket_latency"
+        - "fase15_phase3_error_rate"
+      condition: "both_anomalous"
+      correlation_required: true  # Metrics must correlate
+      min_duration: 2m
+      alert_severity: "critical"
+      description: "Latency spike causing error rate increase"
+      action: "investigate_network"
+
+    # Pattern 4: Resource exhaustion (throughput + adoption drops)
+    - name: "resource_exhaustion"
+      enabled: true
+      metrics:
+        - "fase15_phase3_predictions_per_hour"
+        - "fase15_phase3_personalization_active"
+      condition: "both_anomalous"
+      min_duration: 5m
+      alert_severity: "warning"
+      description: "Possible resource exhaustion reducing throughput"
+      action: "check_resource_usage"
+
+---
+# Real-time Anomaly Detection Rules (in Prometheus/PromQL format)
+
+anomaly_rules:
+
+  - rule: "Phase3MLAccuracyAnomalyZ3Sigma"
+    description: "ML accuracy is 3+ standard deviations from 1h average"
+    query: |
+      abs(fase15_phase3_ml_accuracy{phase="3"} -
+          avg_over_time(fase15_phase3_ml_accuracy{phase="3"}[1h]))
+      > (stddev_over_time(fase15_phase3_ml_accuracy{phase="3"}[1h]) * 3)
+    min_duration: 3m
+    severity: warning
+
+  - rule: "Phase3ErrorRateSpikingRapidly"
+    description: "Error rate increasing >50% in 10 minutes"
+    query: |
+      (rate(fase15_phase3_error_count{phase="3"}[10m]) -
+       rate(fase15_phase3_error_count{phase="3"}[10m] offset 10m))
+      / rate(fase15_phase3_error_count{phase="3"}[10m] offset 10m)
+      > 0.5
+    min_duration: 2m
+    severity: critical
+
+  - rule: "Phase3WebSocketLatencySuddenSpike"
+    description: "WebSocket latency jumps >100ms from baseline"
+    query: |
+      (fase15_phase3_websocket_latency{phase="3"} -
+       avg_over_time(fase15_phase3_websocket_latency{phase="3"}[30m]))
+      > 100
+    min_duration: 2m
+    severity: warning
+    auto_escalate_if_sustained: "5m"
+
+  - rule: "Phase3PredictionsThroughputDrop"
+    description: "Predictions/hour dropped >30% from baseline"
+    query: |
+      (avg_over_time(fase15_phase3_predictions_per_hour{phase="3"}[10m]) -
+       avg_over_time(fase15_phase3_predictions_per_hour{phase="3"}[10m] offset 30m))
+      / avg_over_time(fase15_phase3_predictions_per_hour{phase="3"}[10m] offset 30m)
+      < -0.3
+    min_duration: 5m
+    severity: warning
+
+  - rule: "Phase3PersonalizationAdoptionCollapse"
+    description: "Active personalization dropped >25% in 15 minutes"
+    query: |
+      (avg_over_time(fase15_phase3_personalization_active{phase="3"}[15m]) -
+       avg_over_time(fase15_phase3_personalization_active{phase="3"}[15m] offset 15m))
+      / avg_over_time(fase15_phase3_personalization_active{phase="3"}[15m] offset 15m)
+      < -0.25
+    min_duration: 5m
+    severity: warning
+
+  - rule: "Phase3CascadingFailureDetected"
+    description: "Multiple KPI metrics showing simultaneous anomalies"
+    query: |
+      (
+        (abs(fase15_phase3_ml_accuracy{phase="3"} -
+             avg_over_time(fase15_phase3_ml_accuracy{phase="3"}[1h]))
+         > stddev_over_time(fase15_phase3_ml_accuracy{phase="3"}[1h]) * 2.5) +
+        (fase15_phase3_error_rate{phase="3"} > 0.5 or on() vector(0)) +
+        (fase15_phase3_websocket_latency{phase="3"} > 150 or on() vector(0)) +
+        (rate(fase15_phase3_error_count{phase="3"}[5m]) -
+         rate(fase15_phase3_error_count{phase="3"}[5m] offset 10m) > 0.1 * rate(fase15_phase3_error_count{phase="3"}[5m] offset 10m) or on() vector(0))
+      ) >= 3
+    min_duration: 2m
+    severity: critical
+    description: "3+ anomalies detected simultaneously - cascading failure likely"
+
+---
+# Anomaly Detection Dashboard Queries
+dashboard_queries:
+
+  # Anomaly score (0-10, higher = more anomalous)
+  - name: "anomaly_score"
+    query: |
+      (
+        (abs(fase15_phase3_ml_accuracy{phase="3"} -
+             avg_over_time(fase15_phase3_ml_accuracy{phase="3"}[1h]))
+         / (stddev_over_time(fase15_phase3_ml_accuracy{phase="3"}[1h]) + 0.001) * 1.5) +
+        (abs(fase15_phase3_error_rate{phase="3"} -
+             avg_over_time(fase15_phase3_error_rate{phase="3"}[1h]))
+         / (stddev_over_time(fase15_phase3_error_rate{phase="3"}[1h]) + 0.001)) +
+        (abs(fase15_phase3_websocket_latency{phase="3"} -
+             avg_over_time(fase15_phase3_websocket_latency{phase="3"}[1h]))
+         / (stddev_over_time(fase15_phase3_websocket_latency{phase="3"}[1h]) + 1))
+      ) / 3
+    description: "Combined anomaly score (0-10)"
+
+  # Anomaly rate (percentage of metrics currently anomalous)
+  - name: "anomaly_rate"
+    query: |
+      (
+        (fase15_phase3_ml_accuracy{phase="3"} < 0.78 or on() vector(0)) +
+        ((fase15_phase3_error_rate{phase="3"} * 100) > 0.08 or on() vector(0)) +
+        (fase15_phase3_websocket_latency{phase="3"} > 95 or on() vector(0)) +
+        (fase15_phase3_predictions_per_hour{phase="3"} < 42 or on() vector(0)) +
+        (fase15_phase3_personalization_active{phase="3"} < 140 or on() vector(0)) +
+        (fase15_phase3_active_tests{phase="3"} < 8 or on() vector(0))
+      ) / 6 * 100
+    description: "Percentage of metrics outside normal ranges"
