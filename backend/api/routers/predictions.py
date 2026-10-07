@@ -375,16 +375,56 @@ async def generate_prediction(request: PredictionRequest, db: Session = Depends(
         return response
 
 @router.get("/{client_id}", response_model=PredictionResponse)
-async def get_prediction(client_id: str):
+async def get_prediction(client_id: str, db: Session = Depends(get_db)):
     """
     Get latest prediction for a client
 
-    Retrieves from cache/database
+    Retrieves from database, returns most recent prediction
     """
-    # TODO: Look up from database
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"No prediction found for client {client_id}"
+    # Lookup latest prediction for this client
+    prediction_db = db.query(Prediction)\
+        .filter(Prediction.client_id == client_id)\
+        .order_by(Prediction.created_at.desc())\
+        .first()
+
+    if not prediction_db:
+        logger.warning(f"⚠️ No prediction found for client: {client_id}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No prediction found for client {client_id}"
+        )
+
+    # Parse JSON fields
+    import json
+    try:
+        risk_factors = json.loads(prediction_db.risk_factors) if prediction_db.risk_factors else []
+        positive_factors = json.loads(prediction_db.positive_factors) if prediction_db.positive_factors else []
+        shap_data = json.loads(prediction_db.shap_explanation) if prediction_db.shap_explanation else []
+    except json.JSONDecodeError:
+        risk_factors = []
+        positive_factors = []
+        shap_data = []
+
+    # Convert SHAP data to ExplainabilityFeature objects
+    shap_explanations = [
+        ExplainabilityFeature(
+            feature_name=item.get("feature_name", ""),
+            impact=float(item.get("impact", 0.0)),
+            direction=item.get("direction", "neutral")
+        )
+        for item in shap_data
+    ]
+
+    logger.info(f"✅ Retrieved prediction for client {client_id}: {prediction_db.probability}%")
+
+    return PredictionResponse(
+        client_id=client_id,
+        probability=prediction_db.probability,
+        confidence=prediction_db.confidence,
+        risk_factors=risk_factors[:5],
+        positive_factors=positive_factors[:5],
+        shap_explanations=shap_explanations,
+        predicted_timeline_days=prediction_db.predicted_timeline_days
     )
 
 @router.get("/{client_id}/history")

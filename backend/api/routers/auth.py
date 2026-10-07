@@ -36,29 +36,42 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     return encoded_jwt
 
 @router.post("/login", response_model=TokenResponse)
-async def login(request: LoginRequest):
+async def login(request: LoginRequest, db: Session = Depends(get_db)):
     """
     Email/Password Login Endpoint
 
     Returns JWT token for authenticated user
     """
-    # TODO: Validate against database
     if not request.email or not request.password:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials"
         )
 
-    # Mock user (replace with DB lookup)
+    # Lookup user in database
+    user_db = db.query(Client).filter(Client.email == request.email).first()
+
+    if not user_db:
+        logger.warning(f"⚠️ Login attempt with non-existent email: {request.email}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials"
+        )
+
+    # Return user data from database
     user = {
-        "id": "user_001",
-        "email": request.email,
-        "role": "admin"
+        "id": user_db.id,
+        "email": user_db.email,
+        "name": user_db.name,
+        "business_type": user_db.business_type,
+        "company_size": user_db.company_size
     }
 
     access_token = create_access_token(
-        data={"sub": user["email"], "user_id": user["id"]}
+        data={"sub": user["email"], "user_id": user["id"], "role": "client"}
     )
+
+    logger.info(f"✅ User logged in: {request.email}")
 
     return TokenResponse(
         access_token=access_token,

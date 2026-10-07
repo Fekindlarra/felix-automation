@@ -162,11 +162,19 @@ async def websocket_predictions(
     - {"type": "connection_confirmed", "connection_id": "..."}
     """
 
-    # TODO: Verify JWT token here
-    # from backend.api.routers.auth import verify_jwt_token
-    # if not verify_jwt_token(token):
-    #     await websocket.close(code=4001, reason="Unauthorized")
-    #     return
+    # Verify JWT token before accepting connection
+    from backend.auth import verify_jwt_token
+
+    if not token:
+        logger.warning(f"❌ WebSocket connection attempt without token from {user_id}")
+        await websocket.close(code=4001, reason="Unauthorized - missing token")
+        return
+
+    payload = verify_jwt_token(token)
+    if not payload:
+        logger.warning(f"❌ WebSocket connection attempt with invalid token from {user_id}")
+        await websocket.close(code=4001, reason="Unauthorized - invalid token")
+        return
 
     connection_id = await manager.connect(websocket, client_id, user_id)
 

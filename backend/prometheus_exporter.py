@@ -274,7 +274,8 @@ class PrometheusExporter:
             lines.append("# TYPE fase15_phase3_checkpoint_status gauge")
             decision = latest_checkpoint.get('decision', 'UNKNOWN')
             decision_value = 1 if decision == 'CONTINUE' else (0 if decision == 'CAUTION' else -1)
-            lines.append(f"fase15_phase3_checkpoint_status{{{\"hora\": {latest_checkpoint.get('hora', 0)}, \"decision\": \"{decision}\"}}}} {decision_value}")
+            hora = latest_checkpoint.get('hora', 0)
+            lines.append(f'fase15_phase3_checkpoint_status{{hora="{hora}",decision="{decision}"}} {decision_value}')
             lines.append("")
 
         except Exception as e:

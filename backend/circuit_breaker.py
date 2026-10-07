@@ -287,6 +287,10 @@ def get_prediction_breaker() -> CircuitBreaker:
     return CircuitBreakerRegistry.get_or_create("prediction", config)
 
 
+# Backward compatibility alias
+CircuitBreakerState = CircuitState
+
+
 if __name__ == "__main__":
     # Example usage
     logging.basicConfig(level=logging.INFO)
