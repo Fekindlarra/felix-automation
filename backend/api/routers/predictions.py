@@ -64,10 +64,22 @@ async def generate_prediction(request: PredictionRequest, db: Session = Depends(
     - shap_explanations: Feature importance (ML-based)
 
     BROADCAST: Sends prediction to all WebSocket clients subscribed to this client_id
+
+    PHASE 3: Integrates with personalization rollout engine for variant assignment
     """
     from ml_pipeline import pipeline
+    from backend.phase3_rollout_engine import Phase3RolloutEngine
 
     try:
+        # Initialize rollout engine for Phase 3 personalization
+        rollout_engine = None
+        try:
+            rollout_engine = Phase3RolloutEngine()
+            rollout_engine.connect()
+            rollout_engine.load_current_phase()
+        except Exception as e:
+            logger.debug(f"Phase 3 rollout engine not available: {e}")
+
         # Load trained model if not already loaded
         if pipeline.model is None:
             logger.info("📂 Loading trained ML model...")
@@ -195,6 +207,50 @@ async def generate_prediction(request: PredictionRequest, db: Session = Depends(
         except Exception as e:
             logger.warning(f"⚠️ Skipping comparison recording: {e}")
 
+        # ✨ PHASE 3: Check for personalization eligibility
+        personalized = False
+        winning_variant = None
+
+        if rollout_engine:
+            try:
+                # Check if there's an active test
+                try:
+                    import sqlite3
+                    sqlite_conn = sqlite3.connect('data/pipeline.sqlite')
+                    sqlite_conn.row_factory = sqlite3.Row
+                    cursor = sqlite_conn.cursor()
+
+                    cursor.execute("""
+                        SELECT id, variant_a, variant_b, winner
+                        FROM ab_tests
+                        WHERE active = 1 AND winner IS NOT NULL
+                        LIMIT 1
+                    """)
+                    active_test = cursor.fetchone()
+
+                    if active_test:
+                        test_id = active_test['id']
+                        winner = active_test['winner']
+
+                        # Check if client should get personalized variant
+                        if rollout_engine.should_personalize_client(int(request.client_id), test_id):
+                            rollout_engine.apply_variant_to_client(int(request.client_id), test_id, winner)
+                            personalized = True
+                            winning_variant = winner
+                            logger.info(f"✨ Personalization applied to client {request.client_id}: variant {winner} (Phase {rollout_engine.current_phase.value})")
+                        else:
+                            logger.debug(f"📍 Client {request.client_id} not in rollout percentage for phase {rollout_engine.current_phase.value}")
+
+                    sqlite_conn.close()
+                except Exception as e:
+                    logger.debug(f"No active test found for personalization: {e}")
+            except Exception as e:
+                logger.debug(f"Phase 3 personalization check failed: {e}")
+
+        # Close rollout engine
+        if rollout_engine:
+            rollout_engine.close()
+
         # 📡 BROADCAST TO WEBSOCKET: Send prediction to all connected clients
         try:
             broadcast_payload = {
@@ -206,6 +262,9 @@ async def generate_prediction(request: PredictionRequest, db: Session = Depends(
                 "timeline_days": timeline_days,
                 "timestamp": datetime.now().isoformat(),
                 "model_version": "ml_v1.0.0",
+                # Phase 3 personalization info
+                "personalized": personalized,
+                "winning_variant": winning_variant,
             }
 
             await ws_manager.broadcast_prediction(broadcast_payload)
