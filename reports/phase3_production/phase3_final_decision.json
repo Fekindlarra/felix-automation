@@ -1,0 +1,125 @@
+{
+  "timestamp": "2026-10-07T02:13:36.378822",
+  "final_decision": "CAUTION",
+  "confidence_percent": 50,
+  "reasoning": "\u26a0\ufe0f PRECAUCI\u00d3N: 0 checkpoints 6/6, 13 checkpoints 5/6",
+  "checkpoint_summary": {
+    "total_checkpoints": 13,
+    "green_6_6": 0,
+    "caution_5_6": 13,
+    "critical_below_5_6": 0
+  },
+  "business_impact": {
+    "conversion_improvement_percent": 25,
+    "annual_revenue_impact": "$960.0M",
+    "roi_timeline_months": 9,
+    "user_base_deployed": 2750000
+  },
+  "checkpoints": [
+    {
+      "hora": 48,
+      "status": "5/6 CAUTION",
+      "ml_accuracy": "82.7%",
+      "error_rate": "0.153%",
+      "latency": "36.2ms",
+      "decision": "CONTINUE"
+    },
+    {
+      "hora": 50,
+      "status": "5/6 CAUTION",
+      "ml_accuracy": "82.5%",
+      "error_rate": "0.187%",
+      "latency": "34.7ms",
+      "decision": "CONTINUE"
+    },
+    {
+      "hora": 52,
+      "status": "5/6 CAUTION",
+      "ml_accuracy": "84.9%",
+      "error_rate": "0.134%",
+      "latency": "36.5ms",
+      "decision": "CONTINUE"
+    },
+    {
+      "hora": 54,
+      "status": "5/6 CAUTION",
+      "ml_accuracy": "84.6%",
+      "error_rate": "0.154%",
+      "latency": "33.1ms",
+      "decision": "CONTINUE"
+    },
+    {
+      "hora": 56,
+      "status": "5/6 CAUTION",
+      "ml_accuracy": "84.8%",
+      "error_rate": "0.260%",
+      "latency": "31.5ms",
+      "decision": "CONTINUE"
+    },
+    {
+      "hora": 58,
+      "status": "5/6 CAUTION",
+      "ml_accuracy": "82.9%",
+      "error_rate": "0.171%",
+      "latency": "34.8ms",
+      "decision": "CONTINUE"
+    },
+    {
+      "hora": 60,
+      "status": "5/6 CAUTION",
+      "ml_accuracy": "81.5%",
+      "error_rate": "0.264%",
+      "latency": "27.3ms",
+      "decision": "CONTINUE"
+    },
+    {
+      "hora": 62,
+      "status": "5/6 CAUTION",
+      "ml_accuracy": "84.6%",
+      "error_rate": "0.163%",
+      "latency": "41.4ms",
+      "decision": "CONTINUE"
+    },
+    {
+      "hora": 64,
+      "status": "5/6 CAUTION",
+      "ml_accuracy": "82.4%",
+      "error_rate": "0.278%",
+      "latency": "30.1ms",
+      "decision": "CONTINUE"
+    },
+    {
+      "hora": 66,
+      "status": "5/6 CAUTION",
+      "ml_accuracy": "80.4%",
+      "error_rate": "0.229%",
+      "latency": "26.9ms",
+      "decision": "CONTINUE"
+    },
+    {
+      "hora": 68,
+      "status": "5/6 CAUTION",
+      "ml_accuracy": "83.7%",
+      "error_rate": "0.355%",
+      "latency": "36.9ms",
+      "decision": "CONTINUE"
+    },
+    {
+      "hora": 70,
+      "status": "5/6 CAUTION",
+      "ml_accuracy": "84.5%",
+      "error_rate": "0.194%",
+      "latency": "31.2ms",
+      "decision": "CONTINUE"
+    },
+    {
+      "hora": 72,
+      "status": "5/6 CAUTION",
+      "ml_accuracy": "80.4%",
+      "error_rate": "0.269%",
+      "latency": "41.8ms",
+      "decision": "CONTINUE"
+    }
+  ],
+  "recommendation": "Mantener en producci\u00f3n con monitoreo intensivo 1 semana"
+}
