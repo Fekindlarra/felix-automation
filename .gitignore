@@ -58,3 +58,11 @@ data/backups/
 # OS
 .DS_Store
 Thumbs.db
+
+# Generated Reports & PDFs
+reports/*.pdf
+*.pdf
+
+# Temporary files
+*.tmp
+*.temp
