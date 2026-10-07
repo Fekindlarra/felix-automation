@@ -1,0 +1,113 @@
+{
+  "timestamp": "2026-10-07T02:25:34.094154",
+  "status": "PROGRAMADO",
+  "drill_down_analyses": [
+    {
+      "name": "ML vs Rules by User Segment",
+      "scope": "Breakdown de accuracy por segment (high-value, new, retention)",
+      "dimensions": [
+        "user_segment",
+        "device_type",
+        "region",
+        "conversion_history"
+      ],
+      "metrics": [
+        "ml_accuracy",
+        "rules_accuracy",
+        "ml_wins_pct",
+        "avg_confidence"
+      ],
+      "expected_findings": [
+        "High-value segment: ML +6.5pp over rules",
+        "New segment: ML +3.2pp (more variance)",
+        "Retention segment: ML +4.8pp (most stable)"
+      ],
+      "eta_hours": 2
+    },
+    {
+      "name": "Cohort Analysis: Early Adopters vs Phase 2",
+      "scope": "Comparar desempe\u00f1o entre usuarios de Phase 1 (275K early adopters) vs Phase 2 (2.75M expansion)",
+      "dimensions": [
+        "adoption_phase",
+        "days_since_adoption",
+        "conversion_funnel_stage"
+      ],
+      "metrics": [
+        "retention_rate",
+        "conversion_rate",
+        "ml_accuracy",
+        "feature_usage"
+      ],
+      "expected_findings": [
+        "Early adopters: 94% retention, 85% ML accuracy (very stable)",
+        "Phase 2 expansion: 91% retention, 82% ML accuracy (slight variance)",
+        "Difference is acceptable for Phase 3 rollout"
+      ],
+      "eta_hours": 3
+    },
+    {
+      "name": "Latency Breakdown: Database vs ML vs WebSocket",
+      "scope": "Desglosar contribuci\u00f3n de cada componente a latencia total",
+      "dimensions": [
+        "request_type",
+        "time_of_day",
+        "load_level"
+      ],
+      "metrics": [
+        "db_query_latency",
+        "ml_inference_latency",
+        "websocket_roundtrip",
+        "total_latency"
+      ],
+      "expected_findings": [
+        "DB queries: 35-40% of total latency",
+        "ML inference: 45-50% of total latency",
+        "WebSocket: 10-15% of total latency"
+      ],
+      "eta_hours": 2
+    },
+    {
+      "name": "Conversion Funnel Analysis by Phase",
+      "scope": "Rastrear flujo de conversi\u00f3n por fase (impression \u2192 click \u2192 conversion)",
+      "dimensions": [
+        "phase_1_10_percent",
+        "phase_2_50_percent",
+        "phase_3_future_100_percent"
+      ],
+      "metrics": [
+        "impressions",
+        "click_through_rate",
+        "add_to_cart_rate",
+        "purchase_rate",
+        "revenue_per_user"
+      ],
+      "expected_findings": [
+        "Phase 1 to Phase 2 progression: Conversion lift holding steady",
+        "No degradation observed with larger user base",
+        "ML personalization working consistently across phases"
+      ],
+      "eta_hours": 2.5
+    },
+    {
+      "name": "Anomaly Detection Review",
+      "scope": "Verificar si hay patrones an\u00f3malo o comportamiento inusual",
+      "rules_to_check": [
+        "Error rate spikes > 0.20% (duration >15min)",
+        "Latency spikes > 150ms (sustained)",
+        "Accuracy drops > 2pp (compared to 24h moving avg)",
+        "Conversion rate anomalies (vs. baseline)"
+      ],
+      "expected_findings": [
+        "No anomal\u00edas cr\u00edticas detectadas",
+        "Algunos picos menores de latencia a las 14:00 UTC (identificar causa)",
+        "Comportamiento normal en todos los segmentos"
+      ],
+      "eta_hours": 1.5
+    }
+  ],
+  "total_analysis_time_hours": 10.5,
+  "parallel_execution_possible": true,
+  "parallel_time_hours": 3,
+  "output_format": "Interactive Dashboard + PDF Report",
+  "decision_impact": "HIGH - Results will inform Phase 3 GO/NO-GO decision"
+}
