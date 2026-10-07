@@ -37,6 +37,7 @@ env/
 .env.local
 
 # Database
+*.db
 *.db-wal
 *.db-shm
 
