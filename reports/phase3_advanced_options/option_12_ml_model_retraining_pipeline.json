@@ -1,0 +1,78 @@
+{
+  "option_id": 12,
+  "name": "ML Model Retraining Pipeline",
+  "duration_hours": 6,
+  "complexity": "Alta",
+  "risk": "MEDIO",
+  "status": "READY",
+  "objective": "Improve ML accuracy from 82.5% to 84.2% using 7-day Phase 2 data",
+  "retraining_steps": [
+    {
+      "step": 1,
+      "name": "Feature Engineering",
+      "duration_min": 60,
+      "tasks": [
+        "Extract engagement signals from Phase 2 data",
+        "Create cohort-specific features",
+        "Add seasonal indicators",
+        "Normalize feature distributions"
+      ],
+      "new_features": [
+        "seasonal_index",
+        "cohort_age",
+        "engagement_score",
+        "device_affinity"
+      ]
+    },
+    {
+      "step": 2,
+      "name": "Model Training",
+      "duration_min": 180,
+      "tasks": [
+        "Train XGBoost with new features",
+        "Validate on holdout set (20%)",
+        "Hyperparameter tuning (grid search)",
+        "Cross-validation (5-fold)"
+      ],
+      "training_samples": 2750000
+    },
+    {
+      "step": 3,
+      "name": "Evaluation & Comparison",
+      "duration_min": 90,
+      "tasks": [
+        "Compare new vs old model on Phase 2 test set",
+        "Analyze feature importance",
+        "Detect any regression risks",
+        "Calculate confidence intervals"
+      ],
+      "expected_improvement": "82.5% \u2192 84.2% (+1.7pp)"
+    },
+    {
+      "step": 4,
+      "name": "A/B Test Deployment",
+      "duration_min": 30,
+      "tasks": [
+        "Deploy new model to 5% canary group",
+        "Monitor for 6 hours",
+        "Rollout to 100% if no degradation",
+        "Archive old model version"
+      ],
+      "safety_gates": [
+        "accuracy_no_regression",
+        "latency_unchanged",
+        "error_rate_stable"
+      ]
+    }
+  ],
+  "success_criteria": {
+    "new_accuracy_minimum": 0.84,
+    "improvement_minimum_pp": 1.5,
+    "latency_unchanged": true,
+    "no_errors_introduced": true
+  },
+  "deliverables": [
+    "model_comparison_report.json",
+    "feature_importance_analysis.md"
+  ]
+}

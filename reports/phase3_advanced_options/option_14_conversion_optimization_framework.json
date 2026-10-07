@@ -1,0 +1,66 @@
+{
+  "option_id": 14,
+  "name": "Conversion Optimization Framework",
+  "duration_hours": 4,
+  "complexity": "Media",
+  "risk": "BAJO",
+  "status": "READY",
+  "objective": "Improve conversion funnel from 4.6% to 6.4% (+49K conversions/day at 5.5M)",
+  "funnel_stages": [
+    {
+      "stage": "Browse",
+      "current_conversion": 0.95,
+      "bottleneck": "Product discovery poor, only 95% of visitors browse",
+      "optimization": "Improved search, category recommendations (+2%)",
+      "projected": 0.97
+    },
+    {
+      "stage": "View Product",
+      "current_conversion": 0.85,
+      "bottleneck": "85% of browsers view product detail",
+      "optimization": "Rich media, reviews, personalized similar items (+4%)",
+      "projected": 0.89
+    },
+    {
+      "stage": "Add to Cart",
+      "current_conversion": 0.72,
+      "bottleneck": "Only 72% of product viewers add to cart",
+      "optimization": "One-click add, scarcity messaging, social proof (+8%)",
+      "projected": 0.78
+    },
+    {
+      "stage": "Checkout",
+      "current_conversion": 0.82,
+      "bottleneck": "18% abandon at checkout (33% industry avg)",
+      "optimization": "Express checkout, saved addresses, multiple payment options (+3%)",
+      "projected": 0.85
+    },
+    {
+      "stage": "Complete",
+      "current_conversion": 0.92,
+      "bottleneck": "8% fail to complete transaction",
+      "optimization": "Error recovery, payment retry logic (+1%)",
+      "projected": 0.93
+    }
+  ],
+  "current_metrics": {
+    "browse_to_conversion": 0.046,
+    "daily_conversions_at_2_75m": "121K",
+    "daily_conversions_at_5_5m": "243K"
+  },
+  "projected_metrics": {
+    "browse_to_conversion": 0.064,
+    "daily_conversions_at_2_75m": "168K (+47K)",
+    "daily_conversions_at_5_5m": "335K (+92K)",
+    "annual_incremental_revenue": "+$336M"
+  },
+  "success_criteria": {
+    "final_funnel_conversion": 0.064,
+    "no_regression_per_stage": true,
+    "revenue_lift_minimum": "+$300M annually"
+  },
+  "deliverables": [
+    "conversion_funnel_analysis.json",
+    "optimization_roadmap.md"
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "option_id": 17,
+  "name": "Customer Success Integration",
+  "duration_hours": 5,
+  "complexity": "Media",
+  "risk": "BAJO",
+  "status": "READY",
+  "objective": "Train 50 CS team members, prepare launch communications for 5.5M users",
+  "training_modules": [
+    {
+      "module": 1,
+      "name": "Phase 3 Technical Overview",
+      "duration_min": 60,
+      "audience": "All 50 CS members",
+      "content": [
+        "How Phase 3 works (10% \u2192 50% \u2192 100% rollout)",
+        "New metrics to monitor (6-point health score)",
+        "What to expect (faster recommendations, better conversion)",
+        "How to handle customer questions"
+      ]
+    },
+    {
+      "module": 2,
+      "name": "Escalation Procedures",
+      "duration_min": 45,
+      "audience": "Support leads",
+      "content": [
+        "When to escalate (anomalies, high error rate)",
+        "Escalation path (Support \u2192 Eng \u2192 Product)",
+        "Communication templates",
+        "Rollback procedures"
+      ]
+    },
+    {
+      "module": 3,
+      "name": "Customer Communication",
+      "duration_min": 60,
+      "audience": "CS managers",
+      "content": [
+        "Key benefits messaging (+40% conversion, faster recommendations)",
+        "Privacy & data handling",
+        "FAQ and talking points",
+        "Launch day communication timeline"
+      ]
+    }
+  ],
+  "launch_communications": {
+    "email_to_users": {
+      "recipients": "5.5M active users",
+      "subject": "Faster, smarter personalization is here",
+      "key_message": "+40% better recommendations powered by AI",
+      "send_time": "Oct 14, 10:00 AM UTC (Phase 3 GO day)",
+      "expected_open_rate": "22-25%"
+    },
+    "press_release": {
+      "recipients": "Media, analysts, industry",
+      "headline": "FASE 15 Phase 3: AI-Powered Personalization at 5.5M Users",
+      "key_stats": "+40% conversion lift, $1.9B annual revenue",
+      "distribution": "Press wires, Hacker News, Reddit"
+    },
+    "success_blog_post": {
+      "recipients": "Public blog",
+      "title": "How we doubled personalization impact with Phase 3",
+      "content": "Technical deep-dive, metrics, lessons learned",
+      "publish_date": "Oct 21 (1 week post-launch)"
+    }
+  },
+  "customer_success_deliverables": [
+    "Training deck (50 slides)",
+    "FAQ and talking points doc",
+    "Escalation runbook",
+    "Customer communication templates",
+    "Email copy for launch day",
+    "Press release drafts"
+  ],
+  "success_criteria": {
+    "team_trained_percent": 100,
+    "customer_satisfaction_min": 8.5,
+    "support_ticket_volume": "Normal baseline (no spike)",
+    "launch_day_communications_sent": true
+  },
+  "deliverables": [
+    "training_materials.md",
+    "launch_communications_package.zip"
+  ]
+}

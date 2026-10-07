@@ -1,0 +1,67 @@
+{
+  "option_id": 13,
+  "name": "Advanced User Segmentation",
+  "duration_hours": 5,
+  "complexity": "Alta",
+  "risk": "BAJO",
+  "status": "READY",
+  "objective": "Create 12 user personas with segment-specific ML models and strategies",
+  "segments": [
+    {
+      "segment_id": 1,
+      "name": "High-Value Repeat Buyers",
+      "size_percent": 8,
+      "characteristics": "LTV >$5K, 10+ purchases, 95% retention",
+      "ml_strategy": "Premium personalization, collaborative filtering",
+      "expected_lift": "+45%"
+    },
+    {
+      "segment_id": 2,
+      "name": "Price-Sensitive Shoppers",
+      "size_percent": 22,
+      "characteristics": "LTV <$500, discount-driven, seasonal",
+      "ml_strategy": "Rule-based recommendations, discount optimization",
+      "expected_lift": "+18%"
+    },
+    {
+      "segment_id": 3,
+      "name": "Browse-Then-Abandon",
+      "size_percent": 35,
+      "characteristics": "High session count, low conversion, window shopping",
+      "ml_strategy": "Urgency-based messaging, limited-time offers",
+      "expected_lift": "+32%"
+    },
+    {
+      "segment_id": 4,
+      "name": "Mobile-First Users",
+      "size_percent": 25,
+      "characteristics": "90% mobile traffic, app users, quick decisions",
+      "ml_strategy": "Mobile-optimized UI, fast checkout",
+      "expected_lift": "+28%"
+    },
+    {
+      "segment_id": 5,
+      "name": "New Users (0-7 days)",
+      "size_percent": 10,
+      "characteristics": "First-time visitors, high dropout risk",
+      "ml_strategy": "Onboarding flow, trust-building, free shipping incentive",
+      "expected_lift": "+40%"
+    }
+  ],
+  "modeling_approach": {
+    "per_segment_models": true,
+    "training_data": "Phase 2 (2.75M users)",
+    "validation": "Holdout test by segment",
+    "deployment": "Route users to segment-specific model at inference time"
+  },
+  "success_criteria": {
+    "segments_created": 12,
+    "models_trained": 12,
+    "improvement_vs_global": "5-10pp average lift per segment"
+  },
+  "deliverables": [
+    "user_segmentation_report.json",
+    "segment_strategies.md",
+    "model_routing_config.json"
+  ]
+}

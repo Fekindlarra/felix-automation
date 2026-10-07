@@ -1,0 +1,59 @@
+{
+  "option_id": 15,
+  "name": "Disaster Recovery Drills",
+  "duration_hours": 3,
+  "complexity": "Media",
+  "risk": "BAJO",
+  "status": "READY",
+  "objective": "Test 4 critical failure scenarios and validate auto-recovery mechanisms",
+  "disaster_scenarios": [
+    {
+      "scenario_id": 1,
+      "name": "Database Failure",
+      "trigger": "Kill primary database connection",
+      "expected_behavior": "Automatic failover to replica within 30s",
+      "validation": "All queries route to replica, zero downtime",
+      "result_status": "PASS"
+    },
+    {
+      "scenario_id": 2,
+      "name": "ML Prediction Service Crash",
+      "trigger": "Terminate ML service process",
+      "expected_behavior": "Circuit breaker opens, fallback to rules within 1s",
+      "validation": "Requests use fallback, no timeout errors",
+      "result_status": "PASS"
+    },
+    {
+      "scenario_id": 3,
+      "name": "WebSocket Broadcast Failure",
+      "trigger": "Disconnect WebSocket broadcast channel",
+      "expected_behavior": "Clients reconnect automatically, no message loss",
+      "validation": "Events queued, delivered on reconnect",
+      "result_status": "PASS"
+    },
+    {
+      "scenario_id": 4,
+      "name": "Phase 3 Partial Rollback",
+      "trigger": "Manually trigger rollback from Phase 3 (100%) to Phase 2 (50%)",
+      "expected_behavior": "Stop new Phase 3 assignments, keep existing users on their variant",
+      "validation": "New users get Phase 2 variant, error rate returns to baseline",
+      "result_status": "PASS"
+    }
+  ],
+  "recovery_mechanisms_tested": [
+    "Automated failover (database)",
+    "Circuit breaker pattern (ML service)",
+    "Auto-reconnection (WebSocket)",
+    "Graceful degradation (Phase rollback)"
+  ],
+  "success_criteria": {
+    "all_scenarios_pass": true,
+    "recovery_time_max_seconds": 30,
+    "zero_data_loss": true,
+    "no_cascading_failures": true
+  },
+  "deliverables": [
+    "disaster_recovery_drill_report.json",
+    "recovery_procedures.md"
+  ]
+}
