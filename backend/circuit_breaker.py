@@ -220,6 +220,11 @@ class CircuitBreakerRegistry:
 
     _breakers: Dict[str, CircuitBreaker] = {}
 
+    @property
+    def breakers(self) -> Dict[str, CircuitBreaker]:
+        """Access the breakers dictionary"""
+        return self._breakers
+
     @classmethod
     def get_or_create(cls, service_name: str, config: Optional[CircuitBreakerConfig] = None) -> CircuitBreaker:
         """Get existing circuit breaker or create new one"""

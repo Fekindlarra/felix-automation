@@ -437,6 +437,16 @@ Review logs and monitoring data for additional context."""
             print(f"❌ Error saving reports: {e}")
             return {}
 
+    def generate_report(self) -> Dict[str, Any]:
+        """Generate complete Phase 3 report"""
+        return {
+            "metrics_summary": self.calculate_metrics_summary(),
+            "business_impact": self.calculate_business_impact(),
+            "final_status": self.determine_final_status(),
+            "decision_log": self.decision_log,
+            "checkpoint_count": len(self.checkpoints)
+        }
+
     def close(self):
         """Close database connection"""
         if self.db:

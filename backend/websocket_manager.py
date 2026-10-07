@@ -186,6 +186,24 @@ class WebSocketConnectionManager:
         if client_id:
             self.event_history[client_id].append(message)
 
+    async def broadcast(self, message: dict, role: str = None, client_id: int = None):
+        """
+        Generic broadcast method for Phase 3 admin endpoints
+
+        Args:
+            message: Message to broadcast
+            role: Role to broadcast to ('admin', 'client', None for all)
+            client_id: Client ID to broadcast to (only used with role='client')
+        """
+        if role == "admin":
+            await self.broadcast_to_admin(message)
+        elif role == "client" and client_id:
+            await self.broadcast_to_client(client_id, message)
+        else:
+            # Broadcast to all connections
+            for connection_id in self.active_connections:
+                await self.send_to_connection(connection_id, message)
+
     async def broadcast_to_admin(self, message: dict):
         """Broadcast to all admin connections"""
         for connection_id in self.admin_connections:
