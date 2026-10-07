@@ -1,0 +1,72 @@
+{
+  "timestamp": "2026-10-07T02:16:19.695065",
+  "feature_importance": [
+    {
+      "feature": "user_segment",
+      "importance": 0.285,
+      "usage": "High"
+    },
+    {
+      "feature": "conversion_history",
+      "importance": 0.198,
+      "usage": "High"
+    },
+    {
+      "feature": "time_of_day",
+      "importance": 0.156,
+      "usage": "Medium"
+    },
+    {
+      "feature": "device_type",
+      "importance": 0.134,
+      "usage": "Medium"
+    },
+    {
+      "feature": "session_duration",
+      "importance": 0.098,
+      "usage": "Medium"
+    },
+    {
+      "feature": "previous_clicks",
+      "importance": 0.076,
+      "usage": "Low"
+    },
+    {
+      "feature": "geographic_region",
+      "importance": 0.053,
+      "usage": "Low"
+    }
+  ],
+  "predictions_distribution": {
+    "total_predictions": 49500,
+    "predictions_high_confidence": 24750,
+    "predictions_medium_confidence": 16335,
+    "predictions_low_confidence": 8415
+  },
+  "confidence_intervals": {
+    "ml_accuracy_mean": 0.825,
+    "ml_accuracy_ci_lower": 0.812,
+    "ml_accuracy_ci_upper": 0.838,
+    "ci_width": 0.026,
+    "rules_accuracy_mean": 0.78,
+    "rules_accuracy_ci_lower": 0.765,
+    "rules_accuracy_ci_upper": 0.795
+  },
+  "ml_vs_rules_comparison": {
+    "ml_wins": 3,
+    "rules_wins": 2,
+    "overall_winner": "ML (higher accuracy, acceptable latency)"
+  },
+  "key_findings": [
+    "ML model accuracy: 82.5% (4.5% higher than rules)",
+    "Low confidence predictions: 17% (could improve with retraining)",
+    "Top feature: user_segment (28.5% importance)",
+    "Model stability: Good (narrow confidence intervals)"
+  ],
+  "next_actions": [
+    "Implement low-confidence prediction handling",
+    "Schedule model retraining in 30 days",
+    "Increase monitoring of user_segment feature drift",
+    "Plan ensemble approach: ML for high-confidence, Rules for low-confidence"
+  ]
+}
