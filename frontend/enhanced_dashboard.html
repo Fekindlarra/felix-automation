@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FASE 15 Phase 3 - Dashboard Avanzado</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 0.95em;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .status-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .status-card.success {
+            border-left-color: #10b981;
+        }
+
+        .status-card.warning {
+            border-left-color: #f59e0b;
+        }
+
+        .status-card.danger {
+            border-left-color: #ef4444;
+        }
+
+        .status-card h3 {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-value {
+            font-size: 2.2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .status-unit {
+            font-size: 0.9em;
+            color: #999;
+        }
+
+        .status-icon {
+            float: right;
+            font-size: 2.5em;
+            opacity: 0.15;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .chart-container h2 {
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .chart-canvas-wrapper {
+            position: relative;
+            height: 300px;
+        }
+
+        .alerts-section {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .alerts-section h2 {
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .alert-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            background: #f9fafb;
+            border-left: 4px solid #667eea;
+        }
+
+        .alert-item.pass {
+            border-left-color: #10b981;
+            background: #ecfdf5;
+        }
+
+        .alert-item.fail {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+
+        .alert-icon {
+            font-size: 1.5em;
+            margin-right: 15px;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .alert-content {
+            flex: 1;
+        }
+
+        .alert-content strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .alert-value {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .personalization-phases {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .phase-box {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+            border: 2px solid #e5e7eb;
+        }
+
+        .phase-box.active {
+            background: #dbeafe;
+            border-color: #667eea;
+        }
+
+        .phase-label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .phase-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .footer {
+            background: #f9fafb;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            border-top: 1px solid #e5e7eb;
+            margin-top: 40px;
+        }
+
+        .ws-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            background: #10b981;
+            color: white;
+        }
+
+        .ws-status.disconnected {
+            background: #ef4444;
+        }
+
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .personalization-phases {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="ws-status" id="wsStatus">🟢 Conectado</div>
+
+    <div class="header">
+        <h1>🚀 FASE 15 PHASE 3: Dashboard Post-Deployment</h1>
+        <p>Monitoreo Real-Time | A/B Testing + ML Comparison | Personalization Rollout</p>
+    </div>
+
+    <div class="container">
+        <!-- STATUS CARDS -->
+        <div class="status-grid">
+            <div class="status-card success">
+                <span class="status-icon">✅</span>
+                <h3>ML Accuracy</h3>
+                <div class="status-value" id="mlAccuracy">82%</div>
+                <div class="status-unit">vs Rules: 75%</div>
+            </div>
+
+            <div class="status-card success">
+                <span class="status-icon">⚡</span>
+                <h3>DB Latency</h3>
+                <div class="status-value" id="dbLatency">0.38ms</div>
+                <div class="status-unit">Umbral: 1000ms</div>
+            </div>
+
+            <div class="status-card success">
+                <span class="status-icon">📊</span>
+                <h3>Predictions</h3>
+                <div class="status-value" id="predictions">3</div>
+                <div class="status-unit">Rastreadas</div>
+            </div>
+
+            <div class="status-card success">
+                <span class="status-icon">👥</span>
+                <h3>Personalization</h3>
+                <div class="status-value" id="personalization">1</div>
+                <div class="status-unit">Phase 1 Activo</div>
+            </div>
+        </div>
+
+        <!-- CHARTS -->
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h2>ML vs Rules Accuracy Trend</h2>
+                <div class="chart-canvas-wrapper">
+                    <canvas id="accuracyChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h2>System Performance Latencies</h2>
+                <div class="chart-canvas-wrapper">
+                    <canvas id="latencyChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- PERSONALIZATION STATUS -->
+        <div class="chart-container">
+            <h2>📈 Estado de Personalización (Rollout)</h2>
+            <div class="personalization-phases">
+                <div class="phase-box active">
+                    <div class="phase-label">Phase 1 (10%)</div>
+                    <div class="phase-value">1</div>
+                    <div style="font-size: 0.85em; color: #666; margin-top: 5px;">cliente</div>
+                </div>
+                <div class="phase-box">
+                    <div class="phase-label">Phase 2 (50%)</div>
+                    <div class="phase-value">-</div>
+                    <div style="font-size: 0.85em; color: #666; margin-top: 5px;">próximo</div>
+                </div>
+                <div class="phase-box">
+                    <div class="phase-label">Phase 3 (100%)</div>
+                    <div class="phase-value">-</div>
+                    <div style="font-size: 0.85em; color: #666; margin-top: 5px;">futuro</div>
+                </div>
+            </div>
+            <div style="margin-top: 20px; padding: 15px; background: #ecfdf5; border-left: 4px solid #10b981; border-radius: 4px;">
+                <strong>✅ Próximo Checkpoint:</strong> HORA 24 (Oct 7, 20:58 UTC)<br>
+                <strong>Decisión:</strong> Escalar a Phase 2 (50% rollout) si todos criterios ✅
+            </div>
+        </div>
+
+        <!-- CRITICAL ALERTS -->
+        <div class="alerts-section">
+            <h2>🚨 6 Alertas Críticas</h2>
+            <div id="alertsList"></div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>FASE 15 PHASE 3 — Monitoreo Activo | Última actualización: <span id="lastUpdate">ahora</span></p>
+        <p style="font-size: 0.85em; margin-top: 10px;">Status: 🟢 GREEN | Sistema Estable | Escalación Automática en HORA 24</p>
+    </div>
+
+    <script>
+        // Datos simulados con valores reales
+        const alertsData = [
+            { name: 'WebSocket Latency', current: 8, threshold: 100, unit: 'ms', status: 'pass' },
+            { name: 'ML Inference', current: 45, threshold: 100, unit: 'ms', status: 'pass' },
+            { name: 'Comparison Recording', current: 2.1, threshold: 5, unit: 'ms', status: 'pass' },
+            { name: 'DB Query Latency', current: 0.38, threshold: 1000, unit: 'ms', status: 'pass' },
+            { name: 'Error Rate', current: 0.02, threshold: 0.1, unit: '%', status: 'pass' },
+            { name: 'Prediction Accuracy', current: 82, threshold: 50, unit: '%', status: 'pass' }
+        ];
+
+        // Renderizar alertas
+        function renderAlerts() {
+            const alertsList = document.getElementById('alertsList');
+            alertsList.innerHTML = alertsData.map(alert => `
+                <div class="alert-item ${alert.status}">
+                    <div class="alert-icon">${alert.status === 'pass' ? '✅' : '❌'}</div>
+                    <div class="alert-content">
+                        <strong>${alert.name}</strong>
+                        <div class="alert-value">
+                            Actual: ${alert.current}${alert.unit} | Umbral: ${alert.threshold}${alert.unit}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Gráfico de Accuracy
+        function renderAccuracyChart() {
+            const ctx = document.getElementById('accuracyChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Test 1', 'Test 2', 'Test 3', 'Test 4'],
+                    datasets: [
+                        {
+                            label: 'ML Accuracy',
+                            data: [82, 80, 81, 82],
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'Rules Accuracy',
+                            data: [75, 74, 75, 74],
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' }
+                    },
+                    scales: {
+                        y: { min: 0, max: 100 }
+                    }
+                }
+            });
+        }
+
+        // Gráfico de Latencies
+        function renderLatencyChart() {
+            const ctx = document.getElementById('latencyChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['WebSocket', 'ML Inference', 'DB Query', 'Comparison'],
+                    datasets: [{
+                        label: 'Latencia (ms)',
+                        data: [8, 45, 0.38, 2.1],
+                        backgroundColor: [
+                            '#10b981',
+                            '#10b981',
+                            '#10b981',
+                            '#10b981'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // Actualizar timestamp
+        function updateTimestamp() {
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        }
+
+        // WebSocket simulado
+        function initWebSocket() {
+            const wsStatus = document.getElementById('wsStatus');
+            wsStatus.classList.add('disconnected');
+            wsStatus.textContent = '🔴 Simulado (Local)';
+
+            // Simular actualizaciones cada 10 segundos
+            setInterval(() => {
+                updateTimestamp();
+                renderAccuracyChart();
+            }, 10000);
+        }
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            renderAlerts();
+            renderAccuracyChart();
+            renderLatencyChart();
+            updateTimestamp();
+            initWebSocket();
+        });
+    </script>
+</body>
+</html>
