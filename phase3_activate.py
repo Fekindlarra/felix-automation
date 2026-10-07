@@ -1,52 +1,47 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Phase 3 Activation Script - Development/Production Version
-Comprehensive pre-flight validation and activation of FASE 15 Phase 3
+FASE 15 Phase 3 - Activation Script (Enhanced)
+Manages Phase 3 activation with comprehensive pre-flight validation and backup creation
 """
 
-import sys
-import os
-import json
 import sqlite3
-import shutil
 import logging
+import os
+import shutil
+import json
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, Tuple
-
-sys.path.insert(0, '/home/claude/felix-automation')
-
-from backend.api.config import get_settings
+import sys
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-BACKUP_DIR = Path('/home/claude/felix-automation/data/backups')
-PHASE3_LOG_DIR = Path('/home/claude/felix-automation/logs/phase3')
+BACKUP_DIR = Path('data/backups')
+PHASE3_LOG_DIR = Path('logs/phase3')
 
 
 class Phase3PreflightChecker:
     """Validates all pre-conditions for Phase 3 activation"""
-    
+
     def __init__(self, db_path: str):
         self.db_path = db_path
         self.checks = {}
         self.is_dev_mode = not os.environ.get('PROD_MODE', '').lower() == 'true'
-    
-    def check_phase2_health(self) -> Tuple[bool, str]:
+
+    def check_phase2_health(self) -> tuple[bool, str]:
         """Verify Phase 2 error rate < 1%"""
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
-            
+
             cursor.execute("""
                 SELECT COUNT(*) as total,
                        SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as errors
-                FROM api_logs 
+                FROM api_logs
                 WHERE timestamp > datetime('now', '-24 hours')
             """)
             
