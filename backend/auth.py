@@ -8,10 +8,11 @@ FASE 12: Backend API
 import os
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Dict
+from typing import Optional, Dict, Callable
+from functools import wraps
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Request
 
 logger = logging.getLogger(__name__)
 
@@ -210,3 +211,66 @@ def verify_jwt_token(token: str) -> Optional[Dict]:
     except Exception as e:
         logger.error(f"❌ Unexpected error in JWT verification: {str(e)}")
         return None
+
+
+def verify_request_admin_role(request: Request) -> None:
+    """
+    Verify that request comes from an admin user
+    Extracts token from Authorization header and verifies admin role
+
+    Raises HTTPException with 401 or 403 if not authenticated or not admin
+
+    Usage in FastAPI route:
+        from auth import verify_request_admin_role
+
+        @router.post("/admin-endpoint")
+        async def admin_endpoint(request: Request):
+            verify_request_admin_role(request)
+            # ... rest of handler
+    """
+    # Get Authorization header
+    auth_header = request.headers.get("Authorization", "")
+
+    if not auth_header:
+        logger.warning("❌ Admin access attempt without Authorization header")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authorization header missing",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+    # Extract token from "Bearer <token>"
+    parts = auth_header.split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        logger.warning("❌ Invalid Authorization header format")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Authorization header format",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+    token = parts[1]
+
+    # Verify token and check admin role
+    try:
+        payload = AuthManager.verify_token(token)
+        role = payload.get("role")
+
+        if role != "admin":
+            logger.warning(f"❌ Non-admin access attempt (role: {role})")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin role required for this operation"
+            )
+
+        logger.info(f"✅ Admin access verified for {payload.get('sub')}")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Admin verification failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token verification failed",
+            headers={"WWW-Authenticate": "Bearer"}
+        )

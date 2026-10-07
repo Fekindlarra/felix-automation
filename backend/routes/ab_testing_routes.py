@@ -24,6 +24,40 @@ websocket_manager = None
 # Module-level router
 router = APIRouter(prefix="/api/tests", tags=["A/B Testing"])
 
+
+# ==================== PHASE 3 FEATURE FLAG ====================
+
+def is_phase3_active() -> bool:
+    """
+    Check if Phase 3 is currently active
+    Returns False if database not initialized or flag not set
+    """
+    if database is None:
+        return False
+
+    try:
+        cursor = database.cursor()
+        cursor.execute("""
+            SELECT value FROM system_config WHERE key = 'PHASE_3_ACTIVE'
+        """)
+        result = cursor.fetchone()
+        return result[0] == 'true' if result else False
+    except Exception as e:
+        logger.warning(f"⚠️ Could not check Phase 3 status: {e}")
+        return False
+
+
+def require_phase3_active():
+    """
+    Guard function for routes that require Phase 3 to be active
+    Raises HTTPException with 423 (Locked) status if Phase 3 disabled
+    """
+    if not is_phase3_active():
+        raise HTTPException(
+            status_code=status.HTTP_423_LOCKED,
+            detail="Phase 3 is currently disabled. Cannot perform this operation."
+        )
+
 # ==================== REQUEST/RESPONSE MODELS ====================
 
 class VariantContent(BaseModel):
@@ -112,7 +146,12 @@ async def create_test(request: CreateABTestRequest):
     - **variant_a**: Content for variant A
     - **variant_b**: Content for variant B
     - **duration_days**: How many days to run the test (default: 14)
+
+    ⚠️ Phase 3 Active: This endpoint requires Phase 3 to be active
     """
+    # Check Phase 3 is active
+    require_phase3_active()
+
     if database is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -347,7 +386,14 @@ async def get_test_results(test_id: int):
 
 @router.post("/{test_id}/winner", response_model=WinnerResponse)
 async def mark_winner(test_id: int, winner: str = Query(..., description="Winner variant: A or B")):
-    """Mark the winner of a test and update test status"""
+    """
+    Mark the winner of a test and update test status
+
+    ⚠️ Phase 3 Active: This endpoint requires Phase 3 to be active
+    """
+    # Check Phase 3 is active
+    require_phase3_active()
+
     if database is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
