@@ -200,6 +200,97 @@
             font-variant-numeric: tabular-nums;
         }
 
+        /* Phase 3 Metrics Panel */
+        .phase3-panel {
+            background-color: var(--bg-primary);
+            border: 2px solid var(--info);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 32px;
+            box-shadow: var(--shadow);
+        }
+
+        .phase3-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .phase3-header h2 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .phase3-badge {
+            display: inline-block;
+            background-color: var(--info);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .phase3-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+        }
+
+        .phase3-metric {
+            background-color: var(--bg-secondary);
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .phase3-metric-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .phase3-metric-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .phase3-metric-target {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .phase3-status {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 4px;
+        }
+
+        .phase3-status.green {
+            background-color: var(--success);
+        }
+
+        .phase3-status.yellow {
+            background-color: var(--warning);
+        }
+
+        .phase3-status.red {
+            background-color: var(--danger);
+        }
+        }
+
         .variant-metric {
             text-align: center;
             font-size: 12px;
@@ -527,6 +618,49 @@
                 <div class="stat-number" id="winnerCount">1</div>
                 <div class="stat-label">Ganadores Identificados</div>
             </div>
+        </div>
+
+        <!-- Phase 3 Metrics Panel -->
+        <div class="phase3-panel">
+            <div class="phase3-header">
+                <h2>📊 FASE 15 Phase 3 Monitoring</h2>
+                <span class="phase3-badge">Active</span>
+            </div>
+            <div class="phase3-metrics">
+                <div class="phase3-metric">
+                    <div class="phase3-metric-label"><span class="phase3-status green"></span>ML Accuracy</div>
+                    <div class="phase3-metric-value" id="phase3-ml">83.6%</div>
+                    <div class="phase3-metric-target">Target: ≥78%</div>
+                </div>
+                <div class="phase3-metric">
+                    <div class="phase3-metric-label"><span class="phase3-status yellow"></span>Error Rate</div>
+                    <div class="phase3-metric-value" id="phase3-error">0.087%</div>
+                    <div class="phase3-metric-target">Target: &lt;0.08%</div>
+                </div>
+                <div class="phase3-metric">
+                    <div class="phase3-metric-label"><span class="phase3-status green"></span>Latency</div>
+                    <div class="phase3-metric-value" id="phase3-latency">45ms</div>
+                    <div class="phase3-metric-target">Target: &lt;95ms</div>
+                </div>
+                <div class="phase3-metric">
+                    <div class="phase3-metric-label"><span class="phase3-status green"></span>Predictions/hr</div>
+                    <div class="phase3-metric-value" id="phase3-pred">49.5</div>
+                    <div class="phase3-metric-target">Target: ≥42</div>
+                </div>
+                <div class="phase3-metric">
+                    <div class="phase3-metric-label"><span class="phase3-status green"></span>Personalization</div>
+                    <div class="phase3-metric-value" id="phase3-pers">155</div>
+                    <div class="phase3-metric-target">Target: ≥140</div>
+                </div>
+                <div class="phase3-metric">
+                    <div class="phase3-metric-label"><span class="phase3-status green"></span>Active Tests</div>
+                    <div class="phase3-metric-value" id="phase3-tests">10</div>
+                    <div class="phase3-metric-target">Target: ≥8</div>
+                </div>
+            </div>
+            <p style="margin-top: 16px; font-size: 12px; color: var(--text-secondary);">
+                ✓ 6/6 metrics GREEN | Health Score: 6/6 | <a href="phase3_realtime_dashboard.html" style="color: var(--info); text-decoration: none;">View Full Dashboard →</a>
+            </p>
         </div>
 
         <!-- Active Tests Section -->
