@@ -137,7 +137,7 @@ class Phase3CheckpointMonitor:
                   AND ml_accuracy IS NOT NULL
             """)
             ml_row = cursor.fetchone()
-            ml_accuracy = ml_row['avg_accuracy'] if ml_row['avg_accuracy'] else 0.78
+            ml_accuracy = ml_row['avg_accuracy'] if ml_row and ml_row['avg_accuracy'] is not None else 0.0  # sin dato: falla
 
             # 2. Error Rate - from error_tracker (critical + major errors)
             cursor.execute("""
@@ -148,7 +148,7 @@ class Phase3CheckpointMonitor:
             """)
             error_row = cursor.fetchone()
             error_count = error_row['error_count'] if error_row else 0
-            error_rate = (error_count / 100000.0) if error_count > 0 else 0.0008
+            error_rate = (error_count / 100000.0) if error_count > 0 else 0.0
 
             # 3. WebSocket Latency - from metrics
             cursor.execute("""
@@ -158,7 +158,7 @@ class Phase3CheckpointMonitor:
                   AND created_at > datetime('now', '-2 hours')
             """)
             lat_row = cursor.fetchone()
-            websocket_latency = lat_row['avg_latency'] if lat_row['avg_latency'] else 45.0
+            websocket_latency = lat_row['avg_latency'] if lat_row and lat_row['avg_latency'] is not None else float('inf')  # sin dato: falla
 
             # 4. Predictions/Hour - from ab_test_ml_predictions
             cursor.execute("""
@@ -167,7 +167,7 @@ class Phase3CheckpointMonitor:
                 WHERE created_at > datetime('now', '-2 hours')
             """)
             pred_row = cursor.fetchone()
-            predictions_hour = pred_row['predictions_hour'] if pred_row['predictions_hour'] else 42
+            predictions_hour = pred_row['predictions_hour'] if pred_row and pred_row['predictions_hour'] is not None else 0
 
             # 5. Personalization Active - from personalization_variants
             cursor.execute("""
@@ -176,7 +176,7 @@ class Phase3CheckpointMonitor:
                 WHERE applied_date > datetime('now', '-2 hours')
             """)
             pers_row = cursor.fetchone()
-            personalization_active = pers_row['active_personalization'] if pers_row else 140
+            personalization_active = pers_row['active_personalization'] if pers_row and pers_row['active_personalization'] is not None else 0
 
             # 6. Active Tests - from ab_tests
             cursor.execute("""
@@ -187,7 +187,7 @@ class Phase3CheckpointMonitor:
                   AND (end_date IS NULL OR end_date > datetime('now'))
             """)
             test_row = cursor.fetchone()
-            active_tests = test_row['active_count'] if test_row else 8
+            active_tests = test_row['active_count'] if test_row and test_row['active_count'] is not None else 0
 
             metrics = MetricSnapshot(
                 ml_accuracy=float(ml_accuracy),
@@ -203,14 +203,14 @@ class Phase3CheckpointMonitor:
 
         except Exception as e:
             logger.error(f"❌ Error collecting metrics: {e}")
-            # Return default metrics to continue checkpoint process
+            # Sin datos: el checkpoint falla (cerrado). No se inventan valores (bloqueante 3.4.9)
             return MetricSnapshot(
-                ml_accuracy=0.78,
-                error_rate=0.0008,
-                websocket_latency=45.0,
-                predictions_hour=42.0,
-                personalization_active=140,
-                active_tests=8
+                ml_accuracy=0.0,
+                error_rate=1.0,
+                websocket_latency=float('inf'),
+                predictions_hour=0.0,
+                personalization_active=0,
+                active_tests=0
             )
 
     def check_circuit_breakers(self) -> CircuitBreakerState:
