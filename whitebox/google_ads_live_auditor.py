@@ -72,7 +72,13 @@ class GoogleAdsLiveAuditor:
             # Configurar credenciales
             self.customer_id = gads_config.get("customer_id")
 
-            # Inicializar cliente (simularemos si google-ads no disponible)
+            # Sin conexión real a la API de Google Ads, no se devuelven datos inventados
+            # (bloqueante 3.4.3). Las secciones _audit_* son esqueleto con valores fijos.
+            return self._error_audit(
+                "Auditoría Google Ads en vivo no conectada a la API: sin datos medidos"
+            )
+
+            # Inicializar cliente (cuando exista la conexión real)
             self._init_client(gads_config)
 
             # Estructura de auditoria
