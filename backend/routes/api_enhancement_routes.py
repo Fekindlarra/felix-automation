@@ -29,9 +29,9 @@ async def get_predictions_advanced(
     min_probability: int = Query(0, ge=0, le=100),
     max_probability: int = Query(100, ge=0, le=100),
     min_confidence: int = Query(0, ge=0, le=100),
-    stage: Optional[str] = Query(None, regex="^(prospecto|propuesta|negociacion|cerrado)$"),
-    sort_by: str = Query("probability", regex="^(probability|confidence|timeline)$"),
-    sort_order: str = Query("desc", regex="^(asc|desc)$"),
+    stage: Optional[str] = Query(None, pattern="^(prospecto|propuesta|negociacion|cerrado)$"),
+    sort_by: str = Query("probability", pattern="^(probability|confidence|timeline)$"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$"),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0)
 ):
@@ -113,11 +113,11 @@ async def get_predictions_advanced(
 @router.get("/analytics/anomalies/advanced")
 async def get_anomalies_advanced(
     token: str,
-    severity: Optional[str] = Query(None, regex="^(CRITICAL|HIGH|MEDIUM|LOW)$"),
+    severity: Optional[str] = Query(None, pattern="^(CRITICAL|HIGH|MEDIUM|LOW)$"),
     min_affected_clients: int = Query(0, ge=0),
     date_from: Optional[str] = Query(None),  # ISO format: 2026-10-01
     date_to: Optional[str] = Query(None),
-    sort_by: str = Query("severity", regex="^(severity|affected_clients|timestamp)$"),
+    sort_by: str = Query("severity", pattern="^(severity|affected_clients|timestamp)$"),
     limit: int = Query(50, ge=1, le=500)
 ):
     """
@@ -191,7 +191,7 @@ async def get_anomalies_advanced(
 async def bulk_update_client_stage(
     token: str,
     client_ids: List[int],
-    new_stage: str = Query(..., regex="^(prospecto|propuesta|negociacion|cerrado)$")
+    new_stage: str = Query(..., pattern="^(prospecto|propuesta|negociacion|cerrado)$")
 ):
     """
     Update multiple clients' pipeline stage in one operation
@@ -238,7 +238,7 @@ async def bulk_update_client_stage(
 async def bulk_refresh_analytics(
     token: str,
     client_ids: Optional[List[int]] = None,
-    analysis_type: str = Query("full", regex="^(full|quick)$")
+    analysis_type: str = Query("full", pattern="^(full|quick)$")
 ):
     """
     Refresh analytics for multiple clients
@@ -501,7 +501,7 @@ async def register_webhook(
     webhook_url: str,
     events: List[str] = Query(
         default=["anomaly.critical"],
-        regex="^(anomaly\\.(critical|high|medium|low)|prediction\\.(high|low)|recommendation\\.(urgent|high))$"
+        pattern="^(anomaly\\.(critical|high|medium|low)|prediction\\.(high|low)|recommendation\\.(urgent|high))$"
     ),
     active: bool = Query(True)
 ):
