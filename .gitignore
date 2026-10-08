@@ -35,6 +35,11 @@ env/
 # Environment variables
 .env
 .env.local
+.env.example
+.env.production
+.env.production.example
+*.env
+TRACK_C_CONFIG_EXAMPLE.env
 
 # Database
 *.db
