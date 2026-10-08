@@ -41,7 +41,11 @@ class FacebookAdsLiveAuditor:
 
     # Versión de Facebook Graph API
     API_VERSION = "v18.0"
-    GRAPH_API_URL = f"https://graph.instagram.com/{API_VERSION}"
+    GRAPH_API_URL = f"https://graph.facebook.com/{API_VERSION}"
+
+    # Breakdowns de rendimiento: quién vio y respondió a los anuncios
+    DEMOGRAPHIC_BREAKDOWNS = ["age,gender", "region", "publisher_platform,platform_position"]
+    DEMOGRAPHIC_FIELDS = "impressions,clicks,spend,ctr,cpc,actions"
 
     # Campos a extraer de campañas
     CAMPAIGN_FIELDS = [
@@ -124,6 +128,7 @@ class FacebookAdsLiveAuditor:
             self._audit_audiences(audit_result)
             self._audit_budget_health(audit_result)
             self._audit_performance(audit_result)
+            self._audit_demographics(audit_result)
 
             # Calcular score
             audit_result["score"] = self._calculate_score(audit_result)
@@ -250,6 +255,32 @@ class FacebookAdsLiveAuditor:
                 "avg_cpc": self._calculate_avg_metric(adsets, "cpc")
             }
 
+            # Intereses y segmentación que el cliente configuró (lo declarado, no lo inferido)
+            interests: Dict[str, int] = {}
+            genders_seen = set()
+            geo_seen = set()
+            for a in adsets:
+                t = a.get("targeting") or {}
+                for spec in t.get("flexible_spec", []) or []:
+                    for interest in spec.get("interests", []) or []:
+                        name = interest.get("name")
+                        if name:
+                            interests[name] = interests.get(name, 0) + 1
+                for g in t.get("genders", []) or []:
+                    genders_seen.add({1: "hombres", 2: "mujeres"}.get(g, str(g)))
+                geo = t.get("geo_locations") or {}
+                for c in geo.get("countries", []) or []:
+                    geo_seen.add(c)
+                for r in geo.get("regions", []) or []:
+                    geo_seen.add(r.get("name", ""))
+                for c in geo.get("cities", []) or []:
+                    geo_seen.add(c.get("name", ""))
+            adset_stats["configured_interests"] = sorted(
+                interests.items(), key=lambda kv: kv[1], reverse=True
+            )
+            adset_stats["configured_genders"] = sorted(genders_seen)
+            adset_stats["configured_geo"] = sorted(g for g in geo_seen if g)
+
             audit_result["findings"]["adsets"] = adset_stats
 
             if adset_stats["total"] == 0:
@@ -347,6 +378,30 @@ class FacebookAdsLiveAuditor:
 
         except Exception as e:
             logger.warning(f"[FB_ADS] Error auditando performance: {str(e)}")
+
+    def _audit_demographics(self, audit_result: Dict) -> None:
+        """Rendimiento por edad y género, región y ubicación de anuncio.
+
+        Cada breakdown es una llamada separada. Si Meta rechaza uno, los demás siguen.
+        """
+        demographics: Dict[str, List[Dict]] = {}
+        for breakdown in self.DEMOGRAPHIC_BREAKDOWNS:
+            try:
+                url = f"{self.GRAPH_API_URL}/{self.ad_account_id}/insights"
+                params = {
+                    "access_token": self.access_token,
+                    "fields": self.DEMOGRAPHIC_FIELDS,
+                    "breakdowns": breakdown,
+                    "date_preset": "last_30d",
+                    "limit": 500,
+                }
+                response = requests.get(url, params=params, timeout=15)
+                response.raise_for_status()
+                demographics[breakdown] = response.json().get("data", [])
+            except Exception as e:
+                logger.warning(f"[FB_ADS] Breakdown {breakdown} falló: {str(e)}")
+                audit_result["findings"]["issues"].append(f"Demographic breakdown {breakdown} failed: {str(e)}")
+        audit_result["findings"]["demographics"] = demographics
 
     def _calculate_score(self, audit_result: Dict) -> int:
         """Calcular score 0-100 basado en hallazgos"""
