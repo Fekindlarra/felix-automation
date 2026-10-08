@@ -49,14 +49,17 @@ class ShopifyAuditor:
         """
         try:
             if store_url not in self.api_clients:
-                client = ShopifyAPIClient(store_url, access_token, timeout=30)
-                # Validate credentials before caching
-                if client.validate_credentials():
+                # Pass timeout in config dict, not as direct parameter
+                config = {"timeout": 30}
+                client = ShopifyAPIClient(store_url, access_token, config=config)
+
+                # Try to validate connection with health_check (not validate_credentials which doesn't exist)
+                if client.health_check():
                     self.api_clients[store_url] = client
                     logger.info(f"✅ ShopifyAPIClient creado para: {store_url}")
                     return client
                 else:
-                    logger.error(f"❌ Credenciales inválidas para: {store_url}")
+                    logger.error(f"❌ No se pudo validar conexión para: {store_url}")
                     return None
             return self.api_clients[store_url]
         except Exception as e:
@@ -243,8 +246,8 @@ class ShopifyAuditor:
                 logger.warning("⚠️ No se pudo conectar con Shopify API")
                 return {"error": "Failed to connect to Shopify API"}
 
-            # Get real analytics data
-            analytics = client.get_analytics()
+            # Get real analytics data using correct method name
+            analytics = client.calculate_analytics()
 
             performance = {
                 "page_speed": {
@@ -284,7 +287,7 @@ class ShopifyAuditor:
                     "cdn": "Shopify CDN"
                 },
                 "api_health": {
-                    "status": "healthy" if client.is_healthy() else "unhealthy",
+                    "status": "healthy" if client.health_check() else "unhealthy",
                     "uptime_percent": 99.9,  # Shopify standard SLA
                     "last_check": datetime.now().isoformat()
                 }
@@ -356,7 +359,7 @@ class ShopifyAuditor:
                     "recommendation": "Rotar tokens regularmente en Admin"
                 },
                 "api_health": {
-                    "status": "healthy" if client.is_healthy() else "unhealthy",
+                    "status": "healthy" if client.health_check() else "unhealthy",
                     "uptime_percent": 99.9,
                     "rate_limit_status": "respecting 2 req/sec",
                     "last_check": datetime.now().isoformat()
