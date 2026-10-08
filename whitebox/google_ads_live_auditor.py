@@ -45,6 +45,7 @@ class GoogleAdsLiveAuditor:
         self.orchestrator = orchestrator
         self.client = None
         self.customer_id = None
+        self.client_initialized_with_real_api = False
 
     def audit_client(self, client_id: int, gads_config: Dict) -> Dict:
         """
@@ -116,19 +117,32 @@ class GoogleAdsLiveAuditor:
     def _validate_config(self, gads_config: Dict) -> bool:
         """Validar configuración requerida"""
         required = ["developer_token", "customer_id", "refresh_token"]
-        return all(key in gads_config for key in required)
+        # Check that all required keys exist AND have non-None, non-empty values
+        for key in required:
+            if key not in gads_config or not gads_config[key]:
+                return False
+
+        # Validate customer_id format (should be numeric, not "invalid")
+        customer_id = gads_config.get("customer_id", "")
+        if not isinstance(customer_id, str) or not customer_id.replace("-", "").isdigit():
+            return False
+
+        return True
 
     def _init_client(self, gads_config: Dict) -> None:
         """Inicializar cliente de Google Ads"""
         try:
-            # En producción, usar: from google.ads.googleads.client import GoogleAdsClient
-            # Por ahora simulamos la inicialización
-            self.client = {
-                "developer_token": gads_config.get("developer_token"),
-                "customer_id": gads_config.get("customer_id"),
-                "refresh_token": gads_config.get("refresh_token")
-            }
-            logger.info("[GOOGLE_ADS] Cliente inicializado")
+            # Try to use the real Google Ads client
+            try:
+                from google.ads.googleads.client import GoogleAdsClient
+                self.client = GoogleAdsClient.load_from_storage(version='v17')
+                self.client_initialized_with_real_api = True
+            except ImportError:
+                # google-ads library not available
+                logger.warning("[GOOGLE_ADS] google-ads library not available, cannot authenticate")
+                self.client = None
+                self.client_initialized_with_real_api = False
+                raise Exception("Google Ads API client library not available. Cannot authenticate credentials.")
         except Exception as e:
             logger.error(f"[GOOGLE_ADS] Error inicializando cliente: {str(e)}")
             raise
@@ -155,33 +169,18 @@ class GoogleAdsLiveAuditor:
     def _audit_campaigns(self, audit_result: Dict) -> None:
         """Auditar campañas"""
         try:
+            # Only return data if we successfully authenticated with real API
+            if not self.client_initialized_with_real_api:
+                audit_result["findings"]["campaigns"] = {}
+                return
+
             # En producción, query: SELECT campaign.id, campaign.name, campaign.status,
             # campaign.advertising_channel_type, metrics.impressions, metrics.clicks,
             # metrics.cost_micros FROM campaign WHERE campaign.status != REMOVED
 
-            # Simulación de datos
-            campaigns = [
-                {
-                    "id": "1234567890",
-                    "name": "Summer Campaign 2024",
-                    "status": "ENABLED",
-                    "channel": "SEARCH",
-                    "budget": 5000.0,
-                    "spend": 3200.0,
-                    "impressions": 45000,
-                    "clicks": 1200
-                },
-                {
-                    "id": "1234567891",
-                    "name": "Display Remarketing",
-                    "status": "ENABLED",
-                    "channel": "DISPLAY",
-                    "budget": 2000.0,
-                    "spend": 1800.0,
-                    "impressions": 125000,
-                    "clicks": 3500
-                }
-            ]
+            # Query real data from API
+            # ... API call code here ...
+            campaigns = []  # Would be populated from API
 
             campaign_stats = {
                 "total": len(campaigns),
@@ -211,14 +210,19 @@ class GoogleAdsLiveAuditor:
     def _audit_ad_groups(self, audit_result: Dict) -> None:
         """Auditar ad groups"""
         try:
+            # Only return data if we successfully authenticated with real API
+            if not self.client_initialized_with_real_api:
+                audit_result["findings"]["ad_groups"] = {}
+                return
+
             # En producción, query para obtener ad groups desde Google Ads API
             adgroup_stats = {
-                "total": 8,
-                "enabled": 7,
-                "paused": 1,
-                "total_keywords": 245,
-                "avg_quality_score": 7.2,
-                "critical_quality": 2
+                "total": 0,
+                "enabled": 0,
+                "paused": 0,
+                "total_keywords": 0,
+                "avg_quality_score": 0,
+                "critical_quality": 0
             }
 
             audit_result["findings"]["ad_groups"] = adgroup_stats
@@ -235,20 +239,25 @@ class GoogleAdsLiveAuditor:
     def _audit_keywords(self, audit_result: Dict) -> None:
         """Auditar keywords"""
         try:
+            # Only return data if we successfully authenticated with real API
+            if not self.client_initialized_with_real_api:
+                audit_result["findings"]["keywords"] = {}
+                return
+
             # En producción, query para obtener keywords y performance
             keyword_stats = {
-                "total": 245,
-                "active": 220,
-                "paused": 25,
+                "total": 0,
+                "active": 0,
+                "paused": 0,
                 "match_types": {
-                    "broad": 85,
-                    "phrase": 95,
-                    "exact": 65
+                    "broad": 0,
+                    "phrase": 0,
+                    "exact": 0
                 },
-                "negative_keywords": 32,
-                "high_volume_keywords": 12,
-                "low_volume_keywords": 98,
-                "search_volume_coverage": 0.76
+                "negative_keywords": 0,
+                "high_volume_keywords": 0,
+                "low_volume_keywords": 0,
+                "search_volume_coverage": 0
             }
 
             audit_result["findings"]["keywords"] = keyword_stats
@@ -265,18 +274,23 @@ class GoogleAdsLiveAuditor:
     def _audit_quality_scores(self, audit_result: Dict) -> None:
         """Auditar quality scores"""
         try:
+            # Only return data if we successfully authenticated with real API
+            if not self.client_initialized_with_real_api:
+                audit_result["findings"]["quality_scores"] = {}
+                return
+
             # En producción, obtener del API
             qs_distribution = {
-                "qs_10": 65,  # 65 keywords con QS 10
-                "qs_9": 42,
-                "qs_8": 35,
-                "qs_7": 28,
-                "qs_6_below": 12,
-                "avg_quality_score": 8.1,
-                "expected_ctr": 0.45,
-                "expected_cpc": 1.25,
-                "ad_relevance": "Above Average",
-                "landing_page_exp": "Good"
+                "qs_10": 0,
+                "qs_9": 0,
+                "qs_8": 0,
+                "qs_7": 0,
+                "qs_6_below": 0,
+                "avg_quality_score": 0,
+                "expected_ctr": 0,
+                "expected_cpc": 0,
+                "ad_relevance": "Unknown",
+                "landing_page_exp": "Unknown"
             }
 
             audit_result["findings"]["quality_scores"] = qs_distribution
@@ -326,6 +340,11 @@ class GoogleAdsLiveAuditor:
     def _audit_performance(self, audit_result: Dict) -> None:
         """Auditar performance metrics"""
         try:
+            # Only return data if we successfully authenticated with real API
+            if not self.client_initialized_with_real_api:
+                audit_result["findings"]["performance"] = {}
+                return
+
             # Agregar metrics de campaña
             campaigns = audit_result["findings"]["campaigns"].get("campaigns", [])
 
@@ -340,11 +359,11 @@ class GoogleAdsLiveAuditor:
                 "impressions": total_impressions,
                 "clicks": total_clicks,
                 "spend": total_spend,
-                "conversions": 340,  # Simulado
+                "conversions": 0,
                 "ctr": round(ctr, 2),
                 "cpc": round(cpc, 2),
-                "conversion_rate": 4.2,  # Simulado
-                "roas": 3.5  # Simulado
+                "conversion_rate": 0,
+                "roas": 0
             }
 
             audit_result["findings"]["performance"] = performance
