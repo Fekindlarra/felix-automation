@@ -1,3 +1,4 @@
+import re
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -22,6 +23,20 @@ router = APIRouter(prefix="/api", tags=["api-enhancement"])
 # ============================================================================
 # ADVANCED ANALYTICS FILTERING & SORTING
 # ============================================================================
+
+
+EVENTOS_WEBHOOK_VALIDOS = re.compile(
+    r"^(anomaly\.(critical|high|medium|low)|prediction\.(high|low)|recommendation\.(urgent|high))$"
+)
+
+
+def validar_eventos_webhook(eventos: List[str]) -> List[str]:
+    """Valida cada evento contra el patrón (pydantic 2.5 no permite pattern en List[str])."""
+    for evento in eventos:
+        if not EVENTOS_WEBHOOK_VALIDOS.match(evento):
+            raise ValueError(f"Evento de webhook no válido: {evento}")
+    return eventos
+
 
 @router.get("/analytics/predictions/advanced")
 async def get_predictions_advanced(
@@ -499,10 +514,7 @@ async def list_api_keys(token: str):
 async def register_webhook(
     token: str,
     webhook_url: str,
-    events: List[str] = Query(
-        default=["anomaly.critical"],
-        pattern="^(anomaly\\.(critical|high|medium|low)|prediction\\.(high|low)|recommendation\\.(urgent|high))$"
-    ),
+    events: List[str] = Query(default=["anomaly.critical"]),
     active: bool = Query(True)
 ):
     """
@@ -514,6 +526,7 @@ async def register_webhook(
     - active: Enable/disable webhook
     """
     verify_admin_token(token)
+    events = validar_eventos_webhook(events)
 
     try:
         import secrets
