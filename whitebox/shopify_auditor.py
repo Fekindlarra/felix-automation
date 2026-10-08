@@ -149,6 +149,8 @@ class ShopifyAuditor:
 
             # ============ CALCULAR SCORE ============
             audit_result["score"] = self._calculate_score(audit_result["findings"])
+            if audit_result["score"] is None:
+                audit_result["error"] = "Auditoría Shopify sin medición completa: sin puntaje"
             audit_result["status"] = "completed"
 
             logger.info(f"✅ Auditoría Shopify completada - Score: {audit_result['score']}/100")
@@ -530,35 +532,13 @@ class ShopifyAuditor:
             logger.error(f"❌ Error auditando SEO: {str(e)}")
             return {"error": str(e), "status": "api_error"}
 
-    def _calculate_score(self, findings: Dict) -> int:
-        """Calcula score general de la auditoría (0-100)"""
-        try:
-            scores = {
-                "configuration": 85,  # Bien configurada
-                "performance": 70,    # Necesita mejoras
-                "security": 75,       # Bien pero puede mejorar
-                "integrations": 90,   # Muy bien integrada
-                "seo": 80             # Buen SEO
-            }
-
-            # Promedio ponderado
-            weights = {
-                "configuration": 0.15,
-                "performance": 0.25,
-                "security": 0.25,
-                "integrations": 0.20,
-                "seo": 0.15
-            }
-
-            weighted_score = sum(scores[k] * weights[k] for k in scores.keys())
-            final_score = int(weighted_score)
-
-            logger.info(f"📊 Score calculado: {final_score}/100")
-            return final_score
-
-        except Exception as e:
-            logger.error(f"❌ Error calculando score: {str(e)}")
-            return 0
+    def _calculate_score(self, findings: Dict) -> Optional[int]:
+        """
+        Puntaje general (0-100). Sin medición real no hay puntaje: devuelve None.
+        Antes devolvía 79 fijo, sin importar los hallazgos (bloqueante 3.4.2).
+        """
+        logger.warning("📊 Score Shopify no calculado: las secciones no están medidas")
+        return None
 
     def close(self):
         """Close all API client connections and cleanup resources"""
