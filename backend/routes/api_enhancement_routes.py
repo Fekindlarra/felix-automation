@@ -11,6 +11,8 @@ import csv
 import io
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict
+from typing_extensions import Annotated
+from pydantic import StringConstraints
 from fastapi import APIRouter, HTTPException, status, Query, Request
 from fastapi.responses import StreamingResponse
 from backend.auth import verify_admin_token
@@ -18,6 +20,18 @@ from backend.auth import verify_admin_token
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["api-enhancement"])
+
+# ============================================================================
+# TYPE ALIASES FOR VALIDATION
+# ============================================================================
+
+# Pydantic 2.5 compatible: Pattern constraint for webhook event names
+WebhookEventName = Annotated[
+    str,
+    StringConstraints(
+        pattern=r"^(anomaly\.(critical|high|medium|low)|prediction\.(high|low)|recommendation\.(urgent|high))$"
+    )
+]
 
 # ============================================================================
 # ADVANCED ANALYTICS FILTERING & SORTING
@@ -499,10 +513,7 @@ async def list_api_keys(token: str):
 async def register_webhook(
     token: str,
     webhook_url: str,
-    events: List[str] = Query(
-        default=["anomaly.critical"],
-        regex="^(anomaly\\.(critical|high|medium|low)|prediction\\.(high|low)|recommendation\\.(urgent|high))$"
-    ),
+    events: List[WebhookEventName] = Query(default=["anomaly.critical"]),
     active: bool = Query(True)
 ):
     """
