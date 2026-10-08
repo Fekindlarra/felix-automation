@@ -18,6 +18,14 @@ from enum import Enum
 logger = logging.getLogger(__name__)
 
 
+class MetricsCollectionError(Exception):
+    """
+    Raised when metrics cannot be collected from database.
+    Indicates a data availability issue that should trigger rollback consideration.
+    """
+    pass
+
+
 class CheckpointStatus(Enum):
     """Checkpoint evaluation status"""
     GREEN = "GREEN"        # 6/6 metrics passing
@@ -125,11 +133,14 @@ class Phase3CheckpointMonitor:
             return False
 
     def collect_metrics(self) -> MetricSnapshot:
-        """Collect current 6 metrics from database"""
+        """
+        Collect current 6 metrics from database.
+        Raises MetricsCollectionError if any metric cannot be collected.
+        """
         try:
             cursor = self.db.cursor()
 
-            # 1. ML Accuracy - from comparison_reports
+            # 1. ML Accuracy - from ab_test_ml_predictions
             cursor.execute("""
                 SELECT AVG(ml_accuracy) as avg_accuracy
                 FROM ab_test_ml_predictions
@@ -137,9 +148,16 @@ class Phase3CheckpointMonitor:
                   AND ml_accuracy IS NOT NULL
             """)
             ml_row = cursor.fetchone()
-            ml_accuracy = ml_row['avg_accuracy'] if ml_row['avg_accuracy'] else 0.78
 
-            # 2. Error Rate - from error_tracker (critical + major errors)
+            # Require valid data - no hardcoded fallback
+            if not ml_row or ml_row['avg_accuracy'] is None:
+                raise MetricsCollectionError(
+                    "❌ ML Accuracy: No data collected in last 2 hours. "
+                    "Either ab_test_ml_predictions table is empty or queries are not recording predictions."
+                )
+            ml_accuracy = float(ml_row['avg_accuracy'])
+
+            # 2. Error Rate - from error_log (critical + major errors)
             cursor.execute("""
                 SELECT COUNT(*) as error_count
                 FROM error_log
@@ -147,8 +165,17 @@ class Phase3CheckpointMonitor:
                   AND created_at > datetime('now', '-2 hours')
             """)
             error_row = cursor.fetchone()
-            error_count = error_row['error_count'] if error_row else 0
-            error_rate = (error_count / 100000.0) if error_count > 0 else 0.0008
+
+            # Error count can be 0 (no errors) - that's healthy
+            # But error_row should exist (count query always returns a row)
+            if not error_row:
+                raise MetricsCollectionError(
+                    "❌ Error Rate: Query failed - error_log table may not exist"
+                )
+            error_count = error_row['error_count'] if error_row['error_count'] else 0
+            # Convert count to rate: errors per 100,000 requests (assuming ~100k requests in 2h window)
+            error_rate = (error_count / 100000.0)
+            logger.info(f"ℹ️  Error Rate: {error_count} errors in last 2 hours = {error_rate:.4f}")
 
             # 3. WebSocket Latency - from metrics
             cursor.execute("""
@@ -158,16 +185,38 @@ class Phase3CheckpointMonitor:
                   AND created_at > datetime('now', '-2 hours')
             """)
             lat_row = cursor.fetchone()
-            websocket_latency = lat_row['avg_latency'] if lat_row['avg_latency'] else 45.0
+
+            # Require valid latency data
+            if not lat_row or lat_row['avg_latency'] is None:
+                raise MetricsCollectionError(
+                    "❌ WebSocket Latency: No data collected in last 2 hours. "
+                    "Metrics table may not be recording WebSocket latencies."
+                )
+            websocket_latency = float(lat_row['avg_latency'])
 
             # 4. Predictions/Hour - from ab_test_ml_predictions
             cursor.execute("""
-                SELECT COUNT(*) * 30 as predictions_hour  -- Extrapolate 2h to per-hour
+                SELECT COUNT(*) as prediction_count
                 FROM ab_test_ml_predictions
                 WHERE created_at > datetime('now', '-2 hours')
             """)
             pred_row = cursor.fetchone()
-            predictions_hour = pred_row['predictions_hour'] if pred_row['predictions_hour'] else 42
+
+            if not pred_row:
+                raise MetricsCollectionError(
+                    "❌ Predictions/Hour: Query failed - ab_test_ml_predictions table may not exist"
+                )
+
+            # Extrapolate 2-hour window to per-hour rate
+            prediction_count = pred_row['prediction_count'] if pred_row['prediction_count'] else 0
+            predictions_hour = float(prediction_count * 30)  # 2h window × 30 = per-hour estimate
+
+            if predictions_hour == 0:
+                raise MetricsCollectionError(
+                    "❌ Predictions/Hour: No predictions recorded in last 2 hours. "
+                    "ML prediction service may not be running."
+                )
+            logger.info(f"ℹ️  Predictions/Hour: {prediction_count} in 2h window → {predictions_hour} per hour")
 
             # 5. Personalization Active - from personalization_variants
             cursor.execute("""
@@ -176,7 +225,14 @@ class Phase3CheckpointMonitor:
                 WHERE applied_date > datetime('now', '-2 hours')
             """)
             pers_row = cursor.fetchone()
-            personalization_active = pers_row['active_personalization'] if pers_row else 140
+
+            if not pers_row:
+                raise MetricsCollectionError(
+                    "❌ Personalization Active: Query failed - personalization_variants table may not exist"
+                )
+
+            personalization_active = pers_row['active_personalization'] if pers_row['active_personalization'] else 0
+            logger.info(f"ℹ️  Personalization Active: {personalization_active} clients personalized in last 2 hours")
 
             # 6. Active Tests - from ab_tests
             cursor.execute("""
@@ -187,30 +243,36 @@ class Phase3CheckpointMonitor:
                   AND (end_date IS NULL OR end_date > datetime('now'))
             """)
             test_row = cursor.fetchone()
-            active_tests = test_row['active_count'] if test_row else 8
+
+            if not test_row:
+                raise MetricsCollectionError(
+                    "❌ Active Tests: Query failed - ab_tests table may not exist"
+                )
+
+            active_tests = test_row['active_count'] if test_row['active_count'] else 0
+            logger.info(f"ℹ️  Active Tests: {active_tests} currently running")
 
             metrics = MetricSnapshot(
-                ml_accuracy=float(ml_accuracy),
-                error_rate=float(error_rate),
-                websocket_latency=float(websocket_latency),
-                predictions_hour=float(predictions_hour),
+                ml_accuracy=ml_accuracy,
+                error_rate=error_rate,
+                websocket_latency=websocket_latency,
+                predictions_hour=predictions_hour,
                 personalization_active=int(personalization_active),
                 active_tests=int(active_tests)
             )
 
-            logger.info(f"✅ Metrics collected: {metrics}")
+            logger.info(f"✅ All metrics collected successfully: {metrics}")
             return metrics
 
+        except MetricsCollectionError as e:
+            # Re-raise collection errors - these indicate real problems
+            logger.error(str(e))
+            raise
         except Exception as e:
-            logger.error(f"❌ Error collecting metrics: {e}")
-            # Return default metrics to continue checkpoint process
-            return MetricSnapshot(
-                ml_accuracy=0.78,
-                error_rate=0.0008,
-                websocket_latency=45.0,
-                predictions_hour=42.0,
-                personalization_active=140,
-                active_tests=8
+            # Wrap unexpected exceptions
+            logger.error(f"❌ Unexpected error collecting metrics: {e}", exc_info=True)
+            raise MetricsCollectionError(
+                f"Unexpected error during metrics collection: {e}"
             )
 
     def check_circuit_breakers(self) -> CircuitBreakerState:
@@ -367,13 +429,19 @@ class Phase3CheckpointMonitor:
             logger.error(f"❌ Error saving checkpoint: {e}")
 
     def collect_checkpoint(self, hora: int) -> Optional[Checkpoint]:
-        """Collect a single checkpoint at specified HORA"""
+        """
+        Collect a single checkpoint at specified HORA.
+
+        Returns:
+            Checkpoint if successful
+            None if metrics collection fails (indicating serious data issue)
+        """
         try:
             logger.info(f"\n{'='*70}")
             logger.info(f"CHECKPOINT HORA {hora}")
             logger.info(f"{'='*70}")
 
-            # Collect metrics
+            # Collect metrics - will raise MetricsCollectionError if data unavailable
             metrics = self.collect_metrics()
 
             # Check circuit breakers
@@ -409,8 +477,16 @@ class Phase3CheckpointMonitor:
 
             return checkpoint
 
+        except MetricsCollectionError as e:
+            logger.error(
+                f"❌ Checkpoint HORA {hora} failed: Metrics not available. "
+                f"This should trigger rollback consideration. Error: {e}"
+            )
+            # Signal that this checkpoint could not be collected
+            # The calling code (rollback_manager) should handle this as a CRITICAL condition
+            return None
         except Exception as e:
-            logger.error(f"❌ Error collecting checkpoint: {e}", exc_info=True)
+            logger.error(f"❌ Unexpected error collecting checkpoint HORA {hora}: {e}", exc_info=True)
             return None
 
     def generate_checkpoint_report(self) -> Dict:
