@@ -165,7 +165,8 @@ class DatabaseMigrator:
             
             # Insert data
             placeholders = ','.join(['%s'] * len(columns))
-            insert_stmt = f'INSERT INTO "{table_name}" ({",".join([f\'"{c}\'' for c in columns])}) VALUES ({placeholders})'
+            cols_sql = ",".join('"' + c + '"' for c in columns)
+            insert_stmt = f'INSERT INTO "{table_name}" ({cols_sql}) VALUES ({placeholders})'
             
             pg_cursor = self.pg_conn.cursor()
             execute_values(pg_cursor, insert_stmt, data, page_size=100)
