@@ -318,47 +318,52 @@ class MultiPlatformAuditorAgent:
         """Computar auditoría web (sin BD, seguro para threads)"""
         logger.info(f"  ⚡ Computando Web para {client.name}")
 
-        web_score = 72
-        web_metrics = {
-            "performance": 85,
-            "security": 90,
-            "tracking": 40,
-            "technology": 75,
-            "recommendations": [
-                "Implementar Google Analytics 4",
-                "Optimizar imágenes para móvil",
-                "Mejorar speed con CDN"
-            ]
-        }
+        # Check if client has website URL
+        website_url = getattr(client, 'website', None)
+        if not website_url:
+            logger.warning(f"  ⚠️ Cliente {client.name} sin URL de website")
+            return {
+                "platform": "web",
+                "status": "no_data",
+                "overall_score": None,
+                "error": "No website URL available for audit"
+            }
 
+        # TODO: Implement real web audit when endpoint available
+        # For now, return unavailable status instead of fixed score
         return {
             "platform": "web",
-            "overall_score": web_score,
-            "metrics": web_metrics
+            "status": "unavailable",
+            "overall_score": None,
+            "error": "Web audit not yet implemented"
         }
 
     def _compute_facebook_audit(self, client) -> Dict:
         """Computar auditoría Facebook Ads (sin BD, seguro para threads)"""
         logger.info(f"  📘 Computando Facebook Ads para {client.name}")
 
-        result = create_sample_facebook_audit()
-
+        # TODO: Implement real Facebook Ads audit when credentials available
+        # create_sample_facebook_audit() returns fixed simulated data
+        # Don't return it without credentials
         return {
             "platform": "facebook_ads",
-            "overall_score": result['overall_score'],
-            "metrics": result['metrics']
+            "status": "no_credentials",
+            "overall_score": None,
+            "error": "Facebook Ads credentials not provided - real audit unavailable"
         }
 
     def _compute_google_audit(self, client) -> Dict:
         """Computar auditoría Google Ads (sin BD, seguro para threads)"""
         logger.info(f"  🔍 Computando Google Ads para {client.name}")
 
-        result = create_sample_google_audit()
-
+        # TODO: Implement real Google Ads audit when credentials available
+        # create_sample_google_audit() returns fixed simulated data
+        # Don't return it without credentials
         return {
             "platform": "google_ads",
-            "overall_score": result['overall_score'],
-            "metrics": result['metrics']
+            "status": "no_credentials",
+            "overall_score": None,
+            "error": "Google Ads credentials not provided - real audit unavailable"
         }
 
     def _compute_seo_audit(self, client) -> Dict:
@@ -407,6 +412,7 @@ class MultiPlatformAuditorAgent:
         """Crear auditoría SEO de muestra (cuando hay error o no hay URL)"""
         return {
             "platform": "seo",
+            "data_source": "simulated",  # Mark as simulated data, not real audit
             "overall_score": 65,
             "metrics": {
                 "tecnica": {
