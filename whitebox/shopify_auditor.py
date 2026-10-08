@@ -49,9 +49,9 @@ class ShopifyAuditor:
         """
         try:
             if store_url not in self.api_clients:
-                client = ShopifyAPIClient(store_url, access_token, timeout=30)
+                client = ShopifyAPIClient(store_url, access_token, config={'timeout': 30})
                 # Validate credentials before caching
-                if client.validate_credentials():
+                if client.health_check():
                     self.api_clients[store_url] = client
                     logger.info(f"✅ ShopifyAPIClient creado para: {store_url}")
                     return client
@@ -244,7 +244,7 @@ class ShopifyAuditor:
                 return {"error": "Failed to connect to Shopify API"}
 
             # Get real analytics data
-            analytics = client.get_analytics()
+            analytics = client.calculate_analytics() or {}
 
             performance = {
                 "page_speed": {
@@ -284,7 +284,7 @@ class ShopifyAuditor:
                     "cdn": "Shopify CDN"
                 },
                 "api_health": {
-                    "status": "healthy" if client.is_healthy() else "unhealthy",
+                    "status": "healthy" if client.health_check() else "unhealthy",
                     "uptime_percent": 99.9,  # Shopify standard SLA
                     "last_check": datetime.now().isoformat()
                 }
@@ -356,7 +356,7 @@ class ShopifyAuditor:
                     "recommendation": "Rotar tokens regularmente en Admin"
                 },
                 "api_health": {
-                    "status": "healthy" if client.is_healthy() else "unhealthy",
+                    "status": "healthy" if client.health_check() else "unhealthy",
                     "uptime_percent": 99.9,
                     "rate_limit_status": "respecting 2 req/sec",
                     "last_check": datetime.now().isoformat()
