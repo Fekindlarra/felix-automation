@@ -44,3 +44,9 @@ def test_sitio_corporativo_jumpseller_no_cuenta_como_tienda():
     # og:site_name de la web corporativa de Jumpseller no es señal de tienda
     html = '<meta property="og:site_name" content="Jumpseller">'
     assert detectar_plataforma(html) == []
+
+
+def test_detecta_jumpseller_por_preconnect_del_html_crudo():
+    # Fragmento real del <head> de talleresenbuenamesa.cl (HTML crudo)
+    html = '<link rel="preconnect" href="https://files.jumpseller.com">'
+    assert [p["platform"] for p in detectar_plataforma(html)] == ["jumpseller"]

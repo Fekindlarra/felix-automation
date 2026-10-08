@@ -28,7 +28,7 @@ SENALES = {
         re.compile(r'<meta[^>]+name=["\']generator["\'][^>]+content=["\']Wix\.com Website Builder["\']', re.I),
     ],
     "jumpseller": [
-        re.compile(r"(images|assets|cdnx)\.jumpseller\.com", re.I),
+        re.compile(r"(images|assets|cdnx|files)\.jumpseller\.com", re.I),
         re.compile(r"utm_campaign=powered_by", re.I),
     ],
 }
