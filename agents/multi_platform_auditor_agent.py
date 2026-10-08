@@ -318,48 +318,22 @@ class MultiPlatformAuditorAgent:
         """Computar auditoría web (sin BD, seguro para threads)"""
         logger.info(f"  ⚡ Computando Web para {client.name}")
 
-        web_score = 72
-        web_metrics = {
-            "performance": 85,
-            "security": 90,
-            "tracking": 40,
-            "technology": 75,
-            "recommendations": [
-                "Implementar Google Analytics 4",
-                "Optimizar imágenes para móvil",
-                "Mejorar speed con CDN"
-            ]
-        }
-
-        return {
-            "platform": "web",
-            "overall_score": web_score,
-            "metrics": web_metrics
-        }
+        # Sin medición real del sitio: no se inventa puntaje (bloqueante 3.4.1)
+        return self._sin_datos("web", "El orquestador no mide el sitio; usar el auditor web real")
 
     def _compute_facebook_audit(self, client) -> Dict:
         """Computar auditoría Facebook Ads (sin BD, seguro para threads)"""
         logger.info(f"  📘 Computando Facebook Ads para {client.name}")
 
-        result = create_sample_facebook_audit()
-
-        return {
-            "platform": "facebook_ads",
-            "overall_score": result['overall_score'],
-            "metrics": result['metrics']
-        }
+        # Sin credenciales/medición real en este flujo: no se usa la muestra (bloqueante 3.4.1)
+        return self._sin_datos("facebook_ads", "Sin medición real en el orquestador")
 
     def _compute_google_audit(self, client) -> Dict:
         """Computar auditoría Google Ads (sin BD, seguro para threads)"""
         logger.info(f"  🔍 Computando Google Ads para {client.name}")
 
-        result = create_sample_google_audit()
-
-        return {
-            "platform": "google_ads",
-            "overall_score": result['overall_score'],
-            "metrics": result['metrics']
-        }
+        # Sin medición real en este flujo: no se usa la muestra (bloqueante 3.4.1)
+        return self._sin_datos("google_ads", "Sin medición real en el orquestador")
 
     def _compute_seo_audit(self, client) -> Dict:
         """Computar auditoría SEO (sin BD, seguro para threads)"""
@@ -369,8 +343,8 @@ class MultiPlatformAuditorAgent:
             # Obtener URL del cliente
             website_url = getattr(client, 'website', None)
             if not website_url:
-                logger.warning(f"  ⚠️ Cliente {client.name} sin URL de website, usando mock")
-                return self._create_sample_seo_audit()
+                logger.warning(f"  ⚠️ Cliente {client.name} sin URL de website, sin datos")
+                return self._sin_datos("seo", "Cliente sin URL de website")
 
             # Fetch HTML desde el website
             try:
@@ -379,8 +353,8 @@ class MultiPlatformAuditorAgent:
                 html = response.text
                 page_size = len(response.content)
             except Exception as e:
-                logger.warning(f"  ⚠️ Error fetching {website_url}: {str(e)}, usando mock")
-                return self._create_sample_seo_audit()
+                logger.warning(f"  ⚠️ Error fetching {website_url}: {str(e)}, sin datos")
+                return self._sin_datos("seo", f"No se pudo descargar la URL: {str(e)}")
 
             # Auditar con SEOAuditor
             seo_auditor = SEOAuditor()
@@ -401,7 +375,18 @@ class MultiPlatformAuditorAgent:
 
         except Exception as e:
             logger.error(f"  ❌ Error computando SEO audit: {str(e)}")
-            return self._create_sample_seo_audit()
+            return self._sin_datos("seo", f"Error en auditoría SEO: {str(e)}")
+
+    @staticmethod
+    def _sin_datos(platform: str, motivo: str) -> Dict:
+        """Resultado explícito de 'sin medición'. Nunca lleva puntaje inventado."""
+        return {
+            "platform": platform,
+            "overall_score": None,
+            "status": "sin_datos",
+            "motivo": motivo,
+            "metrics": {}
+        }
 
     def _create_sample_seo_audit(self) -> Dict:
         """Crear auditoría SEO de muestra (cuando hay error o no hay URL)"""
@@ -439,8 +424,8 @@ class MultiPlatformAuditorAgent:
         """Guardar resultados en BD (SEQUENCIAL, sin threading)"""
         # Guardar cada auditoría en la BD
         for platform, audit_data in results.items():
-            if 'overall_score' not in audit_data:
-                logger.warning(f"  ⚠️ Sin score para {platform}, saltando...")
+            if audit_data.get('overall_score') is None:
+                logger.warning(f"  ⚠️ Sin medición para {platform} ({audit_data.get('motivo', 'sin motivo')}), no se guarda")
                 continue
 
             # Crear registro de auditoría
@@ -466,7 +451,7 @@ class MultiPlatformAuditorAgent:
             self.orchestrator._emit_audit_event(client_id, platform, audit_data['overall_score'], audit_id)
 
         # Calcular score promedio
-        scores = [r['overall_score'] for r in results.values() if 'overall_score' in r]
+        scores = [r['overall_score'] for r in results.values() if r.get('overall_score') is not None]
         avg_score = int(sum(scores) / len(scores)) if scores else 0
 
         logger.info(f"  💾 Guardando resultados - Score promedio: {avg_score}/100")
