@@ -248,10 +248,15 @@ class TrackingScriptsAuditor:
             })
 
         if parser.other_tracking:
+            dominio_pattern = re.compile(r'([^/]+\.com|[^/]+\.net)')
+            nombres = []
+            for s in parser.other_tracking:
+                m = dominio_pattern.search(s)
+                nombres.append(m.group(1) if m else s)
             self.findings.append({
                 "severity": "INFO",
                 "title": f"ℹ️ {len(parser.other_tracking)} Script(s) de Tracking Adicional(es)",
-                "description": f"Scripts detectados: {', '.join([re.search(r'([^/]+\.com|[^/]+\.net)', s).group(1) if re.search(r'([^/]+\.com|[^/]+\.net)', s) else s for s in parser.other_tracking])}",
+                "description": f"Scripts detectados: {', '.join(nombres)}",
                 "category": "additional"
             })
 
