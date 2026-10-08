@@ -6,10 +6,11 @@ Señales VERIFICADAS con páginas públicas (2026-10-08, vía lectura de página
     (ejemplo observado: allbirds.com)
   - Wix: <meta name="generator" content="Wix.com Website Builder"> y recursos
     en static.wixstatic.com (ejemplo observado: wix.com)
+  - Jumpseller: recursos en images./assets./cdnx.jumpseller.com y enlace de pie
+    "Desarrollado por Jumpseller" con utm_campaign=powered_by
+    (ejemplo observado: talleresenbuenamesa.cl, tienda de Felipe)
 
-NO incluido: Jumpseller. Las señales observadas corresponden al sitio corporativo
-de Jumpseller, no a una tienda de cliente; no se puede afirmar una señal de tienda.
-Antes de incluirla, verificar con una tienda Jumpseller real.
+Nota: los ejemplos se confirmaron leyendo la página, no con bytes crudos.
 
 Nota: las señales se confirmaron leyendo la página, no con bytes crudos. Revisar
 con HTML crudo antes de usar el resultado con un cliente.
@@ -25,6 +26,10 @@ SENALES = {
     "wix": [
         re.compile(r"static\.wixstatic\.com", re.I),
         re.compile(r'<meta[^>]+name=["\']generator["\'][^>]+content=["\']Wix\.com Website Builder["\']', re.I),
+    ],
+    "jumpseller": [
+        re.compile(r"(images|assets|cdnx)\.jumpseller\.com", re.I),
+        re.compile(r"utm_campaign=powered_by", re.I),
     ],
 }
 

@@ -1,6 +1,6 @@
 """Detector de plataforma (auditors/platform_detector.py).
 Señales verificadas: cdn.shopify.com, shopify-digital-wallet, Wix generator, static.wixstatic.com.
-Jumpseller NO está en el detector a propósito (sin señal verificada de tienda)."""
+Jumpseller usa señales de tienda observadas en talleresenbuenamesa.cl."""
 from auditors.platform_detector import detectar_plataforma
 
 
@@ -30,6 +30,17 @@ def test_sitio_generico_no_detecta_nada():
     assert detectar_plataforma(html) == []
 
 
-def test_jumpseller_no_se_detecta_sin_senal_verificada():
+def test_detecta_jumpseller_por_cdn():
+    html = '<img src="https://cdnx.jumpseller.com/en-buena-mesa/image/1/thumb/306/306">'
+    assert [p["platform"] for p in detectar_plataforma(html)] == ["jumpseller"]
+
+
+def test_detecta_jumpseller_por_pie_de_pagina():
+    html = '<a href="https://jumpseller.cl/?utm_medium=store&utm_campaign=powered_by">Desarrollado por Jumpseller</a>'
+    assert [p["platform"] for p in detectar_plataforma(html)] == ["jumpseller"]
+
+
+def test_sitio_corporativo_jumpseller_no_cuenta_como_tienda():
+    # og:site_name de la web corporativa de Jumpseller no es señal de tienda
     html = '<meta property="og:site_name" content="Jumpseller">'
     assert detectar_plataforma(html) == []
