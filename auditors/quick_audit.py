@@ -28,6 +28,7 @@ class QuickHTMLParser(HTMLParser):
         self.has_ssl = False
         self.scripts = []
         self.in_head = False
+        self.in_title = False
 
     def handle_starttag(self, tag, attrs):
         attrs_dict = dict(attrs)
@@ -35,7 +36,7 @@ class QuickHTMLParser(HTMLParser):
         if tag == 'head':
             self.in_head = True
         elif tag == 'title' and self.in_head:
-            pass
+            self.in_title = True
         elif tag == 'meta':
             if attrs_dict.get('name') == 'viewport':
                 self.has_mobile_viewport = True
@@ -51,12 +52,14 @@ class QuickHTMLParser(HTMLParser):
                 self.scripts.append(src)
 
     def handle_data(self, data):
-        if self.in_head and not self.title:
-            pass
+        if self.in_title and data:
+            self.title += data.strip()
 
     def handle_endtag(self, tag):
         if tag == 'head':
             self.in_head = False
+        elif tag == 'title':
+            self.in_title = False
 
 
 class QuickAuditor:
