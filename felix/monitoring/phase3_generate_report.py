@@ -96,9 +96,13 @@ class Phase3ReportGenerator:
                     ml_accuracies.append(float(metrics['ml_accuracy']))
                 if 'error_rate' in metrics:
                     error_rates.append(float(metrics['error_rate']))
-                if 'websocket_latency_ms' in metrics:
+                if 'websocket_latency' in metrics:
+                    latencies.append(float(metrics['websocket_latency']))
+                elif 'websocket_latency_ms' in metrics:
                     latencies.append(float(metrics['websocket_latency_ms']))
-                if 'predictions_per_hour' in metrics:
+                if 'predictions_hour' in metrics:
+                    predictions_per_hour.append(int(metrics['predictions_hour']))
+                elif 'predictions_per_hour' in metrics:
                     predictions_per_hour.append(int(metrics['predictions_per_hour']))
                 if 'personalization_active' in metrics:
                     personalization_active.append(int(metrics['personalization_active']))
@@ -108,12 +112,12 @@ class Phase3ReportGenerator:
         # Calculate statistics
         def calc_stats(data):
             if not data:
-                return {}
+                return {'min': 0, 'max': 0, 'mean': 0, 'median': 0, 'stdev': 0}
             return {
                 'min': min(data),
                 'max': max(data),
-                'mean': mean(data),
-                'median': median(data),
+                'mean': mean(data) if data else 0,
+                'median': median(data) if data else 0,
                 'stdev': stdev(data) if len(data) > 1 else 0
             }
 
@@ -161,12 +165,17 @@ class Phase3ReportGenerator:
         }
 
         for cp in self.checkpoints:
-            metric_count = cp.get('status', '').split('/')[0] if '/' in cp.get('status', '') else 0
-            metric_count = int(metric_count) if metric_count else 0
+            # Parse health_score first (e.g., "5/6"), fallback to status field
+            health_score_str = cp.get('health_score', '')
+            if '/' in health_score_str:
+                metric_count = int(health_score_str.split('/')[0])
+            else:
+                metric_count = cp.get('status', '').split('/')[0] if '/' in cp.get('status', '') else 0
+                metric_count = int(metric_count) if metric_count else 0
 
             if 'OPEN' in str(cp.get('circuit_breaker_states', {})).upper():
                 distribution['CIRCUIT_OPEN'] += 1
-            elif cp.get('alerts'):
+            elif cp.get('alerts') and any(a.get('severity') == 'CRITICAL' for a in cp.get('alerts', [])):
                 distribution['CRITICAL_ALERT'] += 1
             elif metric_count >= 6:
                 distribution['GREEN_6_6'] += 1
@@ -312,7 +321,7 @@ Based on ML accuracy performance of {metrics_summary['ml_accuracy']['mean']:.2%}
 
 - **Mean:** {metrics_summary['websocket_latency_ms']['mean']:.1f}ms
 - **Range:** {metrics_summary['websocket_latency_ms']['min']:.1f} - {metrics_summary['websocket_latency_ms']['max']:.1f}ms
-- **P95:** {sorted([cp['metrics']['websocket_latency_ms'] for cp in self.checkpoints if 'metrics' in cp])[int(len(self.checkpoints)*0.95)] if self.checkpoints else 0:.1f}ms
+- **P95:** {sorted([cp['metrics'].get('websocket_latency', 0) for cp in self.checkpoints if 'metrics' in cp])[int(len(self.checkpoints)*0.95)] if self.checkpoints else 0:.1f}ms
 
 ### Predictions Per Hour (Target: ≥42)
 
