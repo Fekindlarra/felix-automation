@@ -22,12 +22,14 @@ import argparse
 import json
 import logging
 import sys
+import time
 from datetime import datetime
 from typing import Callable, Dict, Optional
 
 import requests
 
 from auditors.gtm_html_auditor import auditar_gtm_html
+from auditors.html_fuente import normalizar_html
 from auditors.platform_detector import detectar_plataforma
 from auditors.quick_audit import QuickAuditor
 from auditors.seo_auditor import SEOAuditor
@@ -45,11 +47,20 @@ def _normalizar_url(url: str) -> str:
 
 
 def descargar_html(url: str, fetch: Callable = requests.get) -> Dict:
-    """Devuelve {'html': str|None, 'status': 'ok'|'error', 'motivo': str|None}."""
+    """Devuelve html, cabeceras y medidas reales de la descarga (o el motivo del error)."""
     try:
+        inicio = time.monotonic()
         r = fetch(url, timeout=TIMEOUT_SEGUNDOS, headers={"User-Agent": "FelixAuditor/1.0"})
         r.raise_for_status()
-        return {"html": r.text, "status": "ok", "motivo": None}
+        tiempo = time.monotonic() - inicio
+        return {
+            "html": r.text,
+            "status": "ok",
+            "motivo": None,
+            "cabeceras": {k.lower(): v for k, v in dict(r.headers).items()},
+            "tamano": len(r.content),
+            "tiempo": tiempo,
+        }
     except Exception as e:
         return {"html": None, "status": "error", "motivo": f"No se pudo descargar la página: {e}"}
 
@@ -71,11 +82,16 @@ def auditar_url(url: str, html: Optional[str] = None, fetch: Callable = requests
     """
     url = _normalizar_url(url)
     origen = {"tipo": "archivo", "status": "ok", "motivo": None}
+    datos_http = {}  # solo existen si se descargó: cabeceras, tamaño y tiempo reales
 
     if html is None:
         d = descargar_html(url, fetch=fetch)
         origen = {"tipo": "descarga", "status": d["status"], "motivo": d["motivo"]}
         html = d["html"]
+        if html is not None:
+            datos_http = {"headers": d["cabeceras"], "page_size": d["tamano"], "load_time": d["tiempo"]}
+
+    html = normalizar_html(html)
 
     informe = {
         "url": url,
@@ -91,7 +107,7 @@ def auditar_url(url: str, html: Optional[str] = None, fetch: Callable = requests
         return informe
 
     informe["secciones"]["seo"] = _seccion(
-        lambda: {**SEOAuditor().audit({"url": url, "html": html}), "status": "medido"}
+        lambda: {**SEOAuditor().audit({"url": url, "html": html, **datos_http}), "status": "medido"}
     )
     informe["secciones"]["tracking"] = _seccion(
         lambda: {**audit_tracking_scripts(url, html), "status": "medido"}

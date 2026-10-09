@@ -25,15 +25,39 @@ class TrackingScriptParser(HTMLParser):
         self.hotjar_script = None
         self.clarity_script = None
         self.other_tracking = []
+        self._en_script = False
+        self._texto_script = ""
 
     def handle_starttag(self, tag, attrs):
         attrs_dict = dict(attrs)
 
         if tag == "script":
+            self._en_script = True
+            self._texto_script = ""
             src = attrs_dict.get("src", "")
             if src:
                 self.scripts.append(src)
                 self._classify_script(src, attrs_dict)
+
+    def handle_data(self, data):
+        if getattr(self, "_en_script", False):
+            self._texto_script += data
+
+    def handle_endtag(self, tag):
+        if tag == "script" and getattr(self, "_en_script", False):
+            self._en_script = False
+            self._clasificar_inline(self._texto_script)
+
+    def _clasificar_inline(self, texto: str):
+        """Scripts inline: GTM estándar y Pixel cargado con JavaScript."""
+        # Snippet estándar de GTM: el ID va como argumento, la URL se arma en JS.
+        if "gtm.start" in texto and self.gtm_script is None:
+            m = re.search(r"['\"](GTM-[A-Z0-9]{4,})['\"]", texto)
+            if m:
+                self.gtm_script = {"src": "inline", "id": m.group(1)}
+        # Pixel de Facebook armado con JavaScript.
+        if "fbevents.js" in texto and self.facebook_pixel is None:
+            self.facebook_pixel = "inline"
 
     def _classify_script(self, src: str, attrs: Dict):
         """Clasifica el script según su origen"""

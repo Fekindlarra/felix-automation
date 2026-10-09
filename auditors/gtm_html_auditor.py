@@ -18,6 +18,9 @@ from typing import Dict, List
 
 GTM_ID = re.compile(r"GTM-[A-Z0-9]{4,}")
 SCRIPT_GTM = re.compile(r"googletagmanager\.com/gtm\.js\?id=(GTM-[A-Z0-9]{4,})")
+# Snippet estándar: el ID va como argumento y la URL se arma en JavaScript.
+SNIPPET_INLINE = re.compile(r"gtm\.start")
+ID_INLINE = re.compile(r"['\"](GTM-[A-Z0-9]{4,})['\"]")
 NOSCRIPT_GTM = re.compile(r"googletagmanager\.com/ns\.html\?id=(GTM-[A-Z0-9]{4,})")
 CONSENT_DEFAULT = re.compile(r"gtag\(\s*['\"]consent['\"]\s*,\s*['\"]default['\"]")
 DATALAYER = re.compile(r"window\.dataLayer\s*=|var\s+dataLayer\s*=|dataLayer\s*=\s*\[")
@@ -28,8 +31,11 @@ def auditar_gtm_html(html: str) -> Dict:
         return {"status": "sin_datos", "motivo": "No hay HTML para analizar.", "metrics": {}}
 
     scripts: List[str] = SCRIPT_GTM.findall(html)
+    inline = len(SNIPPET_INLINE.findall(html))
+    ids_inline = ID_INLINE.findall(html) if inline else []
     noscript: List[str] = NOSCRIPT_GTM.findall(html)
-    contenedores = sorted(set(scripts) | set(noscript))
+    contenedores = sorted(set(scripts) | set(noscript) | set(ids_inline))
+    repeticiones = len(scripts) + inline
 
     return {
         "status": "medido",
@@ -38,9 +44,9 @@ def auditar_gtm_html(html: str) -> Dict:
         "metrics": {
             "contenedores": contenedores,
             "cantidad_contenedores": len(contenedores),
-            "snippet_script_repeticiones": len(scripts),
+            "snippet_script_repeticiones": repeticiones,
             "snippet_noscript_presente": bool(noscript),
-            "duplicado": len(scripts) > 1 or len(contenedores) > 1,
+            "duplicado": repeticiones > 1 or len(contenedores) > 1,
             "datalayer_presente": bool(DATALAYER.search(html)),
             "consent_mode_default": bool(CONSENT_DEFAULT.search(html)),
         },

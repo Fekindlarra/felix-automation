@@ -36,6 +36,9 @@ class MetaTagParser(HTMLParser):
         if tag == "title":
             self.in_title = True
         elif tag == "meta":
+            if "charset" in attrs_dict:
+                # <meta charset="UTF-8"> no tiene name ni property; antes se perdía.
+                self.meta_tags["charset"] = attrs_dict["charset"]
             if "name" in attrs_dict:
                 self.meta_tags[attrs_dict["name"]] = attrs_dict.get("content", "")
             elif "property" in attrs_dict:
@@ -251,6 +254,16 @@ class SEOAuditor:
 
     def _audit_rendimiento(self, site_data: Dict):
         """Auditar rendimiento y velocidad"""
+        if 'load_time' not in site_data or 'page_size' not in site_data:
+            # Sin medición real no se asigna puntaje (antes se asumía 0.00s y 100).
+            self.metrics["rendimiento"]["score"] = None
+            self.metrics["rendimiento"]["findings"] = [{
+                "severity": "info",
+                "issue": "No medido: sin tiempo de carga ni tamaño de descarga",
+                "value": None,
+            }]
+            return
+
         score = 100
         findings = []
 
@@ -283,6 +296,16 @@ class SEOAuditor:
 
     def _audit_seguridad(self, site_data: Dict):
         """Auditar seguridad y compliance"""
+        if 'headers' not in site_data:
+            # Sin cabeceras HTTP reales no se evalúan (antes se marcaban como faltantes).
+            self.metrics["seguridad"]["score"] = None
+            self.metrics["seguridad"]["findings"] = [{
+                "severity": "info",
+                "issue": "No medido: sin cabeceras HTTP",
+                "value": None,
+            }]
+            return
+
         score = 100
         findings = []
 
@@ -348,10 +371,12 @@ class SEOAuditor:
 
     def _calculate_overall_score(self) -> int:
         """Calcular score general de SEO (0-100)"""
-        scores = [self.metrics[category]["score"] for category in self.metrics]
+        # Solo promedian las secciones medidas (score None = no medido).
+        scores = [self.metrics[category]["score"] for category in self.metrics
+                  if self.metrics[category]["score"] is not None]
         if scores:
             return round(sum(scores) / len(scores))
-        return 0
+        return None
 
     def _reset_metrics(self) -> Dict:
         """Resetear métricas a valores iniciales"""

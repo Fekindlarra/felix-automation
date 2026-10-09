@@ -14,6 +14,8 @@ HTML = """<html><head>
 class _Resp:
     def __init__(self, text, fallar=False):
         self.text = text
+        self.content = text.encode("utf-8")
+        self.headers = {"Content-Type": "text/html; charset=utf-8", "X-Frame-Options": "DENY"}
         self._fallar = fallar
 
     def raise_for_status(self):
@@ -60,3 +62,27 @@ def test_http_500_se_trata_como_error():
     r = auditar_url("https://ejemplo.cl", fetch=lambda url, timeout, headers: _Resp("", fallar=True))
     assert r["origen_html"]["status"] == "error"
     assert r["secciones"]["seo"]["status"] == "sin_datos"
+
+
+def test_descarga_pasa_cabeceras_y_medidas_reales_a_seo():
+    r = auditar_url("https://ejemplo.cl", fetch=lambda url, timeout, headers: _Resp(HTML))
+    seo = r["secciones"]["seo"]["metrics"]
+    assert seo["rendimiento"]["score"] is not None
+    assert seo["seguridad"]["score"] is not None
+
+
+def test_sin_descarga_seo_no_inventa_rendimiento_ni_seguridad():
+    r = auditar_url("talleresenbuenamesa.cl", html=HTML)
+    seo = r["secciones"]["seo"]["metrics"]
+    assert seo["rendimiento"]["score"] is None
+    assert seo["seguridad"]["score"] is None
+    # El promedio sale solo de las secciones medidas (técnica y contenido).
+    assert r["secciones"]["seo"]["overall_score"] is not None
+
+
+def test_charset_meta_sin_name_no_se_marca_como_faltante():
+    from auditors.seo_auditor import SEOAuditor
+    html = '<html><head><meta charset="UTF-8"><title>Taller en Buena Mesa de Chile</title></head><body><h1>x</h1></body></html>'
+    r = SEOAuditor().audit({"url": "https://ejemplo.cl", "html": html})
+    issues = [f["issue"] for sec in r["metrics"].values() for f in sec.get("findings", [])]
+    assert "Falta charset declaration" not in issues
