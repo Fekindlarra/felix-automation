@@ -190,9 +190,11 @@ class QuickAuditor:
             self.score -= 5
 
         if not parser.description or len(parser.description) < 20:
+            # Distingue ausente de corta: la página sí puede tener meta descripción.
+            titulo = "⚠️ Meta Description Faltante" if not parser.description else "⚠️ Meta Description Corta"
             self.findings.append({
                 "severity": "warning",
-                "title": "⚠️ Meta Description Faltante",
+                "title": titulo,
                 "description": "No aparecerás bien en Google"
             })
             self.score -= 5

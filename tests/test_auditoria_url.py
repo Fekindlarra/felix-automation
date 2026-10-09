@@ -86,3 +86,12 @@ def test_charset_meta_sin_name_no_se_marca_como_faltante():
     r = SEOAuditor().audit({"url": "https://ejemplo.cl", "html": html})
     issues = [f["issue"] for sec in r["metrics"].values() for f in sec.get("findings", [])]
     assert "Falta charset declaration" not in issues
+
+
+def test_meta_description_corta_no_se_reporta_como_faltante():
+    from auditors.quick_audit import QuickAuditor
+    html = '<html><head><title>En buena mesa taller</title><meta name="viewport" content="x"><meta name="description" content="En buena mesa "></head><body><h1>x</h1></body></html>'
+    r = QuickAuditor().analizar_html("https://ejemplo.cl", html, 1000)
+    titulos = [f["title"] for f in r["findings"]]
+    assert "⚠️ Meta Description Corta" in titulos
+    assert "⚠️ Meta Description Faltante" not in titulos
