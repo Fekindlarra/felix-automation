@@ -49,3 +49,14 @@ def test_dato_no_medido_no_se_inventa():
     t = tabla([vacio], ["X"])
     assert "| Google Tag Manager | no medido |" in t
     assert "| Puntaje SEO (reglas internas) | no medido |" in t
+
+
+def test_ga4_ausente_con_gtm_se_marca_para_revisar_en_gtm():
+    gtm = {"cantidad_contenedores": 1, "contenedores": ["GTM-ABC123"], "consent_mode_default": False}
+    t = tabla([_informe("https://a.cl", gtm=gtm, ga=False)], ["A"])
+    assert "| Google Analytics 4 | revisar en GTM (ID no visible en el HTML) |" in t
+
+
+def test_ga4_ausente_sin_gtm_sigue_en_no():
+    t = tabla([_informe("https://a.cl", ga=False)], ["A"])
+    assert "| Google Analytics 4 | no |" in t

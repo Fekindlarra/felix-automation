@@ -44,6 +44,14 @@ def _tracking(informe: Dict, nombre: str) -> str:
     return "no medido"
 
 
+def _ga4(informe: Dict) -> str:
+    """GA4 puede cargarse dentro de Tag Manager; en ese caso el HTML no muestra el ID."""
+    resultado = _tracking(informe, "Google Analytics")
+    if resultado == "no" and informe["secciones"].get("gtm", {}).get("metrics", {}).get("contenedores"):
+        return "revisar en GTM (ID no visible en el HTML)"
+    return resultado
+
+
 def _gtm(informe: Dict) -> str:
     g = informe["secciones"].get("gtm", {}).get("metrics", {})
     if not g:
@@ -86,7 +94,7 @@ FILAS = [
     ("Título", lambda i: _seo_metric(i, "tecnica", "Title muy corto")),
     ("Meta descripción", lambda i: _seo_metric(i, "tecnica", "Meta description muy corta")),
     ("Google Tag Manager", _gtm),
-    ("Google Analytics 4", lambda i: _tracking(i, "Google Analytics")),  # coincide con "Google Analytics 4 Detectado"
+    ("Google Analytics 4", _ga4),
     ("Facebook Pixel", lambda i: _tracking(i, "Facebook Pixel")),
     ("Universal Analytics (obsoleto)", lambda i: _tracking(i, "Universal Analytics")),
     ("Consent Mode v2 por defecto", _consent),
