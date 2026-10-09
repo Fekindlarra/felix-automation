@@ -21,6 +21,7 @@ class TrackingScriptParser(HTMLParser):
         self.gtm_script = None
         self.ga_script = None
         self.ga_measurement_id = None
+        self.ua_id = None  # Universal Analytics (UA-XXXX-Y), obsoleto desde julio de 2023
         self.facebook_pixel = None
         self.hotjar_script = None
         self.clarity_script = None
@@ -49,7 +50,8 @@ class TrackingScriptParser(HTMLParser):
             self._clasificar_inline(self._texto_script)
 
     def _clasificar_inline(self, texto: str):
-        """Scripts inline: GTM estándar y Pixel cargado con JavaScript."""
+        """Scripts inline: GTM estándar, Pixel y Universal Analytics."""
+        self._buscar_ua(texto)
         # Snippet estándar de GTM: el ID va como argumento, la URL se arma en JS.
         if "gtm.start" in texto and self.gtm_script is None:
             m = re.search(r"['\"](GTM-[A-Z0-9]{4,})['\"]", texto)
@@ -58,6 +60,13 @@ class TrackingScriptParser(HTMLParser):
         # Pixel de Facebook armado con JavaScript.
         if "fbevents.js" in texto and self.facebook_pixel is None:
             self.facebook_pixel = "inline"
+
+    def _buscar_ua(self, texto: str):
+        """Busca un ID de Universal Analytics (UA-XXXX-Y) en un src o en código inline."""
+        if self.ua_id is None:
+            m = re.search(r"UA-\d{4,}-\d+", texto)
+            if m:
+                self.ua_id = m.group(0)
 
     def _classify_script(self, src: str, attrs: Dict):
         """Clasifica el script según su origen"""
@@ -77,6 +86,10 @@ class TrackingScriptParser(HTMLParser):
             if match:
                 self.ga_measurement_id = match.group(1)
                 self.ga_script = {"src": src, "id": match.group(1)}
+
+        # Universal Analytics (analytics.js / ga.js)
+        elif "google-analytics.com/analytics.js" in src or "google-analytics.com/ga.js" in src:
+            self._buscar_ua(src)
 
         # Facebook Pixel
         elif "connect.facebook.net" in src or "facebook.com/en_US/fbevents.js" in src:
@@ -170,7 +183,8 @@ class TrackingScriptsAuditor:
             })
 
     def _evaluate_ga(self, parser: TrackingScriptParser):
-        """Evalúa Google Analytics 4"""
+        """Evalúa Google Analytics 4 y, aparte, Universal Analytics (obsoleto)"""
+        self._evaluate_ua(parser)
 
         if parser.ga_script:
             if isinstance(parser.ga_script, dict):
@@ -195,6 +209,24 @@ class TrackingScriptsAuditor:
                 "title": "❌ Google Analytics NO Detectado",
                 "description": "No hay script de GA4. Se recomienda agregarlo para analytics.",
                 "impact": "Sin GA, no hay datos de tráfico y comportamiento del usuario.",
+                "category": "analytics"
+            })
+
+    def _evaluate_ua(self, parser: TrackingScriptParser):
+        """Universal Analytics: Google dejó de procesar esos datos en julio de 2023."""
+        if parser.ua_id:
+            self.findings.append({
+                "severity": "WARNING",
+                "title": "⚠️ Universal Analytics Detectado",
+                "description": f"Se encontró el ID {parser.ua_id}. Universal Analytics ya no registra datos nuevos; corresponde migrar a GA4.",
+                "ua_id": parser.ua_id,
+                "category": "analytics"
+            })
+        else:
+            self.findings.append({
+                "severity": "INFO",
+                "title": "✅ Universal Analytics NO Detectado",
+                "description": "No hay código de Universal Analytics (obsoleto).",
                 "category": "analytics"
             })
 

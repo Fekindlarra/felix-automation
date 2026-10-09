@@ -88,6 +88,7 @@ FILAS = [
     ("Google Tag Manager", _gtm),
     ("Google Analytics 4", lambda i: _tracking(i, "Google Analytics")),  # coincide con "Google Analytics 4 Detectado"
     ("Facebook Pixel", lambda i: _tracking(i, "Facebook Pixel")),
+    ("Universal Analytics (obsoleto)", lambda i: _tracking(i, "Universal Analytics")),
     ("Consent Mode v2 por defecto", _consent),
     ("Imágenes sin texto alternativo", _imagenes_sin_alt),
     ("Plataforma", _plataforma),
