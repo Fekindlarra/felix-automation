@@ -6,6 +6,7 @@ Para demos y pruebas rápidas sin credenciales
 """
 
 import json
+import re
 import logging
 import requests
 from typing import Dict, List
@@ -234,19 +235,18 @@ class QuickAuditor:
 
     def _check_tracking_scripts(self, html: str) -> List[str]:
         """Detecta scripts de tracking"""
+        # Patrones específicos: una palabra suelta (p. ej. "facebook" en un enlace) no basta.
         tracking_platforms = {
-            "GA4": ["gtag", "google-analytics"],
-            "GTM": ["googletagmanager", "gtm"],
-            "Facebook Pixel": ["facebook", "fbq"],
-            "Hotjar": ["hotjar"],
-            "Clarity": ["clarity"],
+            "GA4": r"googletagmanager\.com/gtag/js|gtag\(\s*['\"]config['\"]",
+            "GTM": r"GTM-[A-Z0-9]{4,}|googletagmanager\.com/gtm\.js",
+            "Facebook Pixel": r"connect\.facebook\.net|fbevents\.js|fbq\(",
+            "Hotjar": r"static\.hotjar\.com|hjid",
+            "Clarity": r"clarity\.ms",
         }
 
         found = []
-        html_lower = html.lower()
-
-        for platform, keywords in tracking_platforms.items():
-            if any(kw in html_lower for kw in keywords):
+        for platform, patron in tracking_platforms.items():
+            if re.search(patron, html):
                 found.append(platform)
 
         return found

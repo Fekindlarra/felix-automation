@@ -225,7 +225,9 @@ class SEOAuditor:
             score -= 10
 
         # 4. Content length
-        text_content = re.sub(r'<[^>]+>', '', html)
+        # Solo texto visible: se quitan scripts y estilos antes de contar.
+        sin_codigo = re.sub(r'(?is)<(script|style)[^>]*>.*?</\1>', ' ', html)
+        text_content = re.sub(r'<[^>]+>', '', sin_codigo)
         text_length = len(text_content.strip())
         if text_length < 300:
             findings.append({"severity": "warning", "issue": "Contenido muy corto (<300 words)", "value": text_length})

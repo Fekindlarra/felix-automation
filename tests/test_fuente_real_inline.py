@@ -64,3 +64,28 @@ def test_auditoria_url_con_view_source_encuentra_titulo_y_gtm():
     r = auditar_url("https://ejemplo.cl", html=fuente)
     assert r["secciones"]["quick"]["website_url"] == "https://ejemplo.cl"
     assert r["secciones"]["gtm"]["metrics"]["contenedores"] == ["GTM-MKF23TH7"]
+
+
+def test_quick_no_confunde_enlace_a_facebook_con_pixel():
+    from auditors.quick_audit import QuickAuditor
+    html = '<html><head><title>Escuela de cocina en Santiago</title><meta name="viewport" content="x"></head><body><a href="https://facebook.com/escuela">Facebook</a></body></html>'
+    r = QuickAuditor().analizar_html("https://ejemplo.cl", html, 1000)
+    titulos = " ".join(f["title"] for f in r["findings"])
+    assert "Facebook Pixel" not in titulos
+    assert "GA4" not in titulos
+
+
+def test_quick_detecta_pixel_real():
+    from auditors.quick_audit import QuickAuditor
+    html = '<html><head><meta name="viewport" content="x"></head><body><script src="https://connect.facebook.net/es_LA/fbevents.js"></script></body></html>'
+    r = QuickAuditor().analizar_html("https://ejemplo.cl", html, 1000)
+    assert any("Facebook Pixel" in f["title"] for f in r["findings"])
+
+
+def test_contenido_no_cuenta_scripts_como_texto():
+    from auditors.seo_auditor import SEOAuditor
+    script = "var x = '" + ("abc " * 5000) + "';"
+    html = f"<html><head><title>Escuela de cocina en Santiago de Chile</title></head><body><script>{script}</script><p>Texto visible corto.</p></body></html>"
+    r = SEOAuditor().audit({"url": "https://ejemplo.cl", "html": html})
+    issues = [f for f in r["metrics"]["contenido"]["findings"] if f["issue"] == "Contenido extenso"]
+    assert issues == [] or issues[0]["value"] < 1000
