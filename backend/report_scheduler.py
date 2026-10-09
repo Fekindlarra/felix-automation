@@ -6,6 +6,7 @@ Automatiza generación de reportes semanales/mensuales
 """
 
 import sys
+import asyncio
 import logging
 from pathlib import Path
 from datetime import datetime
@@ -73,13 +74,13 @@ class ReportScheduler:
                     notif_service = get_notification_service()
 
                     # Notificar a admin (client_id=0)
-                    await notif_service.notify_alert(
+                    asyncio.run(notif_service.notify_alert(
                         title="📊 Reporte Semanal Disponible",
                         message=f"Tu reporte semanal está listo para revisar.",
                         alert_type="info",
                         client_id=0,
                         icon="📊"
-                    )
+                    ))
                 except Exception as e:
                     logger.warning(f"⚠️ No se pudo emitir notificación: {e}")
             else:
@@ -102,13 +103,13 @@ class ReportScheduler:
                     notif_service = get_notification_service()
 
                     # Notificar a admin (client_id=0)
-                    await notif_service.notify_alert(
+                    asyncio.run(notif_service.notify_alert(
                         title="📊 Reporte Mensual Disponible",
                         message=f"Tu análisis mensual completo está listo.",
                         alert_type="info",
                         client_id=0,
                         icon="📊"
-                    )
+                    ))
                 except Exception as e:
                     logger.warning(f"⚠️ No se pudo emitir notificación: {e}")
             else:

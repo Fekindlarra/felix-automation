@@ -52,6 +52,15 @@ class JumpsellerAuditor:
         Returns:
             Diccionario con resultados de auditoría
         """
+        # Sin medición real: no se devuelven valores escritos a mano (bloqueante 3.4.3)
+        return {
+            "client_id": client_id,
+            "platform": "jumpseller",
+            "score": 0,
+            "error": "Auditoría Jumpseller no conectada a la API: sin datos medidos",
+            "findings": {"issues": ["Auditoría Jumpseller no conectada a la API: sin datos medidos"]}
+        }
+
         try:
             audit_result = {
                 "client_id": client_id,

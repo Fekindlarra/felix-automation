@@ -248,20 +248,15 @@ class TrackingScriptsAuditor:
             })
 
         if parser.other_tracking:
-            # Extract regex pattern and list comprehension outside f-string for Python 3.11 compatibility
-            # (Backslashes in f-string expressions only work in Python 3.12+, but Dockerfile uses 3.11)
-            domain_pattern = r'([^/]+\.com|[^/]+\.net)'
-            extracted_scripts = [
-                re.search(domain_pattern, s).group(1)
-                if re.search(domain_pattern, s)
-                else s
-                for s in parser.other_tracking
-            ]
-
+            dominio_pattern = re.compile(r'([^/]+\.com|[^/]+\.net)')
+            nombres = []
+            for s in parser.other_tracking:
+                m = dominio_pattern.search(s)
+                nombres.append(m.group(1) if m else s)
             self.findings.append({
                 "severity": "INFO",
                 "title": f"ℹ️ {len(parser.other_tracking)} Script(s) de Tracking Adicional(es)",
-                "description": f"Scripts detectados: {', '.join(extracted_scripts)}",
+                "description": f"Scripts detectados: {', '.join(nombres)}",
                 "category": "additional"
             })
 

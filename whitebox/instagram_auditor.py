@@ -172,9 +172,9 @@ class InstagramAuditor:
             agg["saved"] += p.get("saved", 0)
         self.content_data = {"posts": posts, "by_media_type": by_type}
 
-    def _calculate_score(self) -> int:
-        """Pendiente: la regla de puntaje se define con datos medidos de clientes piloto."""
-        return 0
+    def _calculate_score(self) -> Optional[int]:
+        """Sin regla de puntaje medida todavía: None (no 0 fijo)."""
+        return None
 
     # --------------------------------------------------------------- reports
     def _generate_no_credentials_report(self) -> Dict:

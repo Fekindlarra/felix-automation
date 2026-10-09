@@ -84,6 +84,15 @@ class CodeAuditor:
         Returns:
             Diccionario con resultados de auditoría
         """
+        # Sin medición real: no se devuelven valores escritos a mano (bloqueante 3.4.3)
+        return {
+            "client_id": client_id,
+            "platform": "code",
+            "score": 0,
+            "error": "Auditoría de código no conectada a repositorio/SSH: sin datos medidos",
+            "findings": {"issues": ["Auditoría de código no conectada a repositorio/SSH: sin datos medidos"]}
+        }
+
         try:
             # Validar configuración
             if not self._validate_repo_access(code_config):
