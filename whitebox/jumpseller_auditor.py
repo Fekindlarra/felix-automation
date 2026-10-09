@@ -25,7 +25,18 @@ class JumpsellerAuditor:
             orchestrator: FelixAutomationOrchestrator para logging
         """
         self.orchestrator = orchestrator
+        self.client_initialized_with_real_api = False
         logger.info("✅ JumpsellerAuditor inicializado")
+
+    def _validate_credentials(self, jumpseller_config: Dict) -> bool:
+        """Validar configuración requerida"""
+        required = ["store_id", "api_key"]
+        # Check that all required keys exist AND have non-None, non-empty values
+        for key in required:
+            if key not in jumpseller_config or not jumpseller_config[key]:
+                return False
+
+        return True
 
     def audit_client(self, client_id: int, jumpseller_config: Dict) -> Dict:
         """
@@ -69,11 +80,15 @@ class JumpsellerAuditor:
                 "status": "pending"
             }
 
+            # Validar configuración
+            if not self._validate_credentials(jumpseller_config):
+                return self._error_audit("Configuración Jumpseller inválida", client_id)
+
             store_id = jumpseller_config.get("store_id")
             api_key = jumpseller_config.get("api_key")
 
-            if not store_id or not api_key:
-                raise ValueError("store_id y api_key requeridos")
+            # Intentar inicializar cliente real (simularemos si no disponible)
+            self._init_client(jumpseller_config)
 
             logger.info(f"🔍 Auditando tienda Jumpseller: {store_id}")
 
@@ -111,18 +126,46 @@ class JumpsellerAuditor:
 
         except Exception as e:
             logger.error(f"❌ Error auditando Jumpseller: {e}")
-            return {
-                "client_id": client_id,
-                "platform": "jumpseller",
-                "audit_type": "whitebox",
-                "timestamp": datetime.now().isoformat(),
-                "error": str(e),
-                "status": "failed"
-            }
+            return self._error_audit(str(e), client_id)
+
+    def _init_client(self, jumpseller_config: Dict) -> None:
+        """Inicializar cliente de Jumpseller"""
+        try:
+            # Try to use the real Jumpseller API client
+            try:
+                from jumpseller import JumpsellerAPI
+                api_key = jumpseller_config.get("api_key")
+                store_id = jumpseller_config.get("store_id")
+                # Try to instantiate and authenticate with the real API
+                client = JumpsellerAPI(api_key=api_key, store_id=store_id)
+                self.client_initialized_with_real_api = True
+            except ImportError:
+                # Jumpseller API library not available
+                logger.warning("[JUMPSELLER] Jumpseller API library not available, cannot authenticate")
+                self.client_initialized_with_real_api = False
+                raise Exception("Jumpseller API client library not available. Cannot authenticate credentials.")
+        except Exception as e:
+            logger.error(f"[JUMPSELLER] Error inicializando cliente: {str(e)}")
+            raise
+
+    def _error_audit(self, error_msg: str, client_id: int) -> Dict:
+        """Retornar audit con error"""
+        return {
+            "client_id": client_id,
+            "platform": "jumpseller",
+            "audit_type": "whitebox",
+            "timestamp": datetime.now().isoformat(),
+            "error": error_msg,
+            "status": "failed"
+        }
 
     def _audit_configuration(self, store_id: str, api_key: str) -> Dict:
         """Audita configuración de la tienda"""
         try:
+            # Only return data if we successfully authenticated with real API
+            if not self.client_initialized_with_real_api:
+                return {}
+
             logger.info("📋 Auditando configuración...")
 
             config = {
@@ -163,6 +206,10 @@ class JumpsellerAuditor:
     def _audit_products(self, store_id: str, api_key: str) -> Dict:
         """Audita productos de la tienda"""
         try:
+            # Only return data if we successfully authenticated with real API
+            if not self.client_initialized_with_real_api:
+                return {}
+
             logger.info("📦 Auditando productos...")
 
             products = {
@@ -210,6 +257,10 @@ class JumpsellerAuditor:
     def _audit_transactions(self, store_id: str, api_key: str) -> Dict:
         """Audita transacciones y ventas"""
         try:
+            # Only return data if we successfully authenticated with real API
+            if not self.client_initialized_with_real_api:
+                return {}
+
             logger.info("💳 Auditando transacciones...")
 
             transactions = {
@@ -267,6 +318,10 @@ class JumpsellerAuditor:
     def _audit_integrations(self, store_id: str, api_key: str) -> Dict:
         """Audita integraciones de la tienda"""
         try:
+            # Only return data if we successfully authenticated with real API
+            if not self.client_initialized_with_real_api:
+                return {}
+
             logger.info("🔗 Auditando integraciones...")
 
             integrations = {
@@ -346,6 +401,10 @@ class JumpsellerAuditor:
     def _audit_security(self, store_id: str, api_key: str) -> Dict:
         """Audita seguridad de la tienda"""
         try:
+            # Only return data if we successfully authenticated with real API
+            if not self.client_initialized_with_real_api:
+                return {}
+
             logger.info("🔒 Auditando seguridad...")
 
             security = {
