@@ -26,7 +26,9 @@ def test_con_html_entrega_todas_las_secciones_sin_red():
     assert r["url"] == "https://talleresenbuenamesa.cl"
     assert r["origen_html"]["tipo"] == "archivo"
     s = r["secciones"]
-    assert set(s) == {"seo", "tracking", "gtm", "plataforma"}
+    assert set(s) == {"seo", "tracking", "gtm", "quick", "plataforma"}
+    assert s["quick"]["status"] == "medido"
+    assert s["quick"]["website_url"] == "https://talleresenbuenamesa.cl"
     assert s["gtm"]["metrics"]["contenedores"] == ["GTM-ABC123"]
     assert [d["platform"] for d in s["plataforma"]["detectadas"]] == ["jumpseller"]
     assert s["seo"]["status"] == "medido"

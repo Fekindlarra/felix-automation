@@ -99,6 +99,10 @@ class QuickAuditor:
         except Exception as e:
             return self._error_response(str(e))
 
+        return self.analizar_html(website_url, html, page_size)
+
+    def analizar_html(self, website_url: str, html: str, page_size: int) -> Dict:
+        """Analiza un HTML ya descargado (sin red)."""
         # 2. Parse HTML
         parser = QuickHTMLParser()
         try:

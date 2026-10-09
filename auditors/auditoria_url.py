@@ -7,6 +7,7 @@ Descarga el HTML una sola vez (o usa un archivo local) y ejecuta:
 - SEO (auditors/seo_auditor.py)
 - Scripts de tracking (auditors/tracking_scripts_auditor.py)
 - Revisión GTM desde HTML (auditors/gtm_html_auditor.py)
+- QuickAudit: responsive, HTTPS, scripts, título, peso (auditors/quick_audit.py)
 - Plataforma detectada (auditors/platform_detector.py)
 
 Cada sección es independiente: si una falla, las demás igual se entregan y
@@ -28,6 +29,7 @@ import requests
 
 from auditors.gtm_html_auditor import auditar_gtm_html
 from auditors.platform_detector import detectar_plataforma
+from auditors.quick_audit import QuickAuditor
 from auditors.seo_auditor import SEOAuditor
 from auditors.tracking_scripts_auditor import audit_tracking_scripts
 
@@ -84,7 +86,7 @@ def auditar_url(url: str, html: Optional[str] = None, fetch: Callable = requests
 
     if not html:
         sin = {"status": "sin_datos", "motivo": origen["motivo"] or "No hay HTML para analizar."}
-        for nombre in ("seo", "tracking", "gtm", "plataforma"):
+        for nombre in ("seo", "tracking", "gtm", "quick", "plataforma"):
             informe["secciones"][nombre] = dict(sin)
         return informe
 
@@ -95,6 +97,9 @@ def auditar_url(url: str, html: Optional[str] = None, fetch: Callable = requests
         lambda: {**audit_tracking_scripts(url, html), "status": "medido"}
     )
     informe["secciones"]["gtm"] = _seccion(lambda: auditar_gtm_html(html))
+    informe["secciones"]["quick"] = _seccion(
+        lambda: {**QuickAuditor().analizar_html(url, html, len(html.encode("utf-8"))), "status": "medido"}
+    )
     informe["secciones"]["plataforma"] = _seccion(
         lambda: {"status": "medido", "detectadas": detectar_plataforma(html)}
     )
