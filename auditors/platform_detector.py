@@ -7,7 +7,8 @@ Señales VERIFICADAS con páginas públicas (2026-10-08, vía lectura de página
     (tienda con dominio propio): id="shopify-features", dominio *.myshopify.com,
     fonts.shopifycdn.com y cdn.shopify.com
   - Wix: <meta name="generator" content="Wix.com Website Builder"> y recursos
-    en static.wixstatic.com (ejemplo observado: wix.com)
+    en static.wixstatic.com (ejemplo observado: wix.com). HTML crudo confirmado
+    en un sitio Wix: id="wixDesktopViewport" e id="wix-essential-viewer-model"
   - Jumpseller: recursos en images./assets./cdnx.jumpseller.com y enlace de pie
     "Desarrollado por Jumpseller" con utm_campaign=powered_by
     (ejemplo observado: talleresenbuenamesa.cl, tienda de Felipe)
@@ -31,6 +32,8 @@ SENALES = {
     "wix": [
         re.compile(r"static\.wixstatic\.com", re.I),
         re.compile(r'<meta[^>]+name=["\']generator["\'][^>]+content=["\']Wix\.com Website Builder["\']', re.I),
+        re.compile(r'id=["\']wixDesktopViewport["\']', re.I),
+        re.compile(r'id=["\']wix-essential-viewer-model["\']', re.I),
     ],
     "jumpseller": [
         re.compile(r"(images|assets|cdnx|files)\.jumpseller\.com", re.I),

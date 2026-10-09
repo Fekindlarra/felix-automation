@@ -58,3 +58,11 @@ def test_detecta_shopify_por_html_crudo_dominio_propio():
            '<script>Shopify.shop = "kaphjw-eg.myshopify.com";</script>' \
            '<link rel="preconnect" href="https://fonts.shopifycdn.com" crossorigin>'
     assert [p["platform"] for p in detectar_plataforma(html)] == ["shopify"]
+
+
+def test_detecta_wix_por_html_crudo():
+    # Fragmento real del <head> de un sitio Wix (HTML crudo)
+    html = '<meta name="generator" content="Wix.com Website Builder"/>' \
+           '<meta name="viewport" content="width=device-width" id="wixDesktopViewport" />' \
+           '<script type="application/json" id="wix-essential-viewer-model">{}</script>'
+    assert [p["platform"] for p in detectar_plataforma(html)] == ["wix"]
