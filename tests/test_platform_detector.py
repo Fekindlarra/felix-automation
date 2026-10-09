@@ -50,3 +50,11 @@ def test_detecta_jumpseller_por_preconnect_del_html_crudo():
     # Fragmento real del <head> de talleresenbuenamesa.cl (HTML crudo)
     html = '<link rel="preconnect" href="https://files.jumpseller.com">'
     assert [p["platform"] for p in detectar_plataforma(html)] == ["jumpseller"]
+
+
+def test_detecta_shopify_por_html_crudo_dominio_propio():
+    # Fragmento real de raicesdecauquenes.cl (HTML crudo): dominio propio, pero features de Shopify
+    html = '<script id="shopify-features" type="application/json">{"domain":"www.raicesdecauquenes.cl"}</script>' \
+           '<script>Shopify.shop = "kaphjw-eg.myshopify.com";</script>' \
+           '<link rel="preconnect" href="https://fonts.shopifycdn.com" crossorigin>'
+    assert [p["platform"] for p in detectar_plataforma(html)] == ["shopify"]

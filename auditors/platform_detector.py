@@ -3,7 +3,9 @@ Detector de plataforma desde el HTML de un sitio (sin credenciales).
 
 Señales VERIFICADAS con páginas públicas (2026-10-08, vía lectura de página):
   - Shopify: recursos en cdn.shopify.com y etiqueta shopify-digital-wallet
-    (ejemplo observado: allbirds.com)
+    (ejemplo observado: allbirds.com). HTML crudo confirmado en raicesdecauquenes.cl
+    (tienda con dominio propio): id="shopify-features", dominio *.myshopify.com,
+    fonts.shopifycdn.com y cdn.shopify.com
   - Wix: <meta name="generator" content="Wix.com Website Builder"> y recursos
     en static.wixstatic.com (ejemplo observado: wix.com)
   - Jumpseller: recursos en images./assets./cdnx.jumpseller.com y enlace de pie
@@ -22,6 +24,9 @@ SENALES = {
     "shopify": [
         re.compile(r"cdn\.shopify\.com", re.I),
         re.compile(r"shopify-digital-wallet", re.I),
+        re.compile(r'id=["\']shopify-features["\']', re.I),
+        re.compile(r"[\w-]+\.myshopify\.com", re.I),
+        re.compile(r"fonts\.shopifycdn\.com", re.I),
     ],
     "wix": [
         re.compile(r"static\.wixstatic\.com", re.I),
