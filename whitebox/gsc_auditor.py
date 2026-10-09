@@ -1,194 +1,124 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Google Search Console Auditor (White-Box)
-Requiere credenciales OAuth de Google Search Console
-Audita: Indexación, Coverage, Performance, Errores
+Auditor de Google Search Console (white-box, solo lectura)
+
+Usa whitebox/gsc_service_client.py (cuenta de servicio con permiso restringido).
+Regla: nunca inventa cifras. Si no hay conexión o la API no devuelve filas,
+el reporte queda en estado "sin_datos" con overall_score None.
 """
 
-import json
 import logging
 from typing import Dict, List, Optional
-from datetime import datetime, timedelta
+
+from whitebox import gsc_service_client as client
 
 logger = logging.getLogger(__name__)
 
+DIAS_POR_DEFECTO = 28
+LIMITE_FILAS = 10
+
 
 class GSCAuditor:
-    """Auditor especializado en Google Search Console"""
+    """Auditor de Search Console basado en métricas medidas"""
 
     def __init__(self, credentials: Optional[Dict] = None):
         """
-        Inicializar auditor GSC
-
         Args:
             credentials: {
-                'access_token': str,  # OAuth token de GSC
-                'site_url': str,      # URL del sitio (ej: https://example.com/)
-                'property_id': str    # Property ID en GSC
+                'site_url': str,            # propiedad tal como está en GSC
+                'service_account_file': str # opcional; si falta, se usa GSC_SERVICE_ACCOUNT_FILE
+                'creds': credenciales ya cargadas (opcional, pruebas)
+                'session': objeto opcional con post() (pruebas)
             }
         """
         self.platform = "gsc"
         self.credentials = credentials or {}
-        self.is_connected = credentials is not None and all(k in credentials for k in ['access_token', 'site_url'])
-        self.audit_date = datetime.now().isoformat()
-        self.findings = []
-        self.score = 0
+        self.site_url = self.credentials.get("site_url")
+        self.is_connected = bool(self.site_url)
+        self.audit_date = None
+        self.findings: List[Dict] = []
+        self.metrics: Dict = {}
+        self.overall_score: Optional[int] = None
 
     def audit(self, site_data: Optional[Dict] = None) -> Dict:
-        """
-        Auditar sitio en Google Search Console
-
-        Args:
-            site_data: Datos del sitio (opcional, puede venir de credenciales)
-        """
-
         if not self.is_connected:
-            return self._generate_no_credentials_report()
+            return self._sin_datos("No hay propiedad de Search Console indicada (site_url).")
 
         try:
-            # Obtener datos de GSC (FRAMEWORK - implementar con google-api-client)
-            self._get_indexing_data()
-            self._get_coverage_data()
-            self._get_performance_data()
-            self._get_mobile_usability()
-            self._get_core_web_vitals()
+            creds = self.credentials.get("creds")
+            if creds is None:
+                creds = client.load_credentials(self.credentials.get("service_account_file"))
+            session = self.credentials.get("session")
 
-            self.score = self._calculate_score()
-
+            consultas = client.top_queries(
+                self.site_url, days=DIAS_POR_DEFECTO, limit=LIMITE_FILAS, creds=creds, session=session
+            )
+            paginas = client.top_pages(
+                self.site_url, days=DIAS_POR_DEFECTO, limit=LIMITE_FILAS, creds=creds, session=session
+            )
         except Exception as e:
-            logger.error(f"Error auditando GSC: {e}")
-            self.findings.append({
-                "severity": "ERROR",
-                "title": "❌ Error de Conexión a GSC",
-                "description": f"No se pudo conectar a Google Search Console: {str(e)}",
-                "category": "connection"
-            })
+            logger.error(f"Error consultando Search Console: {e}")
+            return self._sin_datos(f"No se pudo consultar Search Console: {e}")
 
+        if not consultas and not paginas:
+            return self._sin_datos("Search Console no devolvió filas para el periodo.")
+
+        self._medir(consultas, paginas)
         return self._generate_report()
 
-    def _get_indexing_data(self):
-        """Obtiene datos de indexación de GSC"""
-        # FRAMEWORK: Llamar a GSC API
-        # GET https://www.googleapis.com/webmasters/v3/sites/{siteUrl}/sitemaps
-
-        # Por ahora, placeholder
+    def _medir(self, consultas: List[Dict], paginas: List[Dict]):
+        """Resume las filas medidas. Sin puntaje: el puntaje lo define el equipo, no el código."""
+        clics = sum(r.get("clicks", 0) for r in consultas)
+        impresiones = sum(r.get("impressions", 0) for r in consultas)
+        posicion_ponderada = (
+            sum(r.get("position", 0) * r.get("impressions", 0) for r in consultas) / impresiones
+            if impresiones else None
+        )
+        self.metrics = {
+            "dias": DIAS_POR_DEFECTO,
+            "clics_top_consultas": clics,
+            "impresiones_top_consultas": impresiones,
+            "ctr_top_consultas": round(clics / impresiones, 4) if impresiones else None,
+            "posicion_media_ponderada": round(posicion_ponderada, 2) if posicion_ponderada is not None else None,
+            "top_consultas": [
+                {"consulta": r["keys"][0], "clics": r.get("clicks", 0),
+                 "impresiones": r.get("impressions", 0), "posicion": round(r.get("position", 0), 2)}
+                for r in consultas if r.get("keys")
+            ],
+            "top_paginas": [
+                {"url": r["keys"][0], "clics": r.get("clicks", 0), "impresiones": r.get("impressions", 0)}
+                for r in paginas if r.get("keys")
+            ],
+        }
         self.findings.append({
             "severity": "INFO",
-            "title": "📊 Indexación (Requiere Credenciales GSC)",
-            "description": "Para obtener datos de indexación, conecta tu cuenta de Google Search Console",
-            "required_action": "Proporciona token OAuth de GSC",
-            "category": "indexing"
+            "title": "📈 Búsqueda orgánica medida",
+            "description": f"{clics} clics e {impresiones} impresiones en las top consultas de los últimos {DIAS_POR_DEFECTO} días.",
+            "category": "performance",
         })
 
-    def _get_coverage_data(self):
-        """Obtiene datos de coverage (errores, advertencias, válido, excluido)"""
-        # FRAMEWORK: Llamar a GSC API
-        # GET https://www.googleapis.com/webmasters/v3/sites/{siteUrl}/searchAnalytics/query
-
-        self.findings.append({
-            "severity": "INFO",
-            "title": "🔍 Coverage (Requiere Credenciales GSC)",
-            "description": "Para obtener datos de coverage, conecta tu cuenta de Google Search Console",
-            "required_action": "Proporciona token OAuth de GSC",
-            "category": "coverage"
-        })
-
-    def _get_performance_data(self):
-        """Obtiene datos de performance en búsqueda"""
-        # FRAMEWORK: Llamar a GSC API Search Analytics
-        # - Clicks
-        # - Impressions
-        # - CTR
-        # - Average Position
-
-        self.findings.append({
-            "severity": "INFO",
-            "title": "📈 Performance en Búsqueda (Requiere Credenciales GSC)",
-            "description": "Para obtener datos de performance, conecta tu cuenta de Google Search Console",
-            "required_action": "Proporciona token OAuth de GSC",
-            "category": "performance"
-        })
-
-    def _get_mobile_usability(self):
-        """Obtiene datos de usabilidad móvil"""
-        # FRAMEWORK: Llamar a GSC API
-        # GET https://www.googleapis.com/webmasters/v3/sites/{siteUrl}/mobileUsabilityIssuesCounts
-
-        self.findings.append({
-            "severity": "INFO",
-            "title": "📱 Mobile Usability (Requiere Credenciales GSC)",
-            "description": "Para obtener datos de usabilidad móvil, conecta tu cuenta de Google Search Console",
-            "required_action": "Proporciona token OAuth de GSC",
-            "category": "mobile"
-        })
-
-    def _get_core_web_vitals(self):
-        """Obtiene datos de Core Web Vitals"""
-        # FRAMEWORK: Llamar a GSC API
-        # GET https://www.googleapis.com/webmasters/v3/sites/{siteUrl}/coreWebVitalsReport/query
-
-        self.findings.append({
-            "severity": "INFO",
-            "title": "⚡ Core Web Vitals (Requiere Credenciales GSC)",
-            "description": "Para obtener datos de Core Web Vitals, conecta tu cuenta de Google Search Console",
-            "required_action": "Proporciona token OAuth de GSC",
-            "category": "core_web_vitals"
-        })
-
-    def _calculate_score(self) -> int:
-        """Calcula score GSC (0-100)"""
-        # Será calculado cuando se conecten credenciales
-        return 0
-
-    def _generate_no_credentials_report(self) -> Dict:
-        """Reporte cuando no hay credenciales"""
+    def _sin_datos(self, motivo: str) -> Dict:
         return {
             "platform": self.platform,
-            "score": 0,
-            "audit_date": self.audit_date,
-            "status": "WAITING_FOR_CREDENTIALS",
-            "findings": [
-                {
-                    "severity": "INFO",
-                    "title": "🔐 Google Search Console No Conectado",
-                    "description": "Para auditar GSC, proporciona credenciales OAuth de Google Search Console",
-                    "required_fields": {
-                        "access_token": "Token OAuth de Google",
-                        "site_url": "URL del sitio (ej: https://example.com/)",
-                        "property_id": "Property ID en GSC"
-                    },
-                    "next_steps": [
-                        "1. Ir a Google Cloud Console",
-                        "2. Crear OAuth 2.0 credentials para Search Console API",
-                        "3. Proporcionar el access_token"
-                    ],
-                    "category": "setup"
-                }
-            ],
-            "summary": {
-                "status": "AWAITING_CREDENTIALS",
-                "can_audit": False,
-                "recommendation": "Conecta GSC para obtener datos de indexación, coverage, performance"
-            }
+            "overall_score": None,
+            "status": "sin_datos",
+            "motivo": motivo,
+            "metrics": {},
+            "findings": [],
         }
 
     def _generate_report(self) -> Dict:
-        """Genera el reporte de auditoría"""
         return {
             "platform": self.platform,
-            "score": self.score,
-            "audit_date": self.audit_date,
+            "overall_score": None,
+            "status": "medido",
+            "motivo": None,
+            "metrics": self.metrics,
             "findings": self.findings,
-            "summary": {
-                "total_findings": len(self.findings),
-                "status": "CREDENTIALS_PROVIDED" if self.is_connected else "NO_CREDENTIALS",
-                "can_audit": self.is_connected
-            }
         }
 
 
 def audit_gsc(credentials: Optional[Dict] = None, site_data: Optional[Dict] = None) -> Dict:
     """Función helper para auditar Google Search Console"""
-    auditor = GSCAuditor(credentials)
-    return auditor.audit(site_data)
+    return GSCAuditor(credentials).audit(site_data)
