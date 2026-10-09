@@ -228,7 +228,8 @@ class SEOAuditor:
         # Solo texto visible: se quitan scripts y estilos antes de contar.
         sin_codigo = re.sub(r'(?is)<(script|style)[^>]*>.*?</\1>', ' ', html)
         text_content = re.sub(r'<[^>]+>', '', sin_codigo)
-        text_length = len(text_content.strip())
+        # Largo del texto visible con espacios colapsados (sin saltos ni indentación).
+        text_length = len(re.sub(r'\s+', ' ', text_content).strip())
         if text_length < 300:
             findings.append({"severity": "warning", "issue": "Contenido muy corto (<300 words)", "value": text_length})
             score -= 10
@@ -239,7 +240,8 @@ class SEOAuditor:
         images_without_alt = [img for img in parser.images if not img.get('alt', '')]
         if images_without_alt:
             findings.append({"severity": "warning", "issue": f"Imágenes sin alt text ({len(images_without_alt)})", "value": len(images_without_alt)})
-            score -= 5 * len(images_without_alt)
+            # Tope: sin límite, 24 imágenes restaban 120 puntos y dejaban el puntaje en 0.
+            score -= min(20, 5 * len(images_without_alt))
 
         # 6. Open Graph tags
         og_tags = {k: v for k, v in parser.meta_tags.items() if k.startswith('og:')}

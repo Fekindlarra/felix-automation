@@ -89,3 +89,31 @@ def test_contenido_no_cuenta_scripts_como_texto():
     r = SEOAuditor().audit({"url": "https://ejemplo.cl", "html": html})
     issues = [f for f in r["metrics"]["contenido"]["findings"] if f["issue"] == "Contenido extenso"]
     assert issues == [] or issues[0]["value"] < 1000
+
+
+def test_quick_ignora_gtag_comentado():
+    from auditors.quick_audit import QuickAuditor
+    html = "<html><head><meta name=\"viewport\" content=\"x\"><script>\n  // gtag('config', 'G-JBWEC7QQTS', {});\n</script></head><body>x</body></html>"
+    r = QuickAuditor().analizar_html("https://ejemplo.cl", html, 1000)
+    assert not any("GA4" in f["title"] for f in r["findings"])
+
+
+def test_contenido_cuenta_texto_visible_sin_saltos():
+    from auditors.seo_auditor import SEOAuditor
+    cuerpo = "\n".join(["                <p>Taller de cocina</p>"] * 400)
+    html = f"<html><head><title>Escuela de cocina en Santiago de Chile</title></head><body>{cuerpo}</body></html>"
+    r = SEOAuditor().audit({"url": "https://ejemplo.cl", "html": html})
+    contenido = r["metrics"]["contenido"]["findings"]
+    largo = [f["value"] for f in contenido if f["issue"] == "Contenido extenso"]
+    assert largo == [] or largo[0] < 10000
+
+
+def test_imagenes_sin_alt_tienen_tope_en_el_puntaje():
+    from auditors.seo_auditor import SEOAuditor
+    def puntaje(n):
+        imgs = "".join(f'<img src="foto{i}.jpg">' for i in range(n))
+        html = f"<html><head><title>Escuela de cocina en Santiago de Chile</title></head><body><h1>x</h1>{imgs}</body></html>"
+        return SEOAuditor().audit({"url": "https://ejemplo.cl", "html": html})["metrics"]["contenido"]["score"]
+    # Con el tope, 30 y 100 imágenes sin alt dan el mismo descuento (antes 0 en ambos).
+    assert puntaje(30) == puntaje(100)
+    assert puntaje(30) > 0

@@ -244,9 +244,13 @@ class QuickAuditor:
             "Clarity": r"clarity\.ms",
         }
 
+        # Sin comentarios: un ID de GA4 comentado no está activo.
+        sin_comentarios = re.sub(r"(?s)/\*.*?\*/|<!--.*?-->", " ", html)
+        sin_comentarios = re.sub(r"(?m)^\s*//.*$", " ", sin_comentarios)
+
         found = []
         for platform, patron in tracking_platforms.items():
-            if re.search(patron, html):
+            if re.search(patron, sin_comentarios):
                 found.append(platform)
 
         return found
