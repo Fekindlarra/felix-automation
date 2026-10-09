@@ -35,7 +35,8 @@ class QuickHTMLParser(HTMLParser):
 
         if tag == 'head':
             self.in_head = True
-        elif tag == 'title':
+        elif tag == 'title' and self.in_head:
+            # Solo el <title> dentro de <head> cuenta (un <title> en <body> se ignora)
             self._in_title = True
         elif tag == 'meta':
             if attrs_dict.get('name') == 'viewport':

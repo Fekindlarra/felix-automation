@@ -1,9 +1,14 @@
 """Bloqueante 3.4.9: el monitor de Phase 3 no debe inventar métricas.
-Si no hay dato, el checkpoint debe fallar (cerrado), no pasar con valores fijos
-como 0.78, 0.0008, 45.0, 42, 140 u 8."""
+
+Si una métrica no tiene dato, collect_metrics lanza MetricsCollectionError y
+collect_checkpoint no emite checkpoint (None). Nunca se devuelven valores
+fijos como 0.78, 0.0008, 45.0, 42, 140 u 8, ni un checkpoint que "pase".
+"""
 import sqlite3
 
-from backend.phase3_checkpoint_monitor import Phase3CheckpointMonitor
+import pytest
+
+from backend.phase3_checkpoint_monitor import MetricsCollectionError, Phase3CheckpointMonitor
 
 
 def _monitor_con_bd_vacia():
@@ -13,16 +18,10 @@ def _monitor_con_bd_vacia():
     return m
 
 
-def test_sin_datos_no_inventa_metricas():
-    snap = _monitor_con_bd_vacia().collect_metrics()
-    assert snap.ml_accuracy != 0.78
-    assert snap.error_rate != 0.0008
-    assert snap.websocket_latency != 45.0
-    assert snap.predictions_hour != 42
-    assert snap.personalization_active != 140
-    assert snap.active_tests != 8
+def test_sin_datos_collect_metrics_lanza_error():
+    with pytest.raises(MetricsCollectionError):
+        _monitor_con_bd_vacia().collect_metrics()
 
 
-def test_sin_datos_el_checkpoint_no_pasa():
-    snap = _monitor_con_bd_vacia().collect_metrics()
-    assert snap.health_score() < 6
+def test_sin_datos_collect_checkpoint_no_emite_checkpoint():
+    assert _monitor_con_bd_vacia().collect_checkpoint(48) is None

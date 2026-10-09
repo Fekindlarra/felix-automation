@@ -27,7 +27,9 @@ Base = declarative_base()
 
 def init_db():
     """Initialize database - create all tables"""
-    from models import Base as ModelsBase
+    # Import explícito del módulo de modelos de esta app. "from models import Base"
+    # resolvía al directorio raíz models/ (sin Base) y fallaba al importar backend.api.main.
+    from backend.api.models import Base as ModelsBase
     ModelsBase.metadata.create_all(bind=engine)
     print("✅ Database initialized successfully")
 

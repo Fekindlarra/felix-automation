@@ -18,6 +18,14 @@ from enum import Enum
 logger = logging.getLogger(__name__)
 
 
+class MetricsCollectionError(Exception):
+    """
+    Se lanza cuando una métrica no se puede medir desde la base de datos.
+    El checkpoint no se emite: sin medición no hay decisión CONTINUE (cierre fallido).
+    """
+    pass
+
+
 class CheckpointStatus(Enum):
     """Checkpoint evaluation status"""
     GREEN = "GREEN"        # 6/6 metrics passing
@@ -137,7 +145,12 @@ class Phase3CheckpointMonitor:
                   AND ml_accuracy IS NOT NULL
             """)
             ml_row = cursor.fetchone()
-            ml_accuracy = ml_row['avg_accuracy'] if ml_row and ml_row['avg_accuracy'] is not None else 0.0  # sin dato: falla
+            if not ml_row or ml_row['avg_accuracy'] is None:
+                raise MetricsCollectionError(
+                    "❌ ML Accuracy: No data collected in last 2 hours. "
+                    "Either ab_test_ml_predictions table is empty or queries are not recording predictions."
+                )
+            ml_accuracy = float(ml_row['avg_accuracy'])
 
             # 2. Error Rate - from error_tracker (critical + major errors)
             cursor.execute("""
@@ -158,7 +171,12 @@ class Phase3CheckpointMonitor:
                   AND created_at > datetime('now', '-2 hours')
             """)
             lat_row = cursor.fetchone()
-            websocket_latency = lat_row['avg_latency'] if lat_row and lat_row['avg_latency'] is not None else float('inf')  # sin dato: falla
+            if not lat_row or lat_row['avg_latency'] is None:
+                raise MetricsCollectionError(
+                    "❌ WebSocket Latency: No data collected in last 2 hours. "
+                    "Metrics table may not be recording WebSocket latencies."
+                )
+            websocket_latency = float(lat_row['avg_latency'])
 
             # 4. Predictions/Hour - from ab_test_ml_predictions
             cursor.execute("""
@@ -201,17 +219,12 @@ class Phase3CheckpointMonitor:
             logger.info(f"✅ Metrics collected: {metrics}")
             return metrics
 
+        except MetricsCollectionError:
+            raise
         except Exception as e:
             logger.error(f"❌ Error collecting metrics: {e}")
-            # Sin datos: el checkpoint falla (cerrado). No se inventan valores (bloqueante 3.4.9)
-            return MetricSnapshot(
-                ml_accuracy=0.0,
-                error_rate=1.0,
-                websocket_latency=float('inf'),
-                predictions_hour=0.0,
-                personalization_active=0,
-                active_tests=0
-            )
+            # Sin medición: no se inventan valores (bloqueante 3.4.9). collect_checkpoint devuelve None.
+            raise MetricsCollectionError(f"Error consultando métricas: {e}") from e
 
     def check_circuit_breakers(self) -> CircuitBreakerState:
         """Check state of all circuit breakers"""
