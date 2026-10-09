@@ -51,6 +51,18 @@ def _hallazgos_tracking(tracking: Dict) -> List[Dict]:
     return out
 
 
+def _hallazgos_seguridad(seo: Dict) -> List[Dict]:
+    """Política de privacidad y banner de cookies: se marcan para revisión legal, no se resuelven aquí."""
+    out = []
+    for f in seo.get("metrics", {}).get("seguridad", {}).get("findings", []):
+        issue = f.get("issue", "")
+        if issue.startswith("No hay enlace a política de privacidad"):
+            out.append(_item("Legal y cookies", "Agregar enlace visible a la política de privacidad", "medio", "bajo", issue))
+        elif issue.startswith("No se detecta banner de cookies"):
+            out.append(_item("Legal y cookies", "Revisar si corresponde un aviso de cookies con consentimiento (validar con asesoría legal)", "medio", "medio", issue))
+    return out
+
+
 def _hallazgos_quick(quick: Dict) -> List[Dict]:
     out = []
     for f in quick.get("findings", []):
@@ -74,6 +86,7 @@ def priorizar(informe: Dict) -> Dict:
     items = []
     if _medida(s.get("seo", {})):
         items += _hallazgos_seo(s["seo"])
+        items += _hallazgos_seguridad(s["seo"])
     if _medida(s.get("gtm", {})):
         items += _hallazgos_gtm(s["gtm"])
     if _medida(s.get("tracking", {})):

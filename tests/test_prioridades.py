@@ -77,3 +77,13 @@ def test_subseccion_seo_no_medida_se_lista():
     r = priorizar(_informe(seo=seo))
     assert "seo.rendimiento" in r["no_medido"]
     assert "seo.seguridad" in r["no_medido"]
+
+
+def test_politica_y_banner_de_cookies_se_listan_como_revision_legal():
+    seo = {"status": "medido", "metrics": {"seguridad": {"score": 90, "findings": [
+        {"issue": "No hay enlace a política de privacidad"},
+        {"issue": "No se detecta banner de cookies"},
+    ]}}}
+    acciones = [i["accion"] for i in priorizar(_informe(seo=seo))["prioridades"]]
+    assert "Agregar enlace visible a la política de privacidad" in acciones
+    assert any("validar con asesoría legal" in a for a in acciones)
