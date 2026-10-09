@@ -60,3 +60,27 @@ def test_ga4_ausente_con_gtm_se_marca_para_revisar_en_gtm():
 def test_ga4_ausente_sin_gtm_sigue_en_no():
     t = tabla([_informe("https://a.cl", ga=False)], ["A"])
     assert "| Google Analytics 4 | no |" in t
+
+
+def test_privacidad_sin_cabeceras_es_no_medido():
+    informe = _informe("https://a.cl")
+    informe["secciones"]["seo"]["metrics"]["seguridad"] = {
+        "findings": [{"issue": "No medido: sin cabeceras HTTP"}]}
+    t = tabla([informe], ["A"])
+    assert "| Enlace a política de privacidad | no medido |" in t
+    assert "| Banner de cookies | no medido |" in t
+
+
+def test_privacidad_con_cabeceras_y_sin_alerta_es_si():
+    informe = _informe("https://a.cl")
+    informe["secciones"]["seo"]["metrics"]["seguridad"] = {"findings": []}
+    t = tabla([informe], ["A"])
+    assert "| Enlace a política de privacidad | sí |" in t
+
+
+def test_privacidad_con_alerta_es_no():
+    informe = _informe("https://a.cl")
+    informe["secciones"]["seo"]["metrics"]["seguridad"] = {
+        "findings": [{"issue": "No hay enlace a política de privacidad"}]}
+    t = tabla([informe], ["A"])
+    assert "| Enlace a política de privacidad | no |" in t

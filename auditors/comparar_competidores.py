@@ -69,6 +69,29 @@ def _consent(informe: Dict) -> str:
     return "sí" if g.get("consent_mode_default") else "no"
 
 
+def _seguridad_legal(informe: Dict, issue_prefix: str) -> str:
+    """Lee una alerta de la sección de seguridad/legal del SEO. Sin alerta y medido = presente."""
+    seo = informe["secciones"].get("seo", {})
+    if seo.get("status") != "medido":
+        return "no medido"
+    hallazgos = seo.get("metrics", {}).get("seguridad", {}).get("findings", [])
+    # Sin cabeceras HTTP (informe desde HTML guardado) esta sección no se evalúa.
+    if any(f.get("issue", "").startswith("No medido") for f in hallazgos):
+        return "no medido"
+    for f in hallazgos:
+        if f.get("issue", "").startswith(issue_prefix):
+            return "no"
+    return "sí"
+
+
+def _politica_privacidad(informe: Dict) -> str:
+    return _seguridad_legal(informe, "No hay enlace a política de privacidad")
+
+
+def _banner_cookies(informe: Dict) -> str:
+    return _seguridad_legal(informe, "No se detecta banner de cookies")
+
+
 def _imagenes_sin_alt(informe: Dict) -> str:
     seo = informe["secciones"].get("seo", {})
     for f in seo.get("metrics", {}).get("contenido", {}).get("findings", []):
@@ -98,6 +121,8 @@ FILAS = [
     ("Facebook Pixel", lambda i: _tracking(i, "Facebook Pixel")),
     ("Universal Analytics (obsoleto)", lambda i: _tracking(i, "Universal Analytics")),
     ("Consent Mode v2 por defecto", _consent),
+    ("Banner de cookies", _banner_cookies),
+    ("Enlace a política de privacidad", _politica_privacidad),
     ("Imágenes sin texto alternativo", _imagenes_sin_alt),
     ("Plataforma", _plataforma),
     ("Puntaje SEO (reglas internas)", _puntaje),
