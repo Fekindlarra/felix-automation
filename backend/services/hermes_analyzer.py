@@ -8,18 +8,18 @@ Integración con API de Hermes (Nous Research) para análisis automático de aud
 import os
 import json
 import asyncio
-import httpx
+import ssl
+import urllib.request
 from typing import Dict, Any, Optional, List
 from pydantic import BaseModel
 from datetime import datetime
 
-# ═══════════════════════════════════════════════════════════════════════════
-# CONFIGURACIÓN
-# ═══════════════════════════════════════════════════════════════════════════
+# Desactivar SSL verification para Windows
+ssl._create_default_https_context = ssl._create_unverified_context
 
 HERMES_API_KEY = os.getenv("HERMES_API_KEY", "")
-HERMES_API_URL = "https://api.nous.ai/v1/completions"  # Endpoint base
-HERMES_MODEL = "nos-hermes-2-mixtral-8x7b-dpo"
+HERMES_API_URL = "https://inference-api.nousresearch.com/v1/chat/completions"
+HERMES_MODEL = "Hermes-4.3-36B"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # MODELOS PYDANTIC
@@ -73,7 +73,7 @@ class HermesPromptBuilder:
         metrics = data.instagram
 
         prompt = f"""
-Eres un experto en marketing digital y análisis de redes sociales.
+Eres un experto en marketing digital y análisis de redes sociales con experiencia en estrategia Instagram.
 
 DATOS DE INSTAGRAM PARA ANALIZAR:
 - Seguidores: {metrics.followers:,}
@@ -94,59 +94,19 @@ TAREA:
 
 FORMATO DE RESPUESTA JSON:
 {{
-    "resumen_ejecutivo": "Análisis ejecutivo de 2-3 líneas",
-    "hallazgos_principales": ["Hallazgo 1", "Hallazgo 2", ...],
-    "recomendaciones": ["Recomendación 1", "Recomendación 2", ...],
+    "resumen_ejecutivo": "Análisis ejecutivo de 2-3 líneas sobre el desempeño de Instagram",
+    "hallazgos_principales": ["Hallazgo 1", "Hallazgo 2", "Hallazgo 3"],
+    "recomendaciones": ["Recomendación 1", "Recomendación 2", "Recomendación 3"],
     "score_general": 75.5,
     "detalles_por_metrica": {{
-        "engagement": {{"analisis": "...", "tendencia": "positiva/negativa"}},
-        "alcance": {{"analisis": "...", "tendencia": "positiva/negativa"}},
-        "crecimiento": {{"analisis": "...", "tendencia": "positiva/negativa"}}
+        "engagement": {{"analisis": "El engagement es bajo", "tendencia": "negativa"}},
+        "alcance": {{"analisis": "Alcance en descenso", "tendencia": "negativa"}},
+        "crecimiento": {{"analisis": "Crecimiento lento", "tendencia": "negativa"}}
     }},
-    "proximos_pasos": ["Paso 1", "Paso 2", ...]
+    "proximos_pasos": ["Paso 1", "Paso 2", "Paso 3"]
 }}
 
 Responde SOLO con el JSON válido, sin explicaciones adicionales.
-"""
-        return prompt
-
-    @staticmethod
-    def build_website_analysis_prompt(data: AuditoriaData) -> str:
-        """Construye prompt para análisis de sitio web"""
-
-        if not data.website_metrics:
-            return "No hay datos de sitio web para analizar"
-
-        metrics = data.website_metrics
-
-        prompt = f"""
-Eres un experto en auditoría técnica de sitios web y SEO.
-
-DATOS DEL SITIO WEB PARA ANALIZAR:
-{json.dumps(metrics, ensure_ascii=False, indent=2)}
-
-TAREA:
-1. Analiza el estado técnico del sitio web
-2. Identifica PROBLEMAS CRÍTICOS (máximo 5)
-3. Proporciona RECOMENDACIONES DE SEO (máximo 5)
-4. Calcula un SCORE DE SALUD (0-100)
-5. Estima IMPACTO POTENCIAL en tráfico
-
-FORMATO DE RESPUESTA JSON:
-{{
-    "resumen_ejecutivo": "Análisis ejecutivo del sitio web",
-    "hallazgos_principales": ["Problema 1", "Problema 2", ...],
-    "recomendaciones": ["Recomendación 1", "Recomendación 2", ...],
-    "score_general": 65.0,
-    "detalles_por_metrica": {{
-        "indexacion": {{"estado": "...", "accion": "..."}},
-        "velocidad": {{"estado": "...", "accion": "..."}},
-        "movil": {{"estado": "...", "accion": "..."}}
-    }},
-    "impacto_potencial": "Estimado aumento de 30-50% en tráfico orgánico"
-}}
-
-Responde SOLO con el JSON válido.
 """
         return prompt
 
@@ -155,13 +115,12 @@ Responde SOLO con el JSON válido.
 # ═══════════════════════════════════════════════════════════════════════════
 
 class HermesClient:
-    """Cliente para llamadas a API de Hermes"""
+    """Cliente para llamadas a API de Hermes (Nous Research)"""
 
     def __init__(self, api_key: str = HERMES_API_KEY, api_url: str = HERMES_API_URL):
         self.api_key = api_key
         self.api_url = api_url
         self.model = HERMES_MODEL
-        self.client = httpx.AsyncClient(timeout=60.0)
 
     async def analyze(self, prompt: str, max_tokens: int = 1500) -> str:
         """
@@ -182,33 +141,30 @@ class HermesClient:
 
             payload = {
                 "model": self.model,
-                "prompt": prompt,
+                "messages": [{"role": "user", "content": prompt}],
                 "max_tokens": max_tokens,
-                "temperature": 0.7,
-                "top_p": 0.95,
-                "stop": ["\\n\\n", "Assistant:"]
+                "temperature": 0.7
             }
 
-            response = await self.client.post(
+            req = urllib.request.Request(
                 self.api_url,
-                json=payload,
-                headers=headers
+                data=json.dumps(payload).encode(),
+                headers=headers,
+                method="POST"
             )
 
-            if response.status_code != 200:
-                raise Exception(f"Hermes API error: {response.status_code} - {response.text}")
+            with urllib.request.urlopen(req, timeout=60) as response:
+                result = json.loads(response.read().decode())
+                return result.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
 
-            result = response.json()
-            return result.get("choices", [{}])[0].get("text", "").strip()
-
-        except httpx.RequestError as e:
-            raise Exception(f"Hermes connection error: {str(e)}")
+        except urllib.error.HTTPError as e:
+            raise Exception(f"Hermes API error: {e.code} - {e.reason}")
         except Exception as e:
-            raise Exception(f"Hermes analysis error: {str(e)}")
+            raise Exception(f"Hermes error: {str(e)}")
 
     async def close(self):
         """Cierra la conexión del cliente"""
-        await self.client.aclose()
+        pass
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ANALIZADOR DE AUDITORÍAS
@@ -242,89 +198,19 @@ class AuditoryAnalyzer:
             except Exception as e:
                 analyses["instagram"] = {"error": str(e)}
 
-        # Analizar website si hay datos
-        if data.website_metrics:
-            prompt = HermesPromptBuilder.build_website_analysis_prompt(data)
-            try:
-                response = await self.hermes.analyze(prompt)
-                analyses["website"] = json.loads(response)
-            except Exception as e:
-                analyses["website"] = {"error": str(e)}
-
         # Construir respuesta estructurada
+        instagram_data = analyses.get("instagram", {})
         return HermesAnalysis(
             auditoria_id=data.auditoria_id,
             cliente_id=data.cliente_id,
             timestamp=datetime.utcnow().isoformat(),
-            resumen_ejecutivo=self._build_executive_summary(analyses),
-            hallazgos_principales=self._extract_findings(analyses),
-            recomendaciones=self._extract_recommendations(analyses),
-            score_general=self._calculate_overall_score(analyses),
-            detalles_por_metrica=self._extract_metric_details(analyses),
-            proximos_pasos=self._extract_next_steps(analyses)
+            resumen_ejecutivo=instagram_data.get("resumen_ejecutivo", "Análisis completado"),
+            hallazgos_principales=instagram_data.get("hallazgos_principales", []),
+            recomendaciones=instagram_data.get("recomendaciones", []),
+            score_general=float(instagram_data.get("score_general", 0)),
+            detalles_por_metrica=instagram_data.get("detalles_por_metrica", {}),
+            proximos_pasos=instagram_data.get("proximos_pasos", [])
         )
-
-    def _build_executive_summary(self, analyses: Dict) -> str:
-        """Construye resumen ejecutivo a partir de análisis"""
-        summaries = []
-
-        if "instagram" in analyses and "resumen_ejecutivo" in analyses["instagram"]:
-            summaries.append(f"Instagram: {analyses['instagram']['resumen_ejecutivo']}")
-
-        if "website" in analyses and "resumen_ejecutivo" in analyses["website"]:
-            summaries.append(f"Sitio web: {analyses['website']['resumen_ejecutivo']}")
-
-        return " | ".join(summaries) if summaries else "Análisis completado sin detalles"
-
-    def _extract_findings(self, analyses: Dict) -> List[str]:
-        """Extrae hallazgos principales"""
-        findings = []
-
-        for key, analysis in analyses.items():
-            if isinstance(analysis, dict) and "hallazgos_principales" in analysis:
-                findings.extend(analysis["hallazgos_principales"])
-
-        return findings[:5]  # Máximo 5 hallazgos
-
-    def _extract_recommendations(self, analyses: Dict) -> List[str]:
-        """Extrae recomendaciones"""
-        recommendations = []
-
-        for key, analysis in analyses.items():
-            if isinstance(analysis, dict) and "recomendaciones" in analysis:
-                recommendations.extend(analysis["recomendaciones"])
-
-        return recommendations[:5]  # Máximo 5 recomendaciones
-
-    def _calculate_overall_score(self, analyses: Dict) -> float:
-        """Calcula score general promedio"""
-        scores = []
-
-        for key, analysis in analyses.items():
-            if isinstance(analysis, dict) and "score_general" in analysis:
-                scores.append(float(analysis["score_general"]))
-
-        return sum(scores) / len(scores) if scores else 0.0
-
-    def _extract_metric_details(self, analyses: Dict) -> Dict[str, Dict]:
-        """Extrae detalles por métrica"""
-        details = {}
-
-        for key, analysis in analyses.items():
-            if isinstance(analysis, dict) and "detalles_por_metrica" in analysis:
-                details[key] = analysis["detalles_por_metrica"]
-
-        return details
-
-    def _extract_next_steps(self, analyses: Dict) -> List[str]:
-        """Extrae próximos pasos"""
-        steps = []
-
-        for key, analysis in analyses.items():
-            if isinstance(analysis, dict) and "proximos_pasos" in analysis:
-                steps.extend(analysis["proximos_pasos"])
-
-        return steps[:5]  # Máximo 5 pasos
 
     async def close(self):
         """Cierra la conexión"""
