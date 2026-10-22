@@ -17,7 +17,7 @@ from datetime import datetime
 # CONFIGURACIÓN
 # ═══════════════════════════════════════════════════════════════════════════
 
-HERMES_API_KEY = os.getenv("HERMES_API_KEY", "sk-nous-N7uxxgz5G75O3pz1a0Uioek4FQxms7fZ")
+HERMES_API_KEY = os.getenv("HERMES_API_KEY", "")
 HERMES_API_URL = "https://api.nous.ai/v1/completions"  # Endpoint base
 HERMES_MODEL = "nos-hermes-2-mixtral-8x7b-dpo"
 

@@ -8,6 +8,7 @@ Dashboard Interno + Portal Cliente + WebSocket Real-Time Updates
 import sys
 import logging
 from pathlib import Path
+from datetime import datetime
 from fastapi import FastAPI, HTTPException, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -49,6 +50,11 @@ from backend.routes.monitoring_routes import router as monitoring_router
 from backend.routes.prometheus_routes import router as prometheus_router
 from backend.routes.alert_routing_routes import router as alert_routing_router
 from backend.routes.fase14_monitoring_routes import router as fase14_monitoring_router
+from backend.routes.hermes_webhook import (
+    router as hermes_router,
+    startup_hermes,
+    shutdown_hermes
+)
 from agents.statistical_tester import StatisticalTester
 from agents.email_variant_assigner import EmailVariantAssigner
 
@@ -116,6 +122,9 @@ app.include_router(alert_routing_router)
 
 # Include FASE 14 Phase 1 Monitoring routes (Production Infrastructure)
 app.include_router(fase14_monitoring_router)
+
+# Include Hermes Webhook routes (Automated Audit Analysis)
+app.include_router(hermes_router)
 
 # Global orchestrator instance
 orchestrator = None
@@ -190,6 +199,13 @@ async def startup_event():
             logger.info("✅ Production Monitoring System initialized at startup")
         except Exception as e:
             logger.warning(f"⚠️ Monitoring system initialization warning (non-blocking): {e}")
+
+        # Initialize Hermes LLM Analyzer
+        try:
+            await startup_hermes()
+            logger.info("✅ Hermes LLM Analyzer initialized at startup")
+        except Exception as e:
+            logger.warning(f"⚠️ Hermes initialization warning (non-blocking): {e}")
 
     except Exception as e:
         logger.error(f"❌ Error conectando a BD: {str(e)}")
@@ -645,7 +661,6 @@ async def activate_phase3(token: str = Depends(verify_admin_token)):
             phase3_state["circuit_breaker_registry"] = CircuitBreakerRegistry
 
         phase3_state["active"] = True
-        from datetime import datetime
         phase3_state["activated_at"] = datetime.utcnow().isoformat()
 
         logger.info("🚀 FASE 15 Phase 3 ACTIVATED")
@@ -704,7 +719,6 @@ async def deactivate_phase3(token: str = Depends(verify_admin_token)):
         try:
             from backend.websocket_manager import get_connection_manager
             from backend.events import EventFactory
-            from datetime import datetime
             ws_manager = get_connection_manager()
             event = EventFactory.phase3_deactivated(
                 client_id=0,
@@ -824,6 +838,15 @@ async def get_detailed_health(token: str = Depends(verify_admin_token)):
 async def shutdown_event():
     """Al cerrar la aplicación"""
     logger.info("🛑 Felix Automation API cerrada")
+
+    # Close Hermes
+    try:
+        await shutdown_hermes()
+        logger.info("✅ Hermes closed")
+    except Exception as e:
+        logger.warning(f"⚠️ Error cerrando Hermes: {str(e)}")
+
+    # Close database
     try:
         global orchestrator
         if orchestrator:

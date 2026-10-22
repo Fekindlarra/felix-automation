@@ -33,3 +33,9 @@ WeasyPrint==60.1
 openai==1.3.0
 google-auth==2.36.0
 Pillow==10.0.0
+
+# PDF generation (Hermes pipeline)
+reportlab==4.0.7
+
+# Email validation (Brevo integration)
+pydantic[email]==2.5.0
