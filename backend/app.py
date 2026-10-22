@@ -55,6 +55,7 @@ from backend.routes.hermes_webhook import (
     startup_hermes,
     shutdown_hermes
 )
+from backend.routes.audit_dashboard import router as audit_dashboard_router
 from agents.statistical_tester import StatisticalTester
 from agents.email_variant_assigner import EmailVariantAssigner
 
@@ -125,6 +126,9 @@ app.include_router(fase14_monitoring_router)
 
 # Include Hermes Webhook routes (Automated Audit Analysis)
 app.include_router(hermes_router)
+
+# Include Audit Dashboard routes (View audit results)
+app.include_router(audit_dashboard_router)
 
 # Global orchestrator instance
 orchestrator = None
